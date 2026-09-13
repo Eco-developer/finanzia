@@ -1,14 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { PrismaUserRepository } from '../../../infrastructure/database/repositories/prisma-user.repository';
-import { HashingService } from '../../../infrastructure/security/hashing.service';
-import { RegisterDto } from '../../../presentation/dtos/auth/register.dto';
-import { LoginDto } from '../../../presentation/dtos/auth/login.dto';
-import { UserResponseDto, AuthResponseDto } from '../../../presentation/dtos/auth/user-response.dto';
-import { UserAlreadyExistsException } from '../../domain/exceptions/user-already-exists.exception';
-import { InvalidCredentialsException } from '../../domain/exceptions/invalid-credentials.exception';
-import { UserNotFoundException } from '../../domain/exceptions/user-not-found.exception';
-import { UserEntity } from '../../domain/entities/user.entity';
+import { Injectable } from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { PrismaUserRepository } from "../../../infrastructure/database/repositories/prisma-user.repository";
+import { HashingService } from "../../../infrastructure/security/hashing.service";
+import { RegisterDto } from "../../../presentation/dtos/auth/register.dto";
+import { LoginDto } from "../../../presentation/dtos/auth/login.dto";
+import {
+  UserResponseDto,
+  AuthResponseDto,
+} from "../../../presentation/dtos/auth/user-response.dto";
+import { UserAlreadyExistsException } from "../../domain/exceptions/user-already-exists.exception";
+import { InvalidCredentialsException } from "../../domain/exceptions/invalid-credentials.exception";
+import { UserNotFoundException } from "../../domain/exceptions/user-not-found.exception";
+import { UserEntity } from "../../domain/entities/user.entity";
 
 @Injectable()
 export class AuthService {
@@ -31,7 +34,7 @@ export class AuthService {
       passwordHash,
       firstName: dto.firstName,
       lastName: dto.lastName,
-      defaultCurrency: dto.defaultCurrency || 'EUR',
+      defaultCurrency: dto.defaultCurrency || "EUR",
     });
 
     const token = this.generateToken(user);
@@ -48,7 +51,10 @@ export class AuthService {
       throw new InvalidCredentialsException();
     }
 
-    const isMatch = await this.hashingService.verify(user.passwordHash, dto.password);
+    const isMatch = await this.hashingService.verify(
+      user.passwordHash,
+      dto.password,
+    );
     if (!isMatch) {
       throw new InvalidCredentialsException();
     }

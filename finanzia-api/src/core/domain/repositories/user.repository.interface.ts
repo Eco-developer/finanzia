@@ -1,4 +1,4 @@
-import { UserEntity } from '../entities/user.entity';
+import { UserEntity } from "../entities/user.entity";
 
 export interface CreateUserData {
   email: string;
@@ -14,4 +14,4 @@ export interface IUserRepository {
   create(data: CreateUserData): Promise<UserEntity>;
 }
 
-export const USER_REPOSITORY = Symbol('IUserRepository');
+export const USER_REPOSITORY = Symbol("IUserRepository");

@@ -1,10 +1,10 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { UserEntity } from '../../../core/domain/entities/user.entity';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma.service";
+import { UserEntity } from "../../../core/domain/entities/user.entity";
 import {
   IUserRepository,
   CreateUserData,
-} from '../../../core/domain/repositories/user.repository.interface';
+} from "../../../core/domain/repositories/user.repository.interface";
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
@@ -33,7 +33,7 @@ export class PrismaUserRepository implements IUserRepository {
         passwordHash: data.passwordHash,
         firstName: data.firstName.trim(),
         lastName: data.lastName ? data.lastName.trim() : null,
-        defaultCurrency: data.defaultCurrency || 'EUR',
+        defaultCurrency: data.defaultCurrency || "EUR",
       },
     });
     return this.toDomain(record);

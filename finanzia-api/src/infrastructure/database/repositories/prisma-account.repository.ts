@@ -1,23 +1,26 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
-import { AccountEntity } from '../../../core/domain/entities/account.entity';
+import { Injectable } from "@nestjs/common";
+import { PrismaService } from "../prisma.service";
+import { AccountEntity } from "../../../core/domain/entities/account.entity";
 import {
   IAccountRepository,
   CreateAccountData,
   UpdateAccountData,
-} from '../../../core/domain/repositories/account.repository.interface';
+} from "../../../core/domain/repositories/account.repository.interface";
 
 @Injectable()
 export class PrismaAccountRepository implements IAccountRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAllByUserId(userId: string, includeArchived = false): Promise<AccountEntity[]> {
+  async findAllByUserId(
+    userId: string,
+    includeArchived = false,
+  ): Promise<AccountEntity[]> {
     const records = await this.prisma.account.findMany({
       where: {
         userId,
         ...(includeArchived ? {} : { isArchived: false }),
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
     });
     return records.map((record) => this.toDomain(record));
   }
@@ -51,7 +54,9 @@ export class PrismaAccountRepository implements IAccountRepository {
       data: {
         ...(data.name !== undefined ? { name: data.name.trim() } : {}),
         ...(data.type !== undefined ? { type: data.type } : {}),
-        ...(data.isArchived !== undefined ? { isArchived: data.isArchived } : {}),
+        ...(data.isArchived !== undefined
+          ? { isArchived: data.isArchived }
+          : {}),
       },
     });
     return this.toDomain(record);
