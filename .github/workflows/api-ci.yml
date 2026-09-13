@@ -27,13 +27,18 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-          cache-dependency-path: finanzia-api/package.json
+          cache-dependency-path: finanzia-api/package-lock.json
 
       - name: Instalar Dependencias
         run: npm ci || npm install
 
       - name: Generar Prisma Client
         run: npx prisma generate
+        env:
+          DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/finanzia_db?schema=public"
+
+      - name: Validar Linting (ESLint)
+        run: npm run lint
 
       - name: Compilar Backend (TypeScript Typecheck)
         run: npm run build

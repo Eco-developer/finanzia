@@ -25,14 +25,13 @@ finanzia-web/
 │   │   ├── domain/          # Modelos y Value Objects (Money, Currency)
 │   │   └── ports/           # Interfaces para clientes HTTP y almacenamiento
 │   ├── infrastructure/      # Adaptadores de comunicación (Fetch seguro a API)
-│   └── presentation/        # Capa de Presentación React / Next.js
-│       ├── components/      # Componentes modulares documentados en Storybook
-│       │   ├── ui/          # Botones, modales, tarjetas, inputs
-│       │   └── financial/   # MoneyDisplay, tarjetas de saldo, tablas
-│       └── app/             # Enrutador Next.js (App Router)
-│           ├── (auth)/      # Login y Registro
-│           └── (dashboard)/ # Panel principal, Cuentas, Transacciones
-├── stories/                 # Historias de Storybook (*.stories.tsx)
+│       └── presentation/        # Capa de Presentación React / Next.js
+│           ├── components/      # Componentes modulares e historias (*.stories.tsx)
+│           │   ├── ui/          # Botones, modales, tarjetas, inputs
+│           │   └── financial/   # MoneyDisplay, tarjetas de saldo, tablas
+│           └── app/             # Enrutador Next.js (App Router)
+│               ├── (auth)/      # Login y Registro
+│               └── (dashboard)/ # Panel principal, Cuentas, Transacciones
 ├── tests/                   # Pruebas unitarias de componentes y hooks
 └── docker/                  # Dockerfile de producción y desarrollo
 ```
