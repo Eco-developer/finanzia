@@ -1,0 +1,42 @@
+name: FinanZIA API CI
+
+on:
+  push:
+    paths:
+      - 'finanzia-api/**'
+      - '.github/workflows/api-ci.yml'
+  pull_request:
+    paths:
+      - 'finanzia-api/**'
+      - '.github/workflows/api-ci.yml'
+
+jobs:
+  validate-api:
+    name: Lint, Typecheck and Unit Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: finanzia-api
+
+    steps:
+      - name: Checkout Repositorio
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: finanzia-api/package.json
+
+      - name: Instalar Dependencias
+        run: npm ci || npm install
+
+      - name: Generar Prisma Client
+        run: npx prisma generate
+
+      - name: Compilar Backend (TypeScript Typecheck)
+        run: npm run build
+
+      - name: Ejecutar Tests Unitarios (Jest)
+        run: npm test
