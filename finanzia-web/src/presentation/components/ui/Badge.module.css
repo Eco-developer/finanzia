@@ -1,0 +1,80 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border-radius: var(--radius-full);
+  font-weight: 500;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.sm {
+  padding: 0.125rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.md {
+  padding: 0.25rem 0.625rem;
+  font-size: 0.8125rem;
+}
+
+/* Variantes */
+.income {
+  background: rgba(16, 185, 129, 0.12);
+  color: var(--status-income);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+.income .dot {
+  background: var(--status-income);
+}
+
+.expense {
+  background: rgba(244, 63, 94, 0.12);
+  color: var(--status-expense);
+  border: 1px solid rgba(244, 63, 94, 0.25);
+}
+.expense .dot {
+  background: var(--status-expense);
+}
+
+.transfer {
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--status-info);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+.transfer .dot {
+  background: var(--status-info);
+}
+
+.warning {
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--status-warning);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+.warning .dot {
+  background: var(--status-warning);
+}
+
+.ai {
+  background: rgba(139, 92, 246, 0.12);
+  color: var(--accent-ai);
+  border: 1px solid rgba(139, 92, 246, 0.25);
+}
+.ai .dot {
+  background: var(--accent-ai);
+}
+
+.neutral {
+  background: var(--bg-surface-hover);
+  color: var(--text-secondary);
+  border: 1px solid var(--bg-card-border);
+}
+.neutral .dot {
+  background: var(--text-muted);
+}

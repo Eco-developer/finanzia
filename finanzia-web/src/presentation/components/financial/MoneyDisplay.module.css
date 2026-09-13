@@ -1,0 +1,37 @@
+.moneyDisplay {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  font-variant-numeric: tabular-nums;
+  transition: color var(--transition-fast);
+}
+
+.income {
+  color: var(--status-income);
+}
+
+.expense {
+  color: var(--status-expense);
+}
+
+.neutral {
+  color: var(--text-primary);
+}
+
+.sm {
+  font-size: 0.875rem;
+}
+
+.md {
+  font-size: 1.125rem;
+}
+
+.lg {
+  font-size: 1.5rem;
+}
+
+.xl {
+  font-size: 2.25rem;
+  font-weight: 700;
+}

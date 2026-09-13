@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+storybook-static
+.git
+.gitignore
+.env
+.env*.local
+*.log
+coverage
+tests
+docs

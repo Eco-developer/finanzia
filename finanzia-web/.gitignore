@@ -1,0 +1,31 @@
+# Dependencias
+node_modules/
+/.pnp
+.pnp.js
+
+# Compilación Next.js
+.next/
+out/
+
+# Storybook build
+storybook-static/
+
+# Testing y cobertura
+coverage/
+
+# Variables de entorno
+.env
+.env*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE y OS
+.idea/
+.vscode/
+.DS_Store
+*.suo
+Thumbs.db
