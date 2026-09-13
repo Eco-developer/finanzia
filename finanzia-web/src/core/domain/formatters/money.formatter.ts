@@ -25,6 +25,7 @@ export function formatCentsToCurrency(
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
+    useGrouping: 'always',
     signDisplay: showSign ? 'always' : 'auto'
   });
 

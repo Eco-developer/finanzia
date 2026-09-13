@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import '@/presentation/styles/globals.css';
+import { AuthProvider } from '@/core/application/auth/auth.context';
 
 export const metadata: Metadata = {
   title: 'FinanZIA — Finanzas Personales con IA Verificable',
@@ -14,7 +15,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
