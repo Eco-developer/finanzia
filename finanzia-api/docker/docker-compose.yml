@@ -1,0 +1,54 @@
+services:
+  # Base de Datos PostgreSQL 16
+  postgres:
+    image: postgres:16-alpine
+    container_name: finanzia-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-finanzia_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-finanzia_password}
+      POSTGRES_DB: ${POSTGRES_DB:-finanzia_db}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - finanzia_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-finanzia_user} -d ${POSTGRES_DB:-finanzia_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - finanzia-network
+
+  # API Backend NestJS (Opcional en compose si se corre local con npm run start:dev)
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    container_name: finanzia-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      DATABASE_URL: postgresql://${POSTGRES_USER:-finanzia_user}:${POSTGRES_PASSWORD:-finanzia_password}@postgres:5432/${POSTGRES_DB:-finanzia_db}?schema=public
+      JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_finanzia_super_secure_32_chars}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "3001:3001"
+    volumes:
+      - ../src:/app/src
+      - ../prisma:/app/prisma
+    networks:
+      - finanzia-network
+
+volumes:
+  finanzia_pgdata:
+    name: finanzia_pgdata
+
+networks:
+  finanzia-network:
+    name: finanzia-network
+    driver: bridge
