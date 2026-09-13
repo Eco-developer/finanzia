@@ -5,6 +5,11 @@ import helmet from 'helmet';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
+// Soporte de serialización BigInt en JSON para evitar TypeErrors en NestJS/Express
+(BigInt.prototype as any).toJSON = function () {
+  return Number(this);
+};
+
 async function bootstrap() {
   const logger = new Logger('FinanZiaBootstrap');
   const app = await NestFactory.create(AppModule);
@@ -52,7 +57,18 @@ async function bootstrap() {
     .addTag('Goals', 'Objetivos y metas de ahorro')
     .addTag('Imports', 'Motor de carga y conciliación CSV con deduplicación')
     .addTag('Advisor', 'Asistente de IA (Gemini) con Tool Calling determinista')
-    .addBearerAuth()
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      description: 'Token JWT obtenido en login/register',
+    })
+    .addCookieAuth('jwt_token', {
+      type: 'apiKey',
+      in: 'cookie',
+      name: 'jwt_token',
+      description: 'Cookie de sesión HttpOnly con JWT emitido en /api/auth/login',
+    })
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);

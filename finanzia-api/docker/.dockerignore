@@ -6,5 +6,4 @@ dist
 .env.*
 *.log
 coverage
-test
 docs

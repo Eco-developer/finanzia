@@ -41,6 +41,7 @@ services:
     volumes:
       - ../src:/app/src
       - ../prisma:/app/prisma
+      - ../test:/app/test
     networks:
       - finanzia-network
 
