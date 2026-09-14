@@ -11,6 +11,7 @@ import { PrismaUserRepository } from "./infrastructure/database/repositories/pri
 import { PrismaAccountRepository } from "./infrastructure/database/repositories/prisma-account.repository";
 import { PrismaCategoryRepository } from "./infrastructure/database/repositories/prisma-category.repository";
 import { PrismaTransactionRepository } from "./infrastructure/database/repositories/prisma-transaction.repository";
+import { PrismaCsvTemplateRepository } from "./infrastructure/database/repositories/prisma-csv-template.repository";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
 
@@ -19,6 +20,7 @@ import { AuthService } from "./core/application/auth/auth.service";
 import { AccountsService } from "./core/application/accounts/accounts.service";
 import { CategoriesService } from "./core/application/categories/categories.service";
 import { TransactionsService } from "./core/application/transactions/transactions.service";
+import { ImportsService } from "./core/application/imports/imports.service";
 
 // Presentation
 import { HealthController } from "./presentation/controllers/health.controller";
@@ -26,6 +28,7 @@ import { AuthController } from "./presentation/controllers/auth.controller";
 import { AccountsController } from "./presentation/controllers/accounts.controller";
 import { CategoriesController } from "./presentation/controllers/categories.controller";
 import { TransactionsController } from "./presentation/controllers/transactions.controller";
+import { ImportsController } from "./presentation/controllers/imports.controller";
 import { GlobalExceptionFilter } from "./presentation/filters/global-exception.filter";
 
 @Module({
@@ -60,6 +63,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     AccountsController,
     CategoriesController,
     TransactionsController,
+    ImportsController,
   ],
   providers: [
     PrismaService,
@@ -67,12 +71,14 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaAccountRepository,
     PrismaCategoryRepository,
     PrismaTransactionRepository,
+    PrismaCsvTemplateRepository,
     HashingService,
     JwtStrategy,
     AuthService,
     AccountsService,
     CategoriesService,
     TransactionsService,
+    ImportsService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
@@ -84,10 +90,12 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaAccountRepository,
     PrismaCategoryRepository,
     PrismaTransactionRepository,
+    PrismaCsvTemplateRepository,
     AuthService,
     AccountsService,
     CategoriesService,
     TransactionsService,
+    ImportsService,
   ],
 })
 export class AppModule {}

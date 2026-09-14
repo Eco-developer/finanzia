@@ -248,6 +248,88 @@ export class PrismaTransactionRepository implements ITransactionRepository {
     });
   }
 
+  async findExistingHashes(
+    userId: string,
+    accountId: string,
+    hashes: string[],
+  ): Promise<string[]> {
+    if (!hashes || hashes.length === 0) {
+      return [];
+    }
+
+    const records = await this.prisma.transaction.findMany({
+      where: {
+        userId,
+        accountId,
+        deduplicationHash: {
+          in: hashes,
+        },
+      },
+      select: {
+        deduplicationHash: true,
+      },
+    });
+
+    return records
+      .map((r) => r.deduplicationHash)
+      .filter((h): h is string => h !== null && h !== undefined);
+  }
+
+  async createManyWithBalance(
+    userId: string,
+    accountId: string,
+    transactions: CreateTransactionData[],
+  ): Promise<{ count: number; newAccountBalanceCents: bigint }> {
+    if (transactions.length === 0) {
+      const account = await this.prisma.account.findUnique({
+        where: { id: accountId },
+      });
+      return {
+        count: 0,
+        newAccountBalanceCents: account?.currentBalanceCents ?? 0n,
+      };
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Calcular delta total del saldo
+      let netDeltaCents = 0n;
+      for (const t of transactions) {
+        netDeltaCents += t.amountCents;
+      }
+
+      // 2. Insertar registros en bloque
+      const createResult = await tx.transaction.createMany({
+        data: transactions.map((t) => ({
+          userId: t.userId,
+          accountId: t.accountId,
+          categoryId: t.categoryId ?? null,
+          amountCents: t.amountCents,
+          type: t.type,
+          transactionDate: t.transactionDate,
+          description: t.description.trim(),
+          notes: t.notes ?? null,
+          isPending: t.isPending ?? false,
+          deduplicationHash: t.deduplicationHash ?? null,
+        })),
+      });
+
+      // 3. Actualizar saldo atómicamente
+      const updatedAccount = await tx.account.update({
+        where: { id: accountId },
+        data: {
+          currentBalanceCents: {
+            increment: netDeltaCents,
+          },
+        },
+      });
+
+      return {
+        count: createResult.count,
+        newAccountBalanceCents: updatedAccount.currentBalanceCents,
+      };
+    });
+  }
+
   private toDomain(record: any): TransactionEntity {
     return new TransactionEntity(
       record.id,

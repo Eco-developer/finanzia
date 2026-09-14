@@ -58,6 +58,18 @@ export interface ITransactionRepository {
   deleteTransactionWithBalance(
     id: string,
   ): Promise<{ deletedId: string; affectedAccountIds: string[] }>;
+
+  findExistingHashes(
+    userId: string,
+    accountId: string,
+    hashes: string[],
+  ): Promise<string[]>;
+
+  createManyWithBalance(
+    userId: string,
+    accountId: string,
+    transactions: CreateTransactionData[],
+  ): Promise<{ count: number; newAccountBalanceCents: bigint }>;
 }
 
 export const TRANSACTION_REPOSITORY = Symbol("ITransactionRepository");
