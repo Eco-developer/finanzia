@@ -27,6 +27,7 @@ import {
   TrendingUp,
   CreditCard,
   Sparkles,
+  FileSpreadsheet,
 } from 'lucide-react';
 import styles from './page.module.css';
 
@@ -281,13 +282,24 @@ export default function HomePage() {
               Saldos en tiempo real auditados en céntimos
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsAccountModalOpen(true)}
-          >
-            + Añadir Cuenta
-          </Button>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsAccountModalOpen(true)}
+            >
+              + Nueva Cuenta
+            </Button>
+            <Link href="/imports">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={accounts.length === 0}
+              >
+                <FileSpreadsheet size={15} style={{ marginRight: '0.375rem' }} /> Importar CSV
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {accounts.length === 0 ? (
