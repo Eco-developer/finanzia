@@ -6,11 +6,19 @@ export interface MoneyDisplayProps {
   cents?: number | bigint;
   amountCents?: number | bigint;
   currency?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showSign?: boolean;
   colorCoded?: boolean;
   className?: string;
 }
+
+const SIZE_CLASS_MAP: Record<string, string> = {
+  sm: styles.sm,
+  md: styles.md,
+  lg: styles.lg,
+  xl: styles.xl,
+  '2xl': styles.xxl,
+};
 
 export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   cents,
@@ -31,7 +39,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
     if (numCents < 0) toneClass = styles.expense;
   }
 
-  const sizeClass = styles[size] || styles.md;
+  const sizeClass = SIZE_CLASS_MAP[size] || styles.md;
 
   return (
     <span

@@ -1,13 +1,17 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/core/application/auth/auth.context';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
 import { Badge } from '@/presentation/components/ui/Badge';
 import { AccountCard } from '@/presentation/components/financial/AccountCard';
+import { RecommendationCard } from '@/presentation/components/financial/RecommendationCard';
 import { TransactionTable } from '@/presentation/components/financial/TransactionTable';
+import { Sidebar } from '@/presentation/components/navigation/Sidebar';
+import { MobileTopBar } from '@/presentation/components/navigation/MobileTopBar';
+import { MobileBottomNav } from '@/presentation/components/navigation/MobileBottomNav';
 import { CreateAccountModal } from '@/presentation/components/financial/CreateAccountModal';
 import { CreateTransactionModal } from '@/presentation/components/financial/CreateTransactionModal';
 import { CreateTransferModal } from '@/presentation/components/financial/CreateTransferModal';
@@ -19,34 +23,34 @@ import {
   TransactionType,
 } from '@/infrastructure/api/transactions.api';
 import {
-  PlusCircle,
+  Plus,
   ArrowLeftRight,
-  LogOut,
-  Wallet,
-  ShieldCheck,
-  TrendingUp,
+  Upload,
   CreditCard,
   Sparkles,
-  FileSpreadsheet,
+  ShieldCheck,
+  Wallet,
+  TrendingUp,
 } from 'lucide-react';
 import styles from './page.module.css';
 
 export default function HomePage() {
-  const { user, isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  // Estados de datos
+  // Estados de datos del dominio
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
   const [activeFilterType, setActiveFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [isDataLoading, setIsDataLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState('dashboard');
 
   // Estados de modales
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
-  // Carga de datos
+  // Carga reactiva de datos
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsDataLoading(true);
@@ -72,7 +76,7 @@ export default function HomePage() {
     }
   }, [isAuthenticated, loadData]);
 
-  // Borrar transacción
+  // Borrar transacción y revertir saldo
   const handleDeleteTransaction = async (id: string) => {
     try {
       await transactionsApi.deleteTransaction(id);
@@ -82,19 +86,59 @@ export default function HomePage() {
     }
   };
 
-  // Cálculos consolidados en céntimos enteros (cero floats)
-  const totalBalanceCents = accounts.reduce(
-    (total, acc) => total + acc.currentBalanceCents,
-    0,
-  );
+  // Cálculos matemáticos en céntimos enteros (cero números flotantes)
+  const totalBalanceCents = useMemo(() => {
+    return accounts.reduce((total, acc) => total + acc.currentBalanceCents, 0);
+  }, [accounts]);
+
+  // Cálculos del mes en curso
+  const { monthlyIncomeCents, monthlyExpenseCents, incomeCount, expenseCount } = useMemo(() => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    const currentMonthTxs = transactions.filter((tx) => {
+      const d = new Date(tx.transactionDate);
+      return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
+    });
+
+    const incomeTxs = currentMonthTxs.filter((tx) => tx.type === 'INCOME');
+    const expenseTxs = currentMonthTxs.filter((tx) => tx.type === 'EXPENSE');
+
+    const incCents = incomeTxs.reduce((acc, tx) => acc + tx.amountCents, 0);
+    const expCents = expenseTxs.reduce((acc, tx) => acc + tx.amountCents, 0);
+
+    return {
+      monthlyIncomeCents: incCents,
+      monthlyExpenseCents: expCents,
+      incomeCount: incomeTxs.length,
+      expenseCount: expenseTxs.length,
+    };
+  }, [transactions]);
 
   // Filtrado de transacciones
-  const filteredTransactions = transactions.filter((tx) => {
-    if (activeFilterType === 'ALL') return true;
-    return tx.type === activeFilterType;
-  });
+  const filteredTransactions = useMemo(() => {
+    return transactions.filter((tx) => {
+      if (activeFilterType === 'ALL') return true;
+      return tx.type === activeFilterType;
+    });
+  }, [transactions, activeFilterType]);
 
-  // Estado cargando autenticación
+  // Navegación por secciones
+  const handleNavigateSection = (sectionKey: string) => {
+    setActiveSection(sectionKey);
+    if (sectionKey === 'accounts') {
+      document.getElementById('accounts-section')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (sectionKey === 'transactions') {
+      document.getElementById('transactions-section')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (sectionKey === 'ai') {
+      document.getElementById('ai-section')?.scrollIntoView({ behavior: 'smooth' });
+    } else if (sectionKey === 'dashboard') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Estado cargando sesión
   if (isAuthLoading) {
     return (
       <div className={styles.loadingScreen}>
@@ -104,23 +148,23 @@ export default function HomePage() {
     );
   }
 
-  // Vista desautenticada (Landing promocional)
+  // Vista desautenticada: Landing Promocional Dark Glassmorphism
   if (!isAuthenticated) {
     return (
       <main className={styles.landingMain}>
         <header className={styles.landingHeader}>
-          <div className={styles.brand}>
+          <div className={styles.landingBrand}>
             <div className={styles.logoIcon}>⚡</div>
             <h1 className={styles.logoText}>
               Finan<span>ZIA</span>
             </h1>
           </div>
-          <div className={styles.headerActions}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
             <a
               href="http://localhost:3001/api/docs"
               target="_blank"
               rel="noreferrer"
-              className={styles.headerLink}
+              className={styles.swaggerLink}
             >
               📖 Swagger API
             </a>
@@ -145,9 +189,8 @@ export default function HomePage() {
             Control riguroso de tus finanzas sin alucinaciones
           </h2>
           <p className={styles.heroDescription}>
-            Registra tus cuentas bancarias, categoriza tus ingresos y gastos con precisión
-            estricta de céntimos (cero floats) y prepárate para interactuar con un asesor
-            financiero determinista.
+            Registra tus cuentas bancarias, concilia extractos CSV y opera con precisión estricta
+            en céntimos enteros auditados por un asistente financiero determinista.
           </p>
           <div className={styles.heroCtas}>
             <Link href="/register">
@@ -184,185 +227,277 @@ export default function HomePage() {
     );
   }
 
-  // Vista Autenticada (Dashboard en Vivo)
+  // Vista Autenticada: Dashboard con Shell Responsive
   return (
-    <main className={styles.main}>
-      {/* Barra de Navegación Superior */}
-      <header className={styles.header}>
-        <div className={styles.brand}>
-          <div className={styles.logoIcon}>⚡</div>
-          <div>
-            <h1 className={styles.logoText}>
-              Finan<span>ZIA</span>
-            </h1>
-            <p className={styles.logoSubtitle}>
-              Bienvenido, <strong>{user?.firstName} {user?.lastName || ''}</strong>
+    <div className={styles.appContainer}>
+      {/* Sidebar Fija Lateral para Desktop (260px) */}
+      <Sidebar
+        activeSection={activeSection}
+        onNavigateSection={handleNavigateSection}
+      />
+
+      {/* Barra Superior Móvil */}
+      <MobileTopBar />
+
+      {/* Contenedor Principal de Contenido */}
+      <main className={styles.mainContent}>
+        {/* Cabecera Superior Consolidada (Desktop) */}
+        <header className={styles.header}>
+          <div className={styles.headerTitles}>
+            <h1 className={styles.pageTitle}>Panel Financiero Consolidado</h1>
+            <p className={styles.pageSubtitle}>
+              Control riguroso de tus finanzas en céntimos enteros con IA determinista
             </p>
           </div>
-        </div>
 
-        <div className={styles.headerActions}>
-          <a
-            href="http://localhost:3001/api/docs"
-            target="_blank"
-            rel="noreferrer"
-            className={styles.headerLink}
-          >
-            📖 Swagger API
-          </a>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={logout}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem' }}
-          >
-            <LogOut size={14} /> Cerrar Sesión
-          </Button>
-        </div>
-      </header>
+          <div className={styles.headerActions}>
+            <a
+              href="http://localhost:3001/api/docs"
+              target="_blank"
+              rel="noreferrer"
+              className={styles.swaggerLink}
+            >
+              📖 Swagger API
+            </a>
 
-      {/* Grid de Métricas Principales */}
-      <section className={styles.dashboardGrid}>
-        {/* Tarjeta: Patrimonio Total Consolidado */}
-        <div className={`glass-card ${styles.metricCard}`}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>Patrimonio Total Líquido</span>
-            <Badge variant="income">En vivo</Badge>
-          </div>
-          <div className={styles.cardValue}>
-            <MoneyDisplay cents={totalBalanceCents} size="xl" colorCoded={false} />
-          </div>
-          <p className={styles.cardFooter}>
-            Consolidado en {accounts.length} {accounts.length === 1 ? 'cuenta activa' : 'cuentas activas'}
-          </p>
-        </div>
-
-        {/* Tarjeta: Acciones Rápidas */}
-        <div className={`glass-card ${styles.metricCard}`}>
-          <div className={styles.cardHeader}>
-            <span className={styles.cardLabel}>Operaciones Rápidas</span>
-          </div>
-          <div style={{ display: 'flex', gap: '0.625rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
-            <Button
-              variant="primary"
-              size="sm"
+            <button
+              type="button"
+              className={styles.primaryActionBtn}
               onClick={() => setIsTransactionModalOpen(true)}
               disabled={accounts.length === 0}
             >
-              <PlusCircle size={15} style={{ marginRight: '0.375rem' }} /> Movimiento
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
+              <Plus size={16} /> + Movimiento
+            </button>
+
+            <button
+              type="button"
+              className={styles.secondaryActionBtn}
               onClick={() => setIsTransferModalOpen(true)}
               disabled={accounts.length < 2}
             >
-              <ArrowLeftRight size={15} style={{ marginRight: '0.375rem' }} /> Transferencia
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsAccountModalOpen(true)}
-            >
-              <CreditCard size={15} style={{ marginRight: '0.375rem' }} /> Nueva Cuenta
-            </Button>
-          </div>
-          {accounts.length === 0 && (
-            <p className={styles.cardNotice}>⚠️ Crea primero una cuenta bancaria para operar.</p>
-          )}
-        </div>
-      </section>
+              <ArrowLeftRight size={15} /> ↔ Transferir
+            </button>
 
-      {/* Sección: Cuentas Financieras */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>Tus Cuentas Financieras</h2>
-            <p className={styles.sectionSubtitle}>
-              Saldos en tiempo real auditados en céntimos
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setIsAccountModalOpen(true)}
-            >
-              + Nueva Cuenta
-            </Button>
-            <Link href="/imports">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={accounts.length === 0}
-              >
-                <FileSpreadsheet size={15} style={{ marginRight: '0.375rem' }} /> Importar CSV
-              </Button>
+            <Link href="/imports" className={styles.secondaryActionBtn}>
+              <Upload size={15} /> ↑ Subir CSV
             </Link>
           </div>
+        </header>
+
+        {/* Tarjeta Hero Móvil (Exclusiva < 1024px) */}
+        <div className={styles.mobileHeroCard}>
+          <div className={styles.mobileHeroTop}>
+            <span className={styles.mobileHeroLabel}>Patrimonio Total Líquido</span>
+            <span className={styles.liveBadge}>EN VIVO</span>
+          </div>
+          <MoneyDisplay cents={totalBalanceCents} size="xl" colorCoded={false} />
+          <div className={styles.mobileHeroDivider} />
+          <div className={styles.mobileHeroMiniStats}>
+            <div className={styles.mobileMiniCol}>
+              <span className={styles.mobileMiniLabel}>Ingresos Mes</span>
+              <div className={styles.incomeValue}>
+                <MoneyDisplay cents={monthlyIncomeCents} size="sm" colorCoded={false} />
+              </div>
+            </div>
+            <div className={styles.mobileMiniCol}>
+              <span className={styles.mobileMiniLabel}>Gastos Mes</span>
+              <div className={styles.expenseValue}>
+                <MoneyDisplay cents={monthlyExpenseCents} size="sm" colorCoded={false} />
+              </div>
+            </div>
+          </div>
         </div>
 
-        {accounts.length === 0 ? (
-          <div className={styles.emptyAccountsCard}>
-            <p>No tienes cuentas financieras registradas todavía.</p>
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => setIsAccountModalOpen(true)}
-              style={{ marginTop: '0.75rem' }}
-            >
-              Crear mi primera cuenta
-            </Button>
-          </div>
-        ) : (
-          <div className={styles.accountsGrid}>
-            {accounts.map((acc) => (
-              <AccountCard key={acc.id} account={acc} />
-            ))}
-          </div>
-        )}
-      </section>
+        {/* Acciones Rápidas Circulares (Exclusivas Mobile) */}
+        <div className={styles.mobileQuickActions}>
+          <button
+            type="button"
+            className={styles.mobileQuickActionBtn}
+            onClick={() => setIsTransactionModalOpen(true)}
+            disabled={accounts.length === 0}
+          >
+            <div className={`${styles.mobileActionCircle} ${styles.mobileActionCircleBrand}`}>
+              +
+            </div>
+            <span className={styles.mobileActionLabel}>Gasto</span>
+          </button>
 
-      {/* Sección: Transacciones y Movimientos */}
-      <section className={styles.section}>
-        <div className={styles.sectionHeader}>
-          <div>
-            <h2 className={styles.sectionTitle}>Histórico de Movimientos</h2>
-            <p className={styles.sectionSubtitle}>
-              Transacciones atómicas registradas en base de datos
+          <button
+            type="button"
+            className={styles.mobileQuickActionBtn}
+            onClick={() => setIsTransferModalOpen(true)}
+            disabled={accounts.length < 2}
+          >
+            <div className={`${styles.mobileActionCircle} ${styles.mobileActionCircleGlass}`}>
+              ↔
+            </div>
+            <span className={styles.mobileActionLabel}>Transferir</span>
+          </button>
+
+          <Link href="/imports" className={styles.mobileQuickActionBtn}>
+            <div className={`${styles.mobileActionCircle} ${styles.mobileActionCircleGlass}`}>
+              ↑
+            </div>
+            <span className={styles.mobileActionLabel}>Subir CSV</span>
+          </Link>
+
+          <button
+            type="button"
+            className={styles.mobileQuickActionBtn}
+            onClick={() => handleNavigateSection('ai')}
+          >
+            <div className={`${styles.mobileActionCircle} ${styles.mobileActionCircleAI}`}>
+              ⚡
+            </div>
+            <span className={styles.mobileActionLabel}>AI Advisor</span>
+          </button>
+        </div>
+
+        {/* Fila de 3 KPI Cards Principales (Desktop) */}
+        <section className={styles.kpiGrid}>
+          {/* KPI 1: Patrimonio Total Líquido */}
+          <div className={styles.kpiCard}>
+            <div className={styles.kpiHeader}>
+              <span className={styles.kpiLabel}>Patrimonio Total Líquido</span>
+              <span className={styles.liveBadge}>EN VIVO</span>
+            </div>
+            <div className={styles.kpiValue}>
+              <MoneyDisplay cents={totalBalanceCents} size="2xl" colorCoded={false} />
+            </div>
+            <p className={styles.kpiFooter}>
+              Consolidado en {accounts.length}{' '}
+              {accounts.length === 1 ? 'cuenta bancaria activa' : 'cuentas bancarias activas'}
             </p>
           </div>
 
-          <div className={styles.filtersGroup}>
-            {(['ALL', 'EXPENSE', 'INCOME', 'TRANSFER'] as const).map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                className={`${styles.filterBtn} ${
-                  activeFilterType === filter ? styles.filterBtnActive : ''
-                }`}
-                onClick={() => setActiveFilterType(filter)}
-              >
-                {filter === 'ALL'
-                  ? 'Todos'
-                  : filter === 'EXPENSE'
-                  ? 'Gastos'
-                  : filter === 'INCOME'
-                  ? 'Ingresos'
-                  : 'Traspasos'}
-              </button>
-            ))}
+          {/* KPI 2: Ingresos del Mes */}
+          <div className={styles.kpiCard}>
+            <div className={styles.kpiHeader}>
+              <span className={styles.kpiLabel}>Ingresos (Este Mes)</span>
+            </div>
+            <div className={`${styles.kpiValue} ${styles.incomeValue}`}>
+              <MoneyDisplay cents={monthlyIncomeCents} size="2xl" colorCoded={false} />
+            </div>
+            <p className={styles.kpiFooterSuccess}>
+              ↑ {incomeCount} {incomeCount === 1 ? 'ingreso registrado' : 'ingresos registrados'} este mes
+            </p>
           </div>
-        </div>
 
-        <TransactionTable
-          transactions={filteredTransactions}
-          accounts={accounts}
-          categories={categories}
-          onDelete={handleDeleteTransaction}
-          isLoading={isDataLoading}
-        />
-      </section>
+          {/* KPI 3: Gastos del Mes */}
+          <div className={styles.kpiCard}>
+            <div className={styles.kpiHeader}>
+              <span className={styles.kpiLabel}>Gastos (Este Mes)</span>
+            </div>
+            <div className={`${styles.kpiValue} ${styles.expenseValue}`}>
+              <MoneyDisplay cents={monthlyExpenseCents} size="2xl" colorCoded={false} />
+            </div>
+            <p className={styles.kpiFooter}>
+              {expenseCount} {expenseCount === 1 ? 'cargo registrado' : 'cargos registrados'} en el periodo
+            </p>
+          </div>
+        </section>
+
+        {/* Fila Intermedia: Cuentas Bancarias y Tarjeta Propuesta IA */}
+        <section className={styles.middleRow} id="accounts-section">
+          <div className={styles.accountsContainer}>
+            <div className={styles.sectionHeader}>
+              <div>
+                <h2 className={styles.sectionTitle}>Tus Cuentas Bancarias</h2>
+                <p className={styles.sectionSubtitle}>
+                  Saldos en tiempo real auditados en céntimos
+                </p>
+              </div>
+              <button
+                type="button"
+                className={styles.secondaryActionBtn}
+                onClick={() => setIsAccountModalOpen(true)}
+              >
+                <CreditCard size={14} /> + Nueva Cuenta
+              </button>
+            </div>
+
+            {accounts.length === 0 ? (
+              <div className={styles.emptyAccountsCard}>
+                <p>No tienes cuentas financieras registradas todavía.</p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={() => setIsAccountModalOpen(true)}
+                >
+                  Crear mi primera cuenta
+                </Button>
+              </div>
+            ) : (
+              <div className={styles.accountsGrid}>
+                {accounts.map((acc) => (
+                  <AccountCard key={acc.id} account={acc} />
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tarjeta de Recomendación FinanZIA AI (Human-in-the-Loop) */}
+          <div id="ai-section">
+            <RecommendationCard
+              title="Potenciar Meta 'Fondo Emergencia'"
+              description="Detectado un excedente de liquidez en tu cuenta corriente. Se sugiere programar un traspaso para maximizar rentabilidad."
+              onApprove={() => {
+                console.log('Propuesta aprobada por el usuario');
+              }}
+              onDismiss={() => {
+                console.log('Propuesta descartada por el usuario');
+              }}
+            />
+          </div>
+        </section>
+
+        {/* Sección: Histórico de Movimientos */}
+        <section className={styles.transactionsSection} id="transactions-section">
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2 className={styles.sectionTitle}>Movimientos Bancarios Recientes</h2>
+              <p className={styles.sectionSubtitle}>
+                Transacciones atómicas verificadas en base de datos
+              </p>
+            </div>
+
+            <div className={styles.filtersGroup}>
+              {(['ALL', 'EXPENSE', 'INCOME', 'TRANSFER'] as const).map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`${styles.filterBtn} ${
+                    activeFilterType === filter ? styles.filterBtnActive : ''
+                  }`}
+                  onClick={() => setActiveFilterType(filter)}
+                >
+                  {filter === 'ALL'
+                    ? 'Todos'
+                    : filter === 'EXPENSE'
+                    ? 'Gastos'
+                    : filter === 'INCOME'
+                    ? 'Ingresos'
+                    : 'Traspasos'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <TransactionTable
+            transactions={filteredTransactions}
+            accounts={accounts}
+            categories={categories}
+            onDelete={handleDeleteTransaction}
+            isLoading={isDataLoading}
+          />
+        </section>
+      </main>
+
+      {/* Barra de Navegación Inferior Móvil (64px fija) */}
+      <MobileBottomNav
+        activeTab={activeSection}
+        onTabChange={handleNavigateSection}
+      />
 
       {/* Modales Interactivos */}
       <CreateAccountModal
@@ -385,6 +520,6 @@ export default function HomePage() {
         onSuccess={() => loadData()}
         accounts={accounts}
       />
-    </main>
+    </div>
   );
 }

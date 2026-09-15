@@ -2,8 +2,6 @@
 
 import React from 'react';
 import { MoneyDisplay } from './MoneyDisplay';
-import { Badge } from '@/presentation/components/ui/Badge';
-import { Landmark, PiggyBank, CreditCard, Wallet, TrendingUp } from 'lucide-react';
 import { AccountItem, AccountType } from '@/infrastructure/api/accounts.api';
 import styles from './AccountCard.module.css';
 
@@ -13,42 +11,57 @@ interface AccountCardProps {
   onClick?: () => void;
 }
 
-const TYPE_ICONS: Record<AccountType, React.ReactNode> = {
-  CHECKING: <Landmark size={18} />,
-  SAVINGS: <PiggyBank size={18} />,
-  CREDIT_CARD: <CreditCard size={18} />,
-  CASH: <Wallet size={18} />,
-  INVESTMENT: <TrendingUp size={18} />,
+const TYPE_BADGE_STYLES: Record<AccountType, string> = {
+  CHECKING: styles.typeBadgeChecking,
+  SAVINGS: styles.typeBadgeSavings,
+  CREDIT_CARD: styles.typeBadgeCredit,
+  CASH: styles.typeBadgeOther,
+  INVESTMENT: styles.typeBadgeCredit,
 };
 
-const TYPE_NAMES: Record<AccountType, string> = {
-  CHECKING: 'Corriente',
-  SAVINGS: 'Ahorro',
-  CREDIT_CARD: 'Tarjeta',
-  CASH: 'Efectivo',
-  INVESTMENT: 'Inversión',
+const TYPE_GRADIENT_STYLES: Record<AccountType, string> = {
+  CHECKING: styles.checking,
+  SAVINGS: styles.savings,
+  CREDIT_CARD: styles.creditCard,
+  CASH: styles.cash,
+  INVESTMENT: styles.investment,
+};
+
+const TYPE_SUBTITLES: Record<AccountType, string> = {
+  CHECKING: 'EUR • Cuenta Principal',
+  SAVINGS: 'Rentabilidad activa • Ahorro',
+  CREDIT_CARD: 'Límite de crédito mensual',
+  CASH: 'Efectivo en mano',
+  INVESTMENT: 'Cartera de inversión',
 };
 
 export function AccountCard({ account, isSelected = false, onClick }: AccountCardProps) {
+  const gradientClass = TYPE_GRADIENT_STYLES[account.type] || styles.checking;
+  const badgeClass = TYPE_BADGE_STYLES[account.type] || styles.typeBadgeOther;
+  const subtitle = TYPE_SUBTITLES[account.type] || 'EUR • Saldo disponible';
+
   return (
     <div
-      className={`${styles.card} ${isSelected ? styles.selected : ''}`}
+      className={`${styles.card} ${gradientClass} ${isSelected ? styles.selected : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
       <div className={styles.topRow}>
-        <div className={styles.iconWrapper}>{TYPE_ICONS[account.type] || <Landmark size={18} />}</div>
-        <Badge variant="neutral" size="sm">
-          {TYPE_NAMES[account.type] || account.type}
-        </Badge>
+        <h3 className={styles.accountName} title={account.name}>
+          {account.name}
+        </h3>
+        <span className={`${styles.typeBadge} ${badgeClass}`}>
+          {account.type}
+        </span>
       </div>
 
-      <div className={styles.info}>
-        <h3 className={styles.accountName}>{account.name}</h3>
-        <div className={styles.balance}>
-          <MoneyDisplay cents={account.currentBalanceCents} size="md" colorCoded={false} />
-        </div>
+      <div className={styles.balanceRow}>
+        <MoneyDisplay cents={account.currentBalanceCents} size="lg" colorCoded={false} />
+      </div>
+
+      <div className={styles.cardFooter}>
+        <span>{subtitle}</span>
       </div>
     </div>
   );

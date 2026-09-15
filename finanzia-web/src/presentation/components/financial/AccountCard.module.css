@@ -1,25 +1,65 @@
 .card {
+  position: relative;
   background: var(--bg-card);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-lg);
-  padding: 1.25rem;
+  padding: 1.25rem 1.35rem;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 1rem;
   transition: all var(--transition-smooth);
+  min-height: 140px;
+  overflow: hidden;
 }
 
 .card:hover {
-  border-color: rgba(255, 255, 255, 0.18);
   transform: translateY(-2px);
-  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .card.selected {
   border-color: var(--brand-primary);
   box-shadow: 0 0 0 1px var(--brand-primary), 0 8px 24px -8px var(--brand-glow);
+}
+
+/* Gradientes sutiles por tipo de cuenta */
+.checking {
+  background: linear-gradient(135deg, rgba(30, 58, 138, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.checking:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 12px 28px -8px rgba(30, 58, 138, 0.35);
+}
+
+.savings {
+  background: linear-gradient(135deg, rgba(6, 95, 70, 0.45) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.savings:hover {
+  border-color: rgba(16, 185, 129, 0.45);
+  box-shadow: 0 12px 28px -8px rgba(16, 185, 129, 0.3);
+}
+
+.creditCard {
+  background: linear-gradient(135deg, rgba(109, 40, 217, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(139, 92, 246, 0.25);
+}
+
+.investment {
+  background: linear-gradient(135deg, rgba(67, 56, 202, 0.4) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+.cash {
+  background: linear-gradient(135deg, rgba(55, 65, 81, 0.5) 0%, rgba(15, 23, 42, 0.85) 100%);
+  border-color: rgba(107, 114, 128, 0.25);
 }
 
 .topRow {
@@ -28,34 +68,68 @@
   justify-content: space-between;
 }
 
-.iconWrapper {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--brand-primary);
-}
-
-.info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
 .accountName {
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 1.05rem;
   font-weight: 600;
   color: var(--text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
-.balance {
-  margin-top: 0.125rem;
+.typeBadge {
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+}
+
+.typeBadgeChecking {
+  background: rgba(59, 130, 246, 0.2);
+  color: #93C5FD;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.typeBadgeSavings {
+  background: rgba(16, 185, 129, 0.2);
+  color: #6EE7B7;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.typeBadgeCredit {
+  background: rgba(139, 92, 246, 0.2);
+  color: #C4B5FD;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.typeBadgeOther {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+.balanceRow {
+  margin-top: 0.5rem;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.checking .cardFooter {
+  color: #93C5FD;
+  opacity: 0.85;
+}
+
+.savings .cardFooter {
+  color: #6EE7B7;
+  opacity: 0.85;
 }

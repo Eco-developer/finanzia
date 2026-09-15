@@ -1,0 +1,171 @@
+/* Top Bar Móvil */
+.topBar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(17, 24, 39, 0.9);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--bg-card-border);
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+}
+
+.topBarBrand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topBarAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: #1F2937;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.topBarTitles {
+  display: flex;
+  flex-direction: column;
+}
+
+.topBarLogo {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.1;
+}
+
+.topBarLogo span {
+  color: var(--brand-primary);
+}
+
+.topBarSub {
+  font-size: 0.5625rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-top: 0.125rem;
+}
+
+.topBarRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.notificationBtn {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: #1F2937;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.notificationBtn:hover {
+  color: var(--text-primary);
+  background: #374151;
+}
+
+.statusDot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--brand-primary);
+  box-shadow: 0 0 6px var(--brand-primary);
+}
+
+/* Bottom Navigation Bar Fija Móvil (64px) */
+.bottomNav {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 64px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-top: 1px solid var(--bg-card-border);
+  z-index: 100;
+  align-items: center;
+  justify-content: space-around;
+  padding: 0 0.5rem;
+}
+
+.bottomNavItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  min-width: 48px;
+  min-height: 48px;
+  padding: 0.25rem 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.bottomNavIcon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.bottomNavLabel {
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.bottomNavItemActive {
+  color: var(--brand-primary);
+}
+
+.bottomNavItemActive .bottomNavLabel {
+  font-weight: 600;
+}
+
+.bottomNavItemAI {
+  color: #A78BFA;
+}
+
+.bottomNavItemAI.bottomNavItemActive {
+  color: #C4B5FD;
+}
+
+/* Visibilidad Responsive */
+@media (max-width: 1023px) {
+  .topBar {
+    display: flex;
+  }
+
+  .bottomNav {
+    display: flex;
+  }
+}

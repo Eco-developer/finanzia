@@ -39,6 +39,7 @@
 
 .dateCell {
   color: var(--text-secondary);
+  font-family: var(--font-mono);
   font-size: 0.8125rem;
   white-space: nowrap;
 }
