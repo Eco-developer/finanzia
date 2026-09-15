@@ -82,8 +82,16 @@ export default function LoginPage() {
               Crear cuenta nueva
             </Link>
           </p>
-          <div className={styles.demoCredentials}>
-            <p><strong>Usuario de prueba:</strong></p>
+          <div
+            className={styles.demoCredentials}
+            onClick={() => {
+              setEmail('tester@finanzia.local');
+              setPassword('Password123!');
+            }}
+            style={{ cursor: 'pointer' }}
+            title="Haz clic para autocompletar credenciales de prueba"
+          >
+            <p><strong>Usuario de prueba (clic para autocompletar):</strong></p>
             <code>tester@finanzia.local</code> / <code>Password123!</code>
           </div>
         </div>

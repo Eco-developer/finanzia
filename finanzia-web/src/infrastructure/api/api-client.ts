@@ -3,8 +3,30 @@
  * Incluye automáticamente credenciales para cookies HttpOnly y token Bearer si existe en localStorage.
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+function getBaseApiUrl(): string {
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (!envUrl) {
+    return 'http://localhost:3001/api';
+  }
+  const cleanUrl = envUrl.replace(/\/+$/, '');
+  return cleanUrl.endsWith('/api') ? cleanUrl : `${cleanUrl}/api`;
+}
+
+export function buildApiUrl(endpoint: string): string {
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint;
+  }
+
+  const base = getBaseApiUrl();
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (path.startsWith('/api/')) {
+    const rootBase = base.endsWith('/api') ? base.slice(0, -4) : base;
+    return `${rootBase}${path}`;
+  }
+
+  return `${base}${path}`;
+}
 
 export interface ApiResponse<T = any> {
   success: boolean;
@@ -29,9 +51,7 @@ export async function apiClient<T = any>(
   endpoint: string,
   options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
-  const url = endpoint.startsWith('http')
-    ? endpoint
-    : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  const url = buildApiUrl(endpoint);
 
   const token =
     typeof window !== 'undefined' ? localStorage.getItem('finanzia_token') : null;
@@ -56,10 +76,13 @@ export async function apiClient<T = any>(
   }
 
   if (!response.ok) {
-    const message =
+    const rawMessage =
       jsonResponse?.message ||
       jsonResponse?.error ||
       `Error HTTP ${response.status}: ${response.statusText}`;
+    const message = Array.isArray(rawMessage)
+      ? rawMessage.join('. ')
+      : String(rawMessage);
     const errorCode = jsonResponse?.errorCode || 'API_ERROR';
     const errors = jsonResponse?.errors;
 

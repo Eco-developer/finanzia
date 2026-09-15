@@ -23,11 +23,24 @@ async function bootstrap() {
   // Parser de cookies para gestión segura de JWT
   app.use(cookieParser());
 
-  // Configuración de CORS estricto
+  // Configuración de CORS con soporte para desarrollo y producción
+  const allowedOrigins = [
+    process.env.CORS_ORIGIN,
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+  ].filter(Boolean) as string[];
+
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || "http://localhost:3000",
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+        callback(null, true);
+      } else {
+        callback(new Error("No permitido por CORS"));
+      }
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept", "X-Requested-With"],
   });
 
   // Tubería global de validación y transformación de DTOs

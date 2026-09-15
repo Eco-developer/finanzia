@@ -119,16 +119,19 @@ export class AuthController {
     description: "Sesión finalizada correctamente",
   })
   async logout(@Res({ passthrough: true }) response: Response) {
+    const isProd = process.env.NODE_ENV === "production";
+    const sameSiteMode = isProd ? ("strict" as const) : ("lax" as const);
+
     response.clearCookie(COOKIE_NAME, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: sameSiteMode,
       path: "/",
     });
     response.clearCookie("auth_token", {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "strict",
+      secure: isProd,
+      sameSite: sameSiteMode,
       path: "/",
     });
 
@@ -172,10 +175,12 @@ export class AuthController {
 
   private setAuthCookie(response: Response, token: string) {
     const isProd = process.env.NODE_ENV === "production";
+    const sameSiteMode = isProd ? ("strict" as const) : ("lax" as const);
+
     response.cookie(COOKIE_NAME, token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "strict",
+      sameSite: sameSiteMode,
       maxAge: SEVEN_DAYS_MS,
       path: "/",
     });
@@ -183,7 +188,7 @@ export class AuthController {
     response.cookie("auth_token", token, {
       httpOnly: true,
       secure: isProd,
-      sameSite: "strict",
+      sameSite: sameSiteMode,
       maxAge: SEVEN_DAYS_MS,
       path: "/",
     });

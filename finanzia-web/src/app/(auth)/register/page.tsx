@@ -23,7 +23,7 @@ export default function RegisterPage() {
   const hasMinLength = password.length >= 8;
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
-  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
   const isPasswordValid = hasMinLength && hasUppercase && hasNumber && hasSpecial;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -32,6 +32,16 @@ export default function RegisterPage() {
 
     if (!firstName.trim() || !email.trim() || !password) {
       setError('Por favor completa todos los campos obligatorios');
+      return;
+    }
+
+    if (firstName.trim().length < 2) {
+      setError('El nombre debe tener entre 2 y 50 caracteres');
+      return;
+    }
+
+    if (lastName.trim() && lastName.trim().length < 2) {
+      setError('Los apellidos deben tener al menos 2 caracteres');
       return;
     }
 
