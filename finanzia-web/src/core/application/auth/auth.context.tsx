@@ -45,7 +45,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshUser();
+    let mounted = true;
+    const safetyTimer = setTimeout(() => {
+      if (mounted) {
+        setIsLoading(false);
+      }
+    }, 4000);
+
+    refreshUser().finally(() => {
+      clearTimeout(safetyTimer);
+    });
+
+    return () => {
+      mounted = false;
+      clearTimeout(safetyTimer);
+    };
   }, [refreshUser]);
 
   const login = async (dto: LoginDto) => {

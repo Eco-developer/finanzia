@@ -62,11 +62,25 @@ export async function apiClient<T = any>(
     ...(options.headers || {}),
   };
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    credentials: 'include', // Imprescindible para cookies HttpOnly
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      signal: options.signal || controller.signal,
+      headers,
+      credentials: 'include', // Imprescindible para cookies HttpOnly
+    });
+  } catch (err: any) {
+    if (err.name === 'AbortError') {
+      throw new ApiError(408, 'TIMEOUT', 'La solicitud al servidor ha superado el tiempo de espera.');
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   let jsonResponse: any;
   try {
