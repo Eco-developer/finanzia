@@ -56,7 +56,7 @@ export const ImportSummaryModal: React.FC<ImportSummaryModalProps> = ({
 
         <div className={styles.balanceBox}>
           <span className={styles.balanceLabel}>Nuevo Saldo Consolidado:</span>
-          <MoneyDisplay amountCents={result.newAccountBalanceCents} size="md" />
+          <MoneyDisplay cents={result.newAccountBalanceCents} size="md" />
         </div>
 
         <div className={styles.modalActions}>

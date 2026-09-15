@@ -3,7 +3,7 @@ import styles from './Badge.module.css';
 
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'income' | 'expense' | 'transfer' | 'warning' | 'ai' | 'neutral';
+  variant?: 'income' | 'expense' | 'transfer' | 'warning' | 'ai' | 'neutral' | 'success';
   size?: 'sm' | 'md';
 }
 
@@ -12,8 +12,9 @@ export const Badge: React.FC<BadgeProps> = ({
   variant = 'neutral',
   size = 'md'
 }) => {
+  const variantClass = styles[variant] || styles.neutral;
   return (
-    <span className={`${styles.badge} ${styles[variant]} ${styles[size]}`}>
+    <span className={`${styles.badge} ${variantClass} ${styles[size]}`}>
       <span className={styles.dot} />
       {children}
     </span>

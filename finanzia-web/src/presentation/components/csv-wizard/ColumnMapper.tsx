@@ -383,7 +383,7 @@ export const ColumnMapper: React.FC<ColumnMapperProps> = ({
                   <td>{row.date || '—'}</td>
                   <td>{row.description || '—'}</td>
                   <td style={{ textAlign: 'right' }}>
-                    <MoneyDisplay amountCents={row.amountCents} size="sm" />
+                    <MoneyDisplay cents={row.amountCents} size="sm" />
                   </td>
                 </tr>
               ))}

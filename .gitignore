@@ -15,6 +15,7 @@ build/
 out/
 storybook-static/
 coverage/
+*.tsbuildinfo
 
 # IDE & OS
 .vscode/

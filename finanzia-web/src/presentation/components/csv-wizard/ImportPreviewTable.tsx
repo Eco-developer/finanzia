@@ -268,7 +268,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                       </select>
                     </td>
                     <td style={{ textAlign: 'right' }}>
-                      <MoneyDisplay amountCents={row.amountCents} size="sm" />
+                      <MoneyDisplay cents={row.amountCents} size="sm" />
                     </td>
                   </tr>
                 );
@@ -289,7 +289,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
           <span>•</span>
           <div className={styles.summaryItem}>
             <span>Impacto neto:</span>
-            <MoneyDisplay amountCents={stats.netDeltaCents} size="sm" />
+            <MoneyDisplay cents={stats.netDeltaCents} size="sm" />
           </div>
         </div>
 

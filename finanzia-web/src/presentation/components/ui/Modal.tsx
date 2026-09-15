@@ -11,7 +11,15 @@ interface ModalProps {
   children: React.ReactNode;
   description?: string;
   maxWidth?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
+
+const sizeMaxWidthMap: Record<'sm' | 'md' | 'lg' | 'xl', string> = {
+  sm: '420px',
+  md: '520px',
+  lg: '680px',
+  xl: '840px',
+};
 
 export function Modal({
   isOpen,
@@ -19,8 +27,10 @@ export function Modal({
   title,
   children,
   description,
-  maxWidth = '520px',
+  maxWidth,
+  size = 'md',
 }: ModalProps) {
+  const effectiveMaxWidth = maxWidth || sizeMaxWidthMap[size] || '520px';
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -47,7 +57,7 @@ export function Modal({
     <div className={styles.overlay} onClick={onClose}>
       <div
         className={styles.modal}
-        style={{ maxWidth }}
+        style={{ maxWidth: effectiveMaxWidth }}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"

@@ -25,12 +25,14 @@
 }
 
 /* Variantes */
-.income {
+.income,
+.success {
   background: rgba(16, 185, 129, 0.12);
   color: var(--status-income);
   border: 1px solid rgba(16, 185, 129, 0.25);
 }
-.income .dot {
+.income .dot,
+.success .dot {
   background: var(--status-income);
 }
 
