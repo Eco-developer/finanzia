@@ -1,0 +1,200 @@
+<svg width="390" height="844" viewBox="0 0 390 844" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="m_bg" x1="0" y1="0" x2="390" y2="844" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0B0F19"/>
+      <stop offset="100%" stop-color="#070A10"/>
+    </linearGradient>
+    <linearGradient id="m_card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E293B" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.95"/>
+    </linearGradient>
+    <linearGradient id="m_n26" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1E3A8A" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="m_revolut" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#065F46" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0F172A" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="m_brand" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo Móvil -->
+  <rect width="390" height="844" fill="url(#m_bg)"/>
+
+  <!-- TOP HEADER (Barra superior) -->
+  <g id="Top_Bar" transform="translate(20, 20)">
+    <circle cx="18" cy="18" r="18" fill="#1F2937"/>
+    <text x="18" y="23" text-anchor="middle" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="12">M</text>
+    
+    <g transform="translate(46, 6)">
+      <text x="0" y="14" fill="#F9FAFB" font-family="Outfit, Inter, sans-serif" font-weight="700" font-size="18">Finan<tspan fill="#10B981">ZIA</tspan></text>
+      <text x="0" y="26" fill="#6B7280" font-family="Inter, sans-serif" font-weight="500" font-size="9">FINANZAS CON IA</text>
+    </g>
+
+    <!-- Notificaciones / Badge -->
+    <circle cx="330" cy="18" r="16" fill="#1F2937"/>
+    <text x="330" y="22" text-anchor="middle" fill="#9CA3AF" font-family="Inter, sans-serif" font-size="12">🔔</text>
+    <circle cx="340" cy="10" r="4" fill="#10B981"/>
+  </g>
+
+  <!-- TARJETA HERO: PATRIMONIO TOTAL (Mobile) -->
+  <g id="Hero_Card" transform="translate(16, 76)">
+    <rect width="358" height="150" rx="16" fill="url(#m_card)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    
+    <text x="20" y="28" fill="#9CA3AF" font-family="Inter, sans-serif" font-weight="500" font-size="11">PATRIMONIO TOTAL LÍQUIDO</text>
+    <rect x="270" y="14" width="68" height="20" rx="10" fill="rgba(16,185,129,0.15)"/>
+    <text x="304" y="28" text-anchor="middle" fill="#10B981" font-family="Inter, sans-serif" font-weight="600" font-size="9">EN VIVO</text>
+
+    <text x="20" y="74" fill="#F9FAFB" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="28">12.450,50 €</text>
+
+    <!-- Desglose Mensual en Mini Columnas -->
+    <line x1="20" y1="94" x2="338" y2="94" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+    
+    <g transform="translate(20, 106)">
+      <text x="0" y="12" fill="#6B7280" font-family="Inter, sans-serif" font-size="10">Ingresos Mes</text>
+      <text x="0" y="30" fill="#10B981" font-family="'JetBrains Mono', monospace" font-weight="600" font-size="14">+2.340 €</text>
+    </g>
+
+    <g transform="translate(180, 106)">
+      <text x="0" y="12" fill="#6B7280" font-family="Inter, sans-serif" font-size="10">Gastos Mes</text>
+      <text x="0" y="30" fill="#F43F5E" font-family="'JetBrains Mono', monospace" font-weight="600" font-size="14">-1.120 €</text>
+    </g>
+  </g>
+
+  <!-- ACCIONES RÁPIDAS CIRCULARES -->
+  <g id="Quick_Actions" transform="translate(16, 242)">
+    <!-- Acción 1: + Movimiento -->
+    <g transform="translate(14, 0)">
+      <circle cx="28" cy="28" r="26" fill="url(#m_brand)"/>
+      <text x="28" y="34" text-anchor="middle" fill="#0B0F19" font-family="Inter, sans-serif" font-weight="700" font-size="20">+</text>
+      <text x="28" y="70" text-anchor="middle" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="500" font-size="11">Gasto</text>
+    </g>
+
+    <!-- Acción 2: Transferir -->
+    <g transform="translate(100, 0)">
+      <circle cx="28" cy="28" r="26" fill="#1F2937" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <text x="28" y="34" text-anchor="middle" fill="#9CA3AF" font-family="Inter, sans-serif" font-size="15">↔</text>
+      <text x="28" y="70" text-anchor="middle" fill="#9CA3AF" font-family="Inter, sans-serif" font-weight="500" font-size="11">Transferir</text>
+    </g>
+
+    <!-- Acción 3: Importar CSV -->
+    <g transform="translate(186, 0)">
+      <circle cx="28" cy="28" r="26" fill="#1F2937" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+      <text x="28" y="34" text-anchor="middle" fill="#9CA3AF" font-family="Inter, sans-serif" font-size="15">↑</text>
+      <text x="28" y="70" text-anchor="middle" fill="#9CA3AF" font-family="Inter, sans-serif" font-weight="500" font-size="11">Subir CSV</text>
+    </g>
+
+    <!-- Acción 4: AI Advisor -->
+    <g transform="translate(272, 0)">
+      <circle cx="28" cy="28" r="26" fill="rgba(139,92,246,0.2)" stroke="rgba(139,92,246,0.5)" stroke-width="1"/>
+      <text x="28" y="34" text-anchor="middle" fill="#C4B5FD" font-family="Inter, sans-serif" font-size="15">⚡</text>
+      <text x="28" y="70" text-anchor="middle" fill="#C4B5FD" font-family="Inter, sans-serif" font-weight="600" font-size="11">AI Advisor</text>
+    </g>
+  </g>
+
+  <!-- CUENTAS BANCARIAS (Scroll Horizontal en Mobile) -->
+  <g id="Accounts_Section" transform="translate(16, 336)">
+    <text x="4" y="16" fill="#F9FAFB" font-family="Outfit, Inter, sans-serif" font-weight="600" font-size="15">Tus Cuentas</text>
+    <text x="350" y="16" text-anchor="end" fill="#10B981" font-family="Inter, sans-serif" font-weight="500" font-size="12">Ver todas</text>
+
+    <!-- Tarjeta Cuenta N26 (Compacta) -->
+    <g transform="translate(0, 26)">
+      <rect width="172" height="96" rx="12" fill="url(#m_n26)" stroke="rgba(59,130,246,0.25)" stroke-width="1"/>
+      <text x="14" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="12">N26 Principal</text>
+      <text x="14" y="40" fill="#93C5FD" font-family="Inter, sans-serif" font-size="10">Corriente</text>
+      <text x="14" y="76" fill="#F9FAFB" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="16">4.890,15 €</text>
+    </g>
+
+    <!-- Tarjeta Cuenta Revolut (Compacta) -->
+    <g transform="translate(184, 26)">
+      <rect width="174" height="96" rx="12" fill="url(#m_revolut)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+      <text x="14" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="12">Revolut Ahorro</text>
+      <text x="14" y="40" fill="#6EE7B7" font-family="Inter, sans-serif" font-size="10">3.10% TAE</text>
+      <text x="14" y="76" fill="#F9FAFB" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="16">7.560,35 €</text>
+    </g>
+  </g>
+
+  <!-- MOVIMIENTOS RECIENTES (Lista Táctil) -->
+  <g id="Recent_List" transform="translate(16, 478)">
+    <text x="4" y="16" fill="#F9FAFB" font-family="Outfit, Inter, sans-serif" font-weight="600" font-size="15">Últimos Movimientos</text>
+    
+    <!-- Fila 1: Nómina -->
+    <g transform="translate(0, 28)">
+      <rect width="358" height="54" rx="10" fill="url(#m_card)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <circle cx="28" cy="27" r="16" fill="rgba(16,185,129,0.15)"/>
+      <text x="28" y="32" text-anchor="middle" fill="#10B981" font-family="Inter, sans-serif" font-size="12">💰</text>
+      <text x="56" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="13">Nómina Tecnológica</text>
+      <text x="56" y="40" fill="#6B7280" font-family="Inter, sans-serif" font-size="11">Hoy, 15 Sep • N26</text>
+      <text x="340" y="33" text-anchor="end" fill="#10B981" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="13">+2.850,00 €</text>
+    </g>
+
+    <!-- Fila 2: Alquiler -->
+    <g transform="translate(0, 90)">
+      <rect width="358" height="54" rx="10" fill="url(#m_card)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <circle cx="28" cy="27" r="16" fill="rgba(244,63,94,0.15)"/>
+      <text x="28" y="32" text-anchor="middle" fill="#F43F5E" font-family="Inter, sans-serif" font-size="12">🏠</text>
+      <text x="56" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="13">Alquiler Vivienda</text>
+      <text x="56" y="40" fill="#6B7280" font-family="Inter, sans-serif" font-size="11">14 Sep • N26</text>
+      <text x="340" y="33" text-anchor="end" fill="#F43F5E" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="13">-850,00 €</text>
+    </g>
+
+    <!-- Fila 3: Supermercado -->
+    <g transform="translate(0, 152)">
+      <rect width="358" height="54" rx="10" fill="url(#m_card)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <circle cx="28" cy="27" r="16" fill="rgba(244,63,94,0.15)"/>
+      <text x="28" y="32" text-anchor="middle" fill="#F43F5E" font-family="Inter, sans-serif" font-size="12">🛒</text>
+      <text x="56" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="13">Mercadona</text>
+      <text x="56" y="40" fill="#6B7280" font-family="Inter, sans-serif" font-size="11">13 Sep • N26</text>
+      <text x="340" y="33" text-anchor="end" fill="#F43F5E" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="13">-64,30 €</text>
+    </g>
+
+    <!-- Fila 4: Traspaso -->
+    <g transform="translate(0, 214)">
+      <rect width="358" height="54" rx="10" fill="url(#m_card)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      <circle cx="28" cy="27" r="16" fill="rgba(59,130,246,0.15)"/>
+      <text x="28" y="32" text-anchor="middle" fill="#60A5FA" font-family="Inter, sans-serif" font-size="12">↔</text>
+      <text x="56" y="24" fill="#F9FAFB" font-family="Inter, sans-serif" font-weight="600" font-size="13">Aporte Ahorro</text>
+      <text x="56" y="40" fill="#6B7280" font-family="Inter, sans-serif" font-size="11">12 Sep • N26 → Revolut</text>
+      <text x="340" y="33" text-anchor="end" fill="#60A5FA" font-family="'JetBrains Mono', monospace" font-weight="700" font-size="13">300,00 €</text>
+    </g>
+  </g>
+
+  <!-- BOTTOM NAVIGATION BAR (Fija en Mobile, 64px de altura) -->
+  <g id="Bottom_Navigation" transform="translate(0, 780)">
+    <rect width="390" height="64" fill="#111827" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    
+    <!-- Tab 1: Home (Activo) -->
+    <g transform="translate(20, 12)">
+      <text x="20" y="20" text-anchor="middle" font-size="18">📊</text>
+      <text x="20" y="36" text-anchor="middle" fill="#10B981" font-family="Inter, sans-serif" font-weight="600" font-size="10">Inicio</text>
+    </g>
+
+    <!-- Tab 2: Movimientos -->
+    <g transform="translate(95, 12)">
+      <text x="20" y="20" text-anchor="middle" font-size="18">↕️</text>
+      <text x="20" y="36" text-anchor="middle" fill="#6B7280" font-family="Inter, sans-serif" font-weight="500" font-size="10">Movimientos</text>
+    </g>
+
+    <!-- Tab 3: Presupuestos -->
+    <g transform="translate(175, 12)">
+      <text x="20" y="20" text-anchor="middle" font-size="18">🎯</text>
+      <text x="20" y="36" text-anchor="middle" fill="#6B7280" font-family="Inter, sans-serif" font-weight="500" font-size="10">Presupuestos</text>
+    </g>
+
+    <!-- Tab 4: AI Advisor -->
+    <g transform="translate(255, 12)">
+      <text x="20" y="20" text-anchor="middle" font-size="18">🤖</text>
+      <text x="20" y="36" text-anchor="middle" fill="#A78BFA" font-family="Inter, sans-serif" font-weight="600" font-size="10">AI Advisor</text>
+    </g>
+
+    <!-- Tab 5: Perfil -->
+    <g transform="translate(330, 12)">
+      <text x="15" y="20" text-anchor="middle" font-size="18">👤</text>
+      <text x="15" y="36" text-anchor="middle" fill="#6B7280" font-family="Inter, sans-serif" font-weight="500" font-size="10">Ajustes</text>
+    </g>
+  </g>
+</svg>

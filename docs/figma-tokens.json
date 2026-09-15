@@ -1,0 +1,123 @@
+{
+  "version": "1.0.0",
+  "name": "FinanZIA Design Tokens",
+  "description": "Tokens de diseño oficiales de FinanZIA listos para importar en Figma mediante Tokens Studio o Figma Variables",
+  "color": {
+    "bg": {
+      "primary": { "value": "#0B0F19", "type": "color", "description": "Fondo principal de la app" },
+      "surface": { "value": "#111827", "type": "color", "description": "Superficie de paneles y modales" },
+      "surfaceHover": { "value": "#1F2937", "type": "color", "description": "Hover en filas y cards" },
+      "card": { "value": "rgba(17, 24, 39, 0.75)", "type": "color", "description": "Glassmorphism card background" },
+      "cardBorder": { "value": "rgba(255, 255, 255, 0.08)", "type": "color", "description": "Borde de tarjeta sutil" },
+      "cardBorderHover": { "value": "rgba(255, 255, 255, 0.18)", "type": "color", "description": "Borde activo en hover" }
+    },
+    "brand": {
+      "primary": { "value": "#10B981", "type": "color", "description": "Verde esmeralda - Acento principal" },
+      "primaryHover": { "value": "#059669", "type": "color", "description": "Verde oscuro hover" },
+      "glow": { "value": "rgba(16, 185, 129, 0.25)", "type": "color", "description": "Halo luminoso esmeralda" }
+    },
+    "ai": {
+      "accent": { "value": "#8B5CF6", "type": "color", "description": "Violeta de FinanZIA AI Advisor" },
+      "glow": { "value": "rgba(139, 92, 246, 0.25)", "type": "color", "description": "Halo luminoso de IA" }
+    },
+    "status": {
+      "income": { "value": "#10B981", "type": "color", "description": "Ingresos / Crecimiento" },
+      "expense": { "value": "#F43F5E", "type": "color", "description": "Gastos / Salidas" },
+      "transfer": { "value": "#3B82F6", "type": "color", "description": "Transferencias entre cuentas" },
+      "warning": { "value": "#F59E0B", "type": "color", "description": "Alerta presupuestaria (80%)" },
+      "danger": { "value": "#EF4444", "type": "color", "description": "Presupuesto desbordado (>100%)" }
+    },
+    "text": {
+      "primary": { "value": "#F9FAFB", "type": "color", "description": "Texto principal alta legibilidad" },
+      "secondary": { "value": "#9CA3AF", "type": "color", "description": "Texto secundario" },
+      "muted": { "value": "#6B7280", "type": "color", "description": "Texto atenuado y metadatos" },
+      "disabled": { "value": "#4B5563", "type": "color", "description": "Texto deshabilitado" }
+    }
+  },
+  "typography": {
+    "fontFamilies": {
+      "display": { "value": "Outfit", "type": "fontFamilies" },
+      "body": { "value": "Inter", "type": "fontFamilies" },
+      "mono": { "value": "JetBrains Mono", "type": "fontFamilies" }
+    },
+    "fontSizes": {
+      "caption": { "value": "11px", "type": "fontSizes" },
+      "small": { "value": "12px", "type": "fontSizes" },
+      "base": { "value": "14px", "type": "fontSizes" },
+      "large": { "value": "16px", "type": "fontSizes" },
+      "h3": { "value": "18px", "type": "fontSizes" },
+      "h2": { "value": "22px", "type": "fontSizes" },
+      "h1": { "value": "28px", "type": "fontSizes" },
+      "display": { "value": "36px", "type": "fontSizes" }
+    },
+    "fontWeights": {
+      "regular": { "value": "400", "type": "fontWeights" },
+      "medium": { "value": "500", "type": "fontWeights" },
+      "semiBold": { "value": "600", "type": "fontWeights" },
+      "bold": { "value": "700", "type": "fontWeights" }
+    }
+  },
+  "spacing": {
+    "space-1": { "value": "4px", "type": "spacing" },
+    "space-2": { "value": "8px", "type": "spacing" },
+    "space-3": { "value": "12px", "type": "spacing" },
+    "space-4": { "value": "16px", "type": "spacing" },
+    "space-6": { "value": "24px", "type": "spacing" },
+    "space-8": { "value": "32px", "type": "spacing" },
+    "space-12": { "value": "48px", "type": "spacing" },
+    "space-16": { "value": "64px", "type": "spacing" }
+  },
+  "borderRadius": {
+    "sm": { "value": "6px", "type": "borderRadius" },
+    "md": { "value": "10px", "type": "borderRadius" },
+    "lg": { "value": "16px", "type": "borderRadius" },
+    "xl": { "value": "24px", "type": "borderRadius" },
+    "full": { "value": "9999px", "type": "borderRadius" }
+  },
+  "boxShadow": {
+    "card": {
+      "value": {
+        "x": 0,
+        "y": 8,
+        "blur": 32,
+        "spread": 0,
+        "color": "rgba(0, 0, 0, 0.37)",
+        "type": "dropShadow"
+      },
+      "type": "boxShadow"
+    },
+    "modal": {
+      "value": {
+        "x": 0,
+        "y": 16,
+        "blur": 48,
+        "spread": 0,
+        "color": "rgba(0, 0, 0, 0.55)",
+        "type": "dropShadow"
+      },
+      "type": "boxShadow"
+    },
+    "brandGlow": {
+      "value": {
+        "x": 0,
+        "y": 0,
+        "blur": 20,
+        "spread": 2,
+        "color": "rgba(16, 185, 129, 0.20)",
+        "type": "dropShadow"
+      },
+      "type": "boxShadow"
+    },
+    "aiGlow": {
+      "value": {
+        "x": 0,
+        "y": 0,
+        "blur": 24,
+        "spread": 3,
+        "color": "rgba(139, 92, 246, 0.22)",
+        "type": "dropShadow"
+      },
+      "type": "boxShadow"
+    }
+  }
+}
