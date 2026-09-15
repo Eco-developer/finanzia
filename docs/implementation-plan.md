@@ -2,7 +2,7 @@
 
 FinanZIA es una plataforma web de finanzas personales asistida por agentes de inteligencia artificial deterministas y verificables. El objetivo central es permitir al usuario registrar, importar, categorizar y analizar sus ingresos y gastos, gestionar presupuestos y metas de ahorro, e interactuar con un asistente financiero inteligente que opera bajo el principio de **cero alucinaciones**, con herramientas backend para cálculos y aprobación humana obligatoria (*human-in-the-loop*) antes de aplicar cualquier cambio o recomendación.
 
-El desarrollo se estructura con base en el marco de Google Antigravity mediante cuatro roles especializados: **Análisis y Diseño**, **Developer**, **QA** y **DevOps**. Todo el ciclo actual se ejecuta **estrictamente en entorno local**, planificando y documentando el despliegue futuro en Microsoft Azure sin incurrir en costes cloud ni despliegues prematuros.
+El desarrollo se estructura con base en el marco de Google Antigravity mediante cinco roles especializados: **Análisis y Diseño**, **UI/UX Designer**, **Developer**, **QA** y **DevOps**. Todo el ciclo actual se ejecuta **estrictamente en entorno local**, planificando y documentando el despliegue futuro en Microsoft Azure sin incurrir en costes cloud ni despliegues prematuros.
 
 ---
 
