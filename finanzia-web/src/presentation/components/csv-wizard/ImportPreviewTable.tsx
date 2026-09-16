@@ -62,10 +62,10 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
       description: item.description,
       amountCents: item.amountCents,
       hash: item.hash,
-      isDuplicate: item.preview.isDuplicate,
+      isDuplicate: item.preview?.isDuplicate ?? false,
       // Duplicados desmarcados por defecto conforme a CA-03.4
-      selected: !item.preview.isDuplicate,
-      categoryId: item.preview.suggestedCategoryId || null,
+      selected: !item.preview?.isDuplicate,
+      categoryId: item.preview?.suggestedCategoryId || null,
     })),
   );
 
@@ -129,7 +129,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
         date: r.date,
         description: r.description,
         amountCents: r.amountCents,
-        categoryId: r.categoryId,
+        categoryId: r.categoryId && r.categoryId.trim() !== '' ? r.categoryId : undefined,
         deduplicationHash: r.hash,
       }));
 

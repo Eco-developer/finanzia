@@ -362,7 +362,14 @@ export default function ImportsPage() {
                 <ImportPreviewTable
                   initialRows={preparedRows.map((row, idx) => ({
                     ...row,
-                    preview: previewData.preview[idx],
+                    preview:
+                      previewData.preview?.find((p) => p.rowId === row.rowId) ||
+                      previewData.preview?.[idx] || {
+                        rowId: row.rowId,
+                        isDuplicate: false,
+                        suggestedCategoryId: null,
+                        suggestedCategoryName: null,
+                      },
                   }))}
                   categories={categories}
                   onCommit={handleCommit}

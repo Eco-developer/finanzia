@@ -68,8 +68,12 @@ export class ImportsController {
   async preview(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: PreviewImportDto,
-  ): Promise<PreviewImportResponseDto> {
-    return this.importsService.previewImport(user.id, dto);
+  ) {
+    const data = await this.importsService.previewImport(user.id, dto);
+    return {
+      success: true,
+      data,
+    };
   }
 
   @Post("commit")
@@ -99,8 +103,12 @@ export class ImportsController {
   async commit(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: CommitImportDto,
-  ): Promise<CommitImportResponseDto> {
-    return this.importsService.commitImport(user.id, dto);
+  ) {
+    const data = await this.importsService.commitImport(user.id, dto);
+    return {
+      success: true,
+      data,
+    };
   }
 
   @Get("templates")
@@ -116,8 +124,12 @@ export class ImportsController {
   })
   async getTemplates(
     @CurrentUser() user: AuthenticatedUser,
-  ): Promise<CsvTemplateResponseDto[]> {
-    return this.importsService.getTemplates(user.id);
+  ) {
+    const data = await this.importsService.getTemplates(user.id);
+    return {
+      success: true,
+      data,
+    };
   }
 
   @Post("templates")
@@ -135,8 +147,12 @@ export class ImportsController {
   async saveTemplate(
     @CurrentUser() user: AuthenticatedUser,
     @Body() dto: SaveCsvTemplateDto,
-  ): Promise<CsvTemplateResponseDto> {
-    return this.importsService.saveTemplate(user.id, dto);
+  ) {
+    const data = await this.importsService.saveTemplate(user.id, dto);
+    return {
+      success: true,
+      data,
+    };
   }
 
   @Delete("templates/:id")

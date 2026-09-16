@@ -7,6 +7,7 @@ import {
   IsInt,
   IsNotEmpty,
   IsOptional,
+  ValidateIf,
 } from "class-validator";
 import { Type } from "class-transformer";
 
@@ -39,10 +40,12 @@ export class CommitRowDto {
   @ApiPropertyOptional({
     description: "ID opcional de categoría asignada a la transacción",
     example: "b1f3c7e4-9876-4abc-9999-1234567890ab",
+    nullable: true,
   })
   @IsOptional()
+  @ValidateIf((_, val) => val !== null && val !== undefined && val !== "")
   @IsUUID("4")
-  categoryId?: string;
+  categoryId?: string | null;
 
   @ApiPropertyOptional({
     description: "Hash SHA-256 para prevenir inserciones duplicadas",

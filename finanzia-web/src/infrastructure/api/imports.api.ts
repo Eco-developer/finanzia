@@ -82,7 +82,7 @@ export const importsApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return res.data;
+    return res.data || (res as unknown as PreviewImportResult);
   },
 
   async commitImport(payload: CommitImportPayload): Promise<CommitImportResult> {
@@ -90,12 +90,12 @@ export const importsApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return res.data;
+    return res.data || (res as unknown as CommitImportResult);
   },
 
   async getTemplates(): Promise<CsvTemplateItem[]> {
     const res = await apiClient<CsvTemplateItem[]>('/imports/templates');
-    return res.data || [];
+    return res.data || (Array.isArray(res) ? res : []);
   },
 
   async saveTemplate(payload: SaveTemplatePayload): Promise<CsvTemplateItem> {
@@ -103,7 +103,7 @@ export const importsApi = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
-    return res.data;
+    return res.data || (res as unknown as CsvTemplateItem);
   },
 
   async deleteTemplate(id: string): Promise<boolean> {
