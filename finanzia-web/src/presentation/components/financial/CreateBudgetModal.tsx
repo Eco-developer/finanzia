@@ -126,7 +126,7 @@ export function CreateBudgetModal({
           id="budget-category"
           label="Categoría de Gasto"
           value={categoryId}
-          onChange={(val) => setCategoryId(val)}
+          onChange={(e) => setCategoryId(e.target.value)}
           options={categoryOptions}
           disabled={!!editingItem || isLoading}
         />

@@ -3,6 +3,7 @@
 import React from 'react';
 import { BudgetPacingItem } from '@/infrastructure/api/budgets.api';
 import { MoneyDisplay } from './MoneyDisplay';
+import { RadixProgress } from '../ui/RadixProgress';
 import styles from './BudgetProgressBar.module.css';
 
 export interface BudgetProgressBarProps {
@@ -67,15 +68,13 @@ export const BudgetProgressBar: React.FC<BudgetProgressBarProps> = ({
         </span>
       </div>
 
-      {/* Barra de progreso */}
+      {/* Barra de progreso accesible con Radix UI */}
       <div className={styles.progressTrack}>
-        <div
-          className={`${styles.progressBar} ${progressBarClass}`}
-          style={{ width: `${clampedPercentage}%` }}
-          role="progressbar"
-          aria-valuenow={percentageUsed}
-          aria-valuemin={0}
-          aria-valuemax={100}
+        <RadixProgress
+          value={clampedPercentage}
+          max={100}
+          size="md"
+          indicatorClassName={`${styles.progressBar} ${progressBarClass}`}
         />
       </div>
 

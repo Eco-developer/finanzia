@@ -1,0 +1,81 @@
+.content {
+  min-width: 180px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-md);
+  padding: 0.35rem;
+  box-shadow: var(--shadow-card);
+  z-index: 1500;
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform, opacity;
+}
+
+.content[data-state='open'] {
+  animation-name: slideDownFade;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.825rem;
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.item[data-highlighted] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--brand-primary);
+}
+
+.item[data-disabled] {
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.danger {
+  color: #ef4444;
+}
+
+.danger[data-highlighted] {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.label {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.725rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.separator {
+  height: 1px;
+  background: var(--bg-card-border);
+  margin: 0.3rem 0;
+}
+
+.inset {
+  padding-left: 2rem;
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

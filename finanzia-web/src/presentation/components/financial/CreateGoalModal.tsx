@@ -83,7 +83,7 @@ export function CreateGoalModal({
         await goalsApi.updateGoal(editingGoal.id, {
           name: name.trim(),
           targetAmountCents,
-          targetDate: targetDate ? new Date(targetDate).toISOString() : null,
+          targetDate: targetDate ? new Date(targetDate).toISOString() : undefined,
         });
       } else {
         await goalsApi.createGoal({

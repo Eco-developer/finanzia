@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useEffect, useCallback } from 'react';
+import React from 'react';
+import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import styles from './Modal.module.css';
 
-interface ModalProps {
+export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
@@ -31,57 +32,41 @@ export function Modal({
   size = 'md',
 }: ModalProps) {
   const effectiveMaxWidth = maxWidth || sizeMaxWidthMap[size] || '520px';
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    },
-    [onClose],
-  );
-
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, handleKeyDown]);
-
-  if (!isOpen) return null;
 
   return (
-    <div className={styles.overlay} onClick={onClose}>
-      <div
-        className={styles.modal}
-        style={{ maxWidth: effectiveMaxWidth }}
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
-        <div className={styles.header}>
-          <div>
-            <h2 id="modal-title" className={styles.title}>
-              {title}
-            </h2>
-            {description && <p className={styles.description}>{description}</p>}
+    <DialogPrimitive.Root open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className={styles.overlay} />
+        <DialogPrimitive.Content
+          className={styles.modal}
+          style={{ maxWidth: effectiveMaxWidth }}
+          {...(!description ? { 'aria-describedby': undefined } : {})}
+        >
+          <div className={styles.header}>
+            <div>
+              <DialogPrimitive.Title className={styles.title}>
+                {title}
+              </DialogPrimitive.Title>
+              {description && (
+                <DialogPrimitive.Description className={styles.description}>
+                  {description}
+                </DialogPrimitive.Description>
+              )}
+            </div>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                className={styles.closeBtn}
+                aria-label="Cerrar modal"
+              >
+                <X size={18} />
+              </button>
+            </DialogPrimitive.Close>
           </div>
-          <button
-            type="button"
-            className={styles.closeBtn}
-            onClick={onClose}
-            aria-label="Cerrar modal"
-          >
-            <X size={18} />
-          </button>
-        </div>
 
-        <div className={styles.body}>{children}</div>
-      </div>
-    </div>
+          <div className={styles.body}>{children}</div>
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   );
 }

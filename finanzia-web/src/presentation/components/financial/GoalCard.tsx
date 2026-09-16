@@ -3,6 +3,7 @@
 import React from 'react';
 import { GoalItem } from '@/infrastructure/api/goals.api';
 import { MoneyDisplay } from './MoneyDisplay';
+import { RadixProgress } from '../ui/RadixProgress';
 import { PlusCircle, Calendar, Trophy, Sparkles } from 'lucide-react';
 import styles from './GoalCard.module.css';
 
@@ -80,15 +81,13 @@ export const GoalCard: React.FC<GoalCardProps> = ({
         </div>
 
         <div className={styles.progressTrack}>
-          <div
-            className={`${styles.progressBar} ${
+          <RadixProgress
+            value={Math.min(100, progressPercentage)}
+            max={100}
+            size="md"
+            indicatorClassName={`${styles.progressBar} ${
               isCompleted ? styles.progressCompleted : ''
             }`}
-            style={{ width: `${Math.min(100, progressPercentage)}%` }}
-            role="progressbar"
-            aria-valuenow={progressPercentage}
-            aria-valuemin={0}
-            aria-valuemax={100}
           />
         </div>
 
