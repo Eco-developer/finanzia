@@ -52,7 +52,7 @@ export function CreateBudgetModal({
       setAlertThresholdPct(80);
     }
     setError(null);
-  }, [editingItem, isOpen, initialMonth, initialYear]);
+  }, [editingItem, isOpen, initialMonth, initialYear, expenseCategories]);
 
   const categoryOptions = expenseCategories.map((c) => ({
     value: c.id,

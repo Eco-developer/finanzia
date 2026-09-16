@@ -175,19 +175,37 @@
 }
 
 .categorySelect {
-  background: rgba(17, 24, 39, 0.9);
+  background: rgba(17, 24, 39, 0.95);
   border: 1px solid var(--bg-card-border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  padding: 0.35rem 0.65rem;
+  padding: 0.4rem 0.65rem;
   font-size: 0.8rem;
   outline: none;
-  max-width: 180px;
+  max-width: 220px;
   cursor: pointer;
+  transition: var(--transition-base);
 }
 
 .categorySelect:focus {
   border-color: var(--brand-primary);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+}
+
+.categorySelect optgroup {
+  background: #0f172a;
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 6px 4px;
+}
+
+.categorySelect option {
+  background: #1e293b;
+  color: #f8fafc;
+  font-weight: 400;
+  font-size: 0.8rem;
+  padding: 4px 8px;
 }
 
 /* Footer / Actions */

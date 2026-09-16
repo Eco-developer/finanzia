@@ -27,6 +27,14 @@ export interface EnrichedRowItem {
   categoryId: string | null;
 }
 
+export interface CategorySelectItem {
+  id: string;
+  name: string;
+  type: string;
+  parentId?: string | null;
+  icon?: string | null;
+}
+
 export interface ImportPreviewTableProps {
   initialRows: Array<{
     rowId: string;
@@ -36,7 +44,7 @@ export interface ImportPreviewTableProps {
     hash: string;
     preview: RowPreviewResult;
   }>;
-  categories: Array<{ id: string; name: string; type: string }>;
+  categories: CategorySelectItem[];
   onCommit: (selectedRows: Array<{
     date: string;
     description: string;
@@ -82,6 +90,52 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
 
     return { total, duplicates, newItems, selectedCount, netDeltaCents };
   }, [rows]);
+
+  // Organizar categorías por tipo (Gastos vs Ingresos) con jerarquía visual
+  const { expenseCategories, incomeCategories } = useMemo(() => {
+    const buildCategoryTree = (type: 'EXPENSE' | 'INCOME') => {
+      const typeCats = categories.filter((c) => c.type === type);
+      const rootCats = typeCats.filter((c) => !c.parentId);
+      const childCats = typeCats.filter((c) => c.parentId);
+
+      const result: Array<{
+        category: CategorySelectItem;
+        formattedName: string;
+      }> = [];
+
+      rootCats.forEach((root) => {
+        result.push({
+          category: root,
+          formattedName: `${root.icon ? root.icon + ' ' : ''}${root.name}`,
+        });
+        const children = childCats.filter((ch) => ch.parentId === root.id);
+        children.forEach((child) => {
+          result.push({
+            category: child,
+            formattedName: `  ↳ ${child.icon ? child.icon + ' ' : ''}${child.name}`,
+          });
+        });
+      });
+
+      // Incluir categorías huerfanas si existieran
+      const listedIds = new Set(result.map((r) => r.category.id));
+      typeCats
+        .filter((c) => !listedIds.has(c.id))
+        .forEach((orphan) => {
+          result.push({
+            category: orphan,
+            formattedName: `${orphan.icon ? orphan.icon + ' ' : ''}${orphan.name}`,
+          });
+        });
+
+      return result;
+    };
+
+    return {
+      expenseCategories: buildCategoryTree('EXPENSE'),
+      incomeCategories: buildCategoryTree('INCOME'),
+    };
+  }, [categories]);
 
   // Manejo de selecciones
   const toggleRow = (rowId: string) => {
@@ -260,11 +314,24 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                         onChange={(e) => handleCategoryChange(row.rowId, e.target.value)}
                       >
                         <option value="">-- Sin categoría --</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name}
-                          </option>
-                        ))}
+                        {expenseCategories.length > 0 && (
+                          <optgroup label="🔴 GASTOS">
+                            {expenseCategories.map(({ category, formattedName }) => (
+                              <option key={category.id} value={category.id}>
+                                {formattedName}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        {incomeCategories.length > 0 && (
+                          <optgroup label="🟢 INGRESOS">
+                            {incomeCategories.map(({ category, formattedName }) => (
+                              <option key={category.id} value={category.id}>
+                                {formattedName}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
                       </select>
                     </td>
                     <td style={{ textAlign: 'right' }}>
