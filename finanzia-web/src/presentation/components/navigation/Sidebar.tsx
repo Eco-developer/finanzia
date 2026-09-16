@@ -41,8 +41,8 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
 
         {/* Navigation Menu */}
         <nav className={styles.navMenu}>
-          <button
-            type="button"
+          <Link
+            href="/"
             className={`${styles.navItem} ${
               activeSection === 'dashboard' ? styles.navItemActive : ''
             }`}
@@ -50,7 +50,7 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
           >
             <span className={styles.navIcon}>📊</span>
             <span>Dashboard</span>
-          </button>
+          </Link>
 
           <button
             type="button"
@@ -74,8 +74,8 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
             <span>Transacciones</span>
           </button>
 
-          <button
-            type="button"
+          <Link
+            href="/budgets"
             className={`${styles.navItem} ${
               activeSection === 'budgets' ? styles.navItemActive : ''
             }`}
@@ -83,10 +83,10 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
           >
             <span className={styles.navIcon}>🎯</span>
             <span>Presupuestos</span>
-          </button>
+          </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/goals"
             className={`${styles.navItem} ${
               activeSection === 'goals' ? styles.navItemActive : ''
             }`}
@@ -94,7 +94,7 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
           >
             <span className={styles.navIcon}>🏆</span>
             <span>Metas de Ahorro</span>
-          </button>
+          </Link>
 
           <Link href="/imports" className={styles.navItem}>
             <span className={styles.navIcon}>📄</span>

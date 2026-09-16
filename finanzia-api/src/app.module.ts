@@ -12,6 +12,8 @@ import { PrismaAccountRepository } from "./infrastructure/database/repositories/
 import { PrismaCategoryRepository } from "./infrastructure/database/repositories/prisma-category.repository";
 import { PrismaTransactionRepository } from "./infrastructure/database/repositories/prisma-transaction.repository";
 import { PrismaCsvTemplateRepository } from "./infrastructure/database/repositories/prisma-csv-template.repository";
+import { PrismaBudgetRepository } from "./infrastructure/database/repositories/prisma-budget.repository";
+import { PrismaSavingsGoalRepository } from "./infrastructure/database/repositories/prisma-savings-goal.repository";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
 
@@ -21,6 +23,8 @@ import { AccountsService } from "./core/application/accounts/accounts.service";
 import { CategoriesService } from "./core/application/categories/categories.service";
 import { TransactionsService } from "./core/application/transactions/transactions.service";
 import { ImportsService } from "./core/application/imports/imports.service";
+import { BudgetsService } from "./core/application/budgets/budgets.service";
+import { GoalsService } from "./core/application/goals/goals.service";
 
 // Presentation
 import { HealthController } from "./presentation/controllers/health.controller";
@@ -29,6 +33,8 @@ import { AccountsController } from "./presentation/controllers/accounts.controll
 import { CategoriesController } from "./presentation/controllers/categories.controller";
 import { TransactionsController } from "./presentation/controllers/transactions.controller";
 import { ImportsController } from "./presentation/controllers/imports.controller";
+import { BudgetsController } from "./presentation/controllers/budgets.controller";
+import { GoalsController } from "./presentation/controllers/goals.controller";
 import { GlobalExceptionFilter } from "./presentation/filters/global-exception.filter";
 
 @Module({
@@ -64,6 +70,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     CategoriesController,
     TransactionsController,
     ImportsController,
+    BudgetsController,
+    GoalsController,
   ],
   providers: [
     PrismaService,
@@ -72,6 +80,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaCategoryRepository,
     PrismaTransactionRepository,
     PrismaCsvTemplateRepository,
+    PrismaBudgetRepository,
+    PrismaSavingsGoalRepository,
     HashingService,
     JwtStrategy,
     AuthService,
@@ -79,6 +89,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     CategoriesService,
     TransactionsService,
     ImportsService,
+    BudgetsService,
+    GoalsService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
@@ -91,11 +103,15 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaCategoryRepository,
     PrismaTransactionRepository,
     PrismaCsvTemplateRepository,
+    PrismaBudgetRepository,
+    PrismaSavingsGoalRepository,
     AuthService,
     AccountsService,
     CategoriesService,
     TransactionsService,
     ImportsService,
+    BudgetsService,
+    GoalsService,
   ],
 })
 export class AppModule {}

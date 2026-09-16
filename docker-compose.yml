@@ -1,3 +1,5 @@
+name: finanzia
+
 services:
   # Base de Datos PostgreSQL 16
   postgres:
@@ -20,10 +22,10 @@ services:
     networks:
       - finanzia-network
 
-  # API Backend NestJS (Opcional en compose si se corre local con npm run start:dev)
+  # API Backend NestJS
   api:
     build:
-      context: ..
+      context: ./finanzia-api
       dockerfile: docker/Dockerfile.dev
     container_name: finanzia-api
     restart: unless-stopped
@@ -40,17 +42,41 @@ services:
     ports:
       - "3001:3001"
     volumes:
-      - ../src:/app/src
-      - ../prisma:/app/prisma
-      - ../test:/app/test
+      - ./finanzia-api/src:/app/src
+      - ./finanzia-api/prisma:/app/prisma
+      - ./finanzia-api/test:/app/test
+    networks:
+      - finanzia-network
+
+  # Frontend Web Next.js + Storybook
+  web:
+    build:
+      context: ./finanzia-web
+      dockerfile: docker/Dockerfile.dev
+    container_name: finanzia-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "3000:3000"
+      - "6006:6006"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:3001/api
+      - INTERNAL_API_URL=http://api:3001/api
+    volumes:
+      - ./finanzia-web/src:/app/src
+      - ./finanzia-web/public:/app/public
+      - ./finanzia-web/stories:/app/stories
+      - ./finanzia-web/.storybook:/app/.storybook
     networks:
       - finanzia-network
 
 volumes:
   finanzia_pgdata:
     name: finanzia_pgdata
+    external: true
 
 networks:
   finanzia-network:
     name: finanzia-network
-    driver: bridge
+    external: true
