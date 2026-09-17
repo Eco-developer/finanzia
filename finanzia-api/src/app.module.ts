@@ -25,6 +25,10 @@ import { TransactionsService } from "./core/application/transactions/transaction
 import { ImportsService } from "./core/application/imports/imports.service";
 import { BudgetsService } from "./core/application/budgets/budgets.service";
 import { GoalsService } from "./core/application/goals/goals.service";
+import { AiToolsService } from "./core/application/ai/ai-tools.service";
+import { GeminiAdvisorService } from "./infrastructure/ai/gemini-advisor.service";
+import { AiAdvisorService } from "./core/application/ai/ai-advisor.service";
+import { RecommendationsService } from "./core/application/recommendations/recommendations.service";
 
 // Presentation
 import { HealthController } from "./presentation/controllers/health.controller";
@@ -35,6 +39,8 @@ import { TransactionsController } from "./presentation/controllers/transactions.
 import { ImportsController } from "./presentation/controllers/imports.controller";
 import { BudgetsController } from "./presentation/controllers/budgets.controller";
 import { GoalsController } from "./presentation/controllers/goals.controller";
+import { AdvisorController } from "./presentation/controllers/advisor.controller";
+import { RecommendationsController } from "./presentation/controllers/recommendations.controller";
 import { GlobalExceptionFilter } from "./presentation/filters/global-exception.filter";
 
 @Module({
@@ -72,6 +78,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     ImportsController,
     BudgetsController,
     GoalsController,
+    AdvisorController,
+    RecommendationsController,
   ],
   providers: [
     PrismaService,
@@ -91,6 +99,10 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     ImportsService,
     BudgetsService,
     GoalsService,
+    AiToolsService,
+    GeminiAdvisorService,
+    AiAdvisorService,
+    RecommendationsService,
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
@@ -112,6 +124,10 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     ImportsService,
     BudgetsService,
     GoalsService,
+    AiToolsService,
+    GeminiAdvisorService,
+    AiAdvisorService,
+    RecommendationsService,
   ],
 })
 export class AppModule {}
