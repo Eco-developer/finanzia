@@ -101,16 +101,16 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
             <span>Importar CSV</span>
           </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/advisor"
             className={`${styles.navItem} ${styles.navItemAI} ${
-              activeSection === 'ai' ? styles.navItemActive : ''
+              activeSection === 'advisor' || activeSection === 'ai' ? styles.navItemActive : ''
             }`}
-            onClick={() => handleNavClick('ai')}
+            onClick={() => handleNavClick('advisor')}
           >
-            <span className={styles.navIcon}>🤖</span>
+            <span className={styles.navIcon}>✨</span>
             <span>FinanZIA AI Advisor</span>
-          </button>
+          </Link>
         </nav>
       </div>
 

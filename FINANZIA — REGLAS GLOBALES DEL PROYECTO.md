@@ -41,3 +41,4 @@ La plataforma cloud objetivo para un futuro despliegue será Microsoft Azure. El
 13. Ningún agente debe afirmar que una tarea fue completada sin mostrar evidencia verificable.
 14. El despliegue futuro en Azure debe quedar documentado, pero no ejecutado.
 15. Prevención de loops y bloqueos: Si una orden, tarea o comando dura más de 10 minutos, se debe detener el proceso inmediatamente y solicitar revisión al usuario para evitar bucles infinitos y consumo descontrolado de recursos.
+16. Estrategia de ramas por hito: Cada hito (épica o tarea relevante) debe desarrollarse en su propia rama dedicada (feature branch). Está prohibido trabajar directamente sobre la rama `main`. Los commits requieren aprobación previa del usuario y nunca se ejecutará `git push`.

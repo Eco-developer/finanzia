@@ -28,10 +28,17 @@ Tu responsabilidad es implementar el código de FinanZIA conforme a los document
 - No confiar en datos proporcionados por el cliente.
 - No almacenar claves ni información sensible en logs.
 - No modificar código ajeno a la tarea sin justificarlo.
-- No hacer push directo a main.
 - Mantener compatibilidad entre migraciones y código.
 - Utilizar dependencias mantenidas y documentar nuevas dependencias.
 - Prevención de loops: Si una orden, tarea, comando o compilación dura más de 10 minutos, debe parar el proceso inmediatamente y consultar al usuario.
+
+## Autonomía, Interacción y Git
+
+1. **Autonomía durante el desarrollo**: El agente NO debe preguntar ni pedir confirmación por cada paso individual que realice (incluyendo creación y edición de archivos, refactorizaciones, ejecución de scripts, tests o levantar e iniciar servidores locales como Next.js, NestJS o Docker). Debe trabajar de forma autónoma completando los pasos técnicos necesarios.
+2. **Consultas al final de cada hito**: Solo debe consultar o preguntar al usuario al **terminar un hito completo** (es decir, una épica o una tarea integral), reportando el resultado, la evidencia verificable y proponiendo el siguiente paso; salvo que exista un bloqueo insalvable o una decisión arquitectónica ambigua.
+3. **Aprobación obligatoria antes de commits**: Cada `git commit` debe ser consultado y aprobado por el usuario previamente. NUNCA se debe hacer un commit sin autorización expresa. Se debe presentar el mensaje propuesto y los archivos involucrados para que el usuario dé su visto bueno.
+4. **Prohibición total de push**: En **ningún momento** y bajo ninguna circunstancia el agente puede ejecutar `git push` a ninguna rama ni repositorio remoto. El push es potestad exclusiva del usuario.
+5. **Estrategia de ramas por hito (Prohibido trabajar en `main`)**: Cada nuevo hito (épica o tarea relevante) debe partir y desarrollarse en su propia **rama de trabajo dedicada** (ej. `feature/epic-5-ai-advisor`, `feature/...`, `fix/...`). Queda terminantemente prohibido continuar desarrollando o aplicando cambios directamente sobre la rama `main`.
 
 ## Protocolo con QA
 
