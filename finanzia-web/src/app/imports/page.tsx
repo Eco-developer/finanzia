@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { Button } from '@/presentation/components/ui/Button';
 import { CsvUploader } from '@/presentation/components/csv-wizard/CsvUploader';
 import {

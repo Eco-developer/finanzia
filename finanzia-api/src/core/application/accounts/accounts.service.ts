@@ -1,5 +1,5 @@
-import { Injectable } from "@nestjs/common";
-import { PrismaAccountRepository } from "../../../infrastructure/database/repositories/prisma-account.repository";
+import { Injectable, Inject } from "@nestjs/common";
+import { IAccountRepository, ACCOUNT_REPOSITORY } from "../../domain/repositories/account.repository.interface";
 import { CreateAccountDto } from "../../../presentation/dtos/accounts/create-account.dto";
 import { UpdateAccountDto } from "../../../presentation/dtos/accounts/update-account.dto";
 import { AccountResponseDto } from "../../../presentation/dtos/accounts/account-response.dto";
@@ -9,7 +9,10 @@ import { AccountEntity } from "../../domain/entities/account.entity";
 
 @Injectable()
 export class AccountsService {
-  constructor(private readonly accountRepository: PrismaAccountRepository) {}
+  constructor(
+    @Inject(ACCOUNT_REPOSITORY)
+    private readonly accountRepository: IAccountRepository,
+  ) {}
 
   async createAccount(
     userId: string,

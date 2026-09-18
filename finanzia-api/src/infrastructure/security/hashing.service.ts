@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
 import * as argon2 from "argon2";
+import { IHashingService } from "../../core/application/ports/hashing.port";
 
 @Injectable()
-export class HashingService {
+export class HashingService implements IHashingService {
   /**
    * Hashes a plain password using Argon2id with secure memory and time cost settings.
    */

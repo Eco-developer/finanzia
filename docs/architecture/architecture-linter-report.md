@@ -119,3 +119,34 @@ cd finanzia-api && npm run graph:arch
 # Frontend
 cd finanzia-web && npm run graph:arch
 ```
+
+---
+
+## 5. Estado Final Post-Remediación: 0 Violaciones Logradas
+
+Tras la ejecución integral de las remediaciones arquitectónicas, se alcanzaron **0 violaciones en ambos proyectos** sin relajar ninguna regla:
+
+### 5.1 Resumen de Remediaciones Implementadas
+
+1. **Backend (`finanzia-api`)**:
+   - **Tipos de Dominio Puros**: Se crearon `src/core/domain/types/financial.types.ts` con tipos desacoplados de Prisma (`AccountType`, `TransactionType`, `CategoryType`, `RecommendationType`, `RecommendationStatus`), eliminando cualquier dependencia de base de datos en el dominio.
+   - **Puertos de Aplicación**: Se definieron `hashing.port.ts`, `ai-advisor.port.ts` y `financial-analytics.port.ts` en `src/core/application/ports/`.
+   - **Puertos de Repositorio**: Se crearon `ai-recommendation.repository.interface.ts` y `advisor-history.repository.interface.ts`.
+   - **Adaptadores de Infraestructura**: Se implementaron `PrismaAiRecommendationRepository`, `PrismaAdvisorHistoryRepository` y `PrismaFinancialAnalyticsAdapter` desacoplando completamente a los servicios de `PrismaService`.
+   - **Inversión de Dependencias (IoC)**: Todos los servicios de aplicación (`AccountsService`, `TransactionsService`, `BudgetsService`, `CategoriesService`, `GoalsService`, `ImportsService`, `AuthService`, `RecommendationsService`, `AiToolsService`, `AiAdvisorService`) ahora inyectan tokens de interfaz mediante `@Inject(...)`.
+   - **Módulo Principal NestJS**: Se registraron todos los pares Token $\rightarrow$ Adaptador en `src/app.module.ts`.
+
+2. **Frontend (`finanzia-web`)**:
+   - **Reubicación de Contexto React**: `auth.context.tsx` se movió a `src/presentation/context/auth.context.tsx`, actualizando todas sus importaciones a través de la aplicación.
+   - **Custom Hooks de Presentación**: Se crearon `useAccounts`, `useTransactions`, `useBudgets` y `useGoals` en `src/presentation/hooks/`.
+   - **Modales Desacoplados**: Los 6 modales financieros (`CreateAccountModal`, `CreateTransactionModal`, `CreateTransferModal`, `CreateBudgetModal`, `CreateGoalModal`, `ContributeGoalModal`) ahora consumen hooks de presentación sin importar clientes de infraestructura API.
+
+### 5.2 Tabla de Métricas de Validación
+
+| Métrica / Proyecto | Backend (`finanzia-api`) | Frontend (`finanzia-web`) |
+| :--- | :--- | :--- |
+| **Violaciones de Arquitectura (`lint:arch`)** | **0 errores / 0 advertencias** (102 módulos, 177 dependencias) | **0 errores / 0 advertencias** (97 módulos, 173 dependencias) |
+| **Suites de Tests Unitarios (`npm test`)** | **10 / 10 pasando** (90 tests) | **9 / 9 pasando** (44 tests) |
+| **Compilación de Producción (`npm run build`)** | **Exitosa (NestJS)** | **Exitosa (Next.js 15 App Router)** |
+| **Estado CI / Pre-push Hook** | **100% Validado** | **100% Validado** |
+

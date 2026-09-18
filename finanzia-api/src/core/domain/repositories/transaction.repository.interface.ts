@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client";
+import { TransactionType } from "../types/financial.types";
 import { TransactionEntity } from "../entities/transaction.entity";
 
 export interface CreateTransactionData {

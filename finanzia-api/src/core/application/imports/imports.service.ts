@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import { TransactionType } from "@prisma/client";
-import { PrismaAccountRepository } from "../../../infrastructure/database/repositories/prisma-account.repository";
-import { PrismaTransactionRepository } from "../../../infrastructure/database/repositories/prisma-transaction.repository";
-import { PrismaCategoryRepository } from "../../../infrastructure/database/repositories/prisma-category.repository";
-import { PrismaCsvTemplateRepository } from "../../../infrastructure/database/repositories/prisma-csv-template.repository";
+import { Injectable, Inject } from "@nestjs/common";
+import { TransactionType } from "../../domain/types/financial.types";
+import { IAccountRepository, ACCOUNT_REPOSITORY } from "../../domain/repositories/account.repository.interface";
+import { ITransactionRepository, TRANSACTION_REPOSITORY } from "../../domain/repositories/transaction.repository.interface";
+import { ICategoryRepository, CATEGORY_REPOSITORY } from "../../domain/repositories/category.repository.interface";
+import { ICsvTemplateRepository, CSV_TEMPLATE_REPOSITORY } from "../../domain/repositories/csv-template.repository.interface";
 import { AccountNotFoundException } from "../../domain/exceptions/account-not-found.exception";
 import { UnauthorizedAccountAccessException } from "../../domain/exceptions/unauthorized-account-access.exception";
 import { sanitizeCsvField } from "../../domain/utils/csv-sanitizer.util";
@@ -161,10 +161,14 @@ const CATEGORY_RULES: KeywordCategoryRule[] = [
 @Injectable()
 export class ImportsService {
   constructor(
-    private readonly accountRepository: PrismaAccountRepository,
-    private readonly transactionRepository: PrismaTransactionRepository,
-    private readonly categoryRepository: PrismaCategoryRepository,
-    private readonly csvTemplateRepository: PrismaCsvTemplateRepository,
+    @Inject(ACCOUNT_REPOSITORY)
+    private readonly accountRepository: IAccountRepository,
+    @Inject(TRANSACTION_REPOSITORY)
+    private readonly transactionRepository: ITransactionRepository,
+    @Inject(CATEGORY_REPOSITORY)
+    private readonly categoryRepository: ICategoryRepository,
+    @Inject(CSV_TEMPLATE_REPOSITORY)
+    private readonly csvTemplateRepository: ICsvTemplateRepository,
   ) {}
 
   async previewImport(

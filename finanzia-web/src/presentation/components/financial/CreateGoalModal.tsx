@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Button } from '@/presentation/components/ui/Button';
-import { goalsApi, GoalItem } from '@/infrastructure/api/goals.api';
+import { useGoals, type GoalItem } from '@/presentation/hooks/useGoals';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateGoalModalProps {
@@ -20,6 +20,7 @@ export function CreateGoalModal({
   onSuccess,
   editingGoal,
 }: CreateGoalModalProps) {
+  const { createGoal, updateGoal } = useGoals();
   const [name, setName] = useState('');
   const [targetAmountInput, setTargetAmountInput] = useState('');
   const [currentAmountInput, setCurrentAmountInput] = useState('');
@@ -80,13 +81,13 @@ export function CreateGoalModal({
     setIsLoading(true);
     try {
       if (editingGoal) {
-        await goalsApi.updateGoal(editingGoal.id, {
+        await updateGoal(editingGoal.id, {
           name: name.trim(),
           targetAmountCents,
           targetDate: targetDate ? new Date(targetDate).toISOString() : undefined,
         });
       } else {
-        await goalsApi.createGoal({
+        await createGoal({
           name: name.trim(),
           targetAmountCents,
           currentAmountCents,

@@ -3,14 +3,10 @@ import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiToolsService } from "../../core/application/ai/ai-tools.service";
 import { ToolCallExecution } from "../../core/application/ai/dtos/chat.dto";
-
-export interface AdvisorExecutionResult {
-  content: string;
-  toolExecutions: ToolCallExecution[];
-}
+import { IAiAdvisorPort, AdvisorExecutionResult } from "../../core/application/ports/ai-advisor.port";
 
 @Injectable()
-export class GeminiAdvisorService {
+export class GeminiAdvisorService implements IAiAdvisorPort {
   private readonly logger = new Logger(GeminiAdvisorService.name);
   private readonly aiClient: GoogleGenAI | null = null;
   private readonly apiKey: string | undefined;

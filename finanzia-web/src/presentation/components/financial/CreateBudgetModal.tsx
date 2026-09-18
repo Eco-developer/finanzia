@@ -5,8 +5,8 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
 import { Button } from '@/presentation/components/ui/Button';
-import { budgetsApi, BudgetPacingItem } from '@/infrastructure/api/budgets.api';
-import { CategoryItem } from '@/infrastructure/api/categories.api';
+import { useBudgets, type BudgetPacingItem } from '@/presentation/hooks/useBudgets';
+import type { CategoryItem } from '@/infrastructure/api/categories.api';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateBudgetModalProps {
@@ -28,6 +28,7 @@ export function CreateBudgetModal({
   initialYear = new Date().getFullYear(),
   editingItem,
 }: CreateBudgetModalProps) {
+  const { createBudget } = useBudgets();
   // Filtrar solo categorías de tipo gasto (EXPENSE)
   const expenseCategories = categories.filter((c) => c.type === 'EXPENSE');
 
@@ -82,7 +83,7 @@ export function CreateBudgetModal({
 
     setIsLoading(true);
     try {
-      await budgetsApi.createBudget({
+      await createBudget({
         categoryId,
         amountLimitCents,
         periodMonth,

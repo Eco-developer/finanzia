@@ -14,8 +14,25 @@ import { PrismaTransactionRepository } from "./infrastructure/database/repositor
 import { PrismaCsvTemplateRepository } from "./infrastructure/database/repositories/prisma-csv-template.repository";
 import { PrismaBudgetRepository } from "./infrastructure/database/repositories/prisma-budget.repository";
 import { PrismaSavingsGoalRepository } from "./infrastructure/database/repositories/prisma-savings-goal.repository";
+import { PrismaAiRecommendationRepository } from "./infrastructure/database/repositories/prisma-ai-recommendation.repository";
+import { PrismaAdvisorHistoryRepository } from "./infrastructure/database/repositories/prisma-advisor-history.repository";
+import { PrismaFinancialAnalyticsAdapter } from "./infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
+
+// Ports & Tokens
+import { USER_REPOSITORY } from "./core/domain/repositories/user.repository.interface";
+import { ACCOUNT_REPOSITORY } from "./core/domain/repositories/account.repository.interface";
+import { CATEGORY_REPOSITORY } from "./core/domain/repositories/category.repository.interface";
+import { TRANSACTION_REPOSITORY } from "./core/domain/repositories/transaction.repository.interface";
+import { CSV_TEMPLATE_REPOSITORY } from "./core/domain/repositories/csv-template.repository.interface";
+import { BUDGET_REPOSITORY } from "./core/domain/repositories/budget.repository.interface";
+import { SAVINGS_GOAL_REPOSITORY } from "./core/domain/repositories/savings-goal.repository.interface";
+import { AI_RECOMMENDATION_REPOSITORY } from "./core/domain/repositories/ai-recommendation.repository.interface";
+import { ADVISOR_HISTORY_REPOSITORY } from "./core/domain/repositories/advisor-history.repository.interface";
+import { FINANCIAL_ANALYTICS_PORT } from "./core/application/ports/financial-analytics.port";
+import { HASHING_SERVICE } from "./core/application/ports/hashing.port";
+import { AI_ADVISOR_PORT } from "./core/application/ports/ai-advisor.port";
 
 // Application
 import { AuthService } from "./core/application/auth/auth.service";
@@ -90,8 +107,25 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaCsvTemplateRepository,
     PrismaBudgetRepository,
     PrismaSavingsGoalRepository,
+    PrismaAiRecommendationRepository,
+    PrismaAdvisorHistoryRepository,
+    PrismaFinancialAnalyticsAdapter,
     HashingService,
     JwtStrategy,
+    // Bindings de Puertos e Interfaces (Hexagonal Architecture / DIP)
+    { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
+    { provide: ACCOUNT_REPOSITORY, useClass: PrismaAccountRepository },
+    { provide: CATEGORY_REPOSITORY, useClass: PrismaCategoryRepository },
+    { provide: TRANSACTION_REPOSITORY, useClass: PrismaTransactionRepository },
+    { provide: CSV_TEMPLATE_REPOSITORY, useClass: PrismaCsvTemplateRepository },
+    { provide: BUDGET_REPOSITORY, useClass: PrismaBudgetRepository },
+    { provide: SAVINGS_GOAL_REPOSITORY, useClass: PrismaSavingsGoalRepository },
+    { provide: AI_RECOMMENDATION_REPOSITORY, useClass: PrismaAiRecommendationRepository },
+    { provide: ADVISOR_HISTORY_REPOSITORY, useClass: PrismaAdvisorHistoryRepository },
+    { provide: FINANCIAL_ANALYTICS_PORT, useClass: PrismaFinancialAnalyticsAdapter },
+    { provide: HASHING_SERVICE, useClass: HashingService },
+    { provide: AI_ADVISOR_PORT, useClass: GeminiAdvisorService },
+    // Application Services
     AuthService,
     AccountsService,
     CategoriesService,
@@ -110,13 +144,18 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
   ],
   exports: [
     PrismaService,
-    PrismaUserRepository,
-    PrismaAccountRepository,
-    PrismaCategoryRepository,
-    PrismaTransactionRepository,
-    PrismaCsvTemplateRepository,
-    PrismaBudgetRepository,
-    PrismaSavingsGoalRepository,
+    USER_REPOSITORY,
+    ACCOUNT_REPOSITORY,
+    CATEGORY_REPOSITORY,
+    TRANSACTION_REPOSITORY,
+    CSV_TEMPLATE_REPOSITORY,
+    BUDGET_REPOSITORY,
+    SAVINGS_GOAL_REPOSITORY,
+    AI_RECOMMENDATION_REPOSITORY,
+    ADVISOR_HISTORY_REPOSITORY,
+    FINANCIAL_ANALYTICS_PORT,
+    HASHING_SERVICE,
+    AI_ADVISOR_PORT,
     AuthService,
     AccountsService,
     CategoriesService,

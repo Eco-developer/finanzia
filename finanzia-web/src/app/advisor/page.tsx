@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { Sidebar } from '@/presentation/components/navigation/Sidebar';
 import { MobileTopBar } from '@/presentation/components/navigation/MobileTopBar';
 import { MobileBottomNav } from '@/presentation/components/navigation/MobileBottomNav';

@@ -3,9 +3,10 @@ import {
   NotFoundException,
   ForbiddenException,
   BadRequestException,
+  Inject,
 } from "@nestjs/common";
-import { PrismaBudgetRepository } from "../../../infrastructure/database/repositories/prisma-budget.repository";
-import { PrismaCategoryRepository } from "../../../infrastructure/database/repositories/prisma-category.repository";
+import { IBudgetRepository, BUDGET_REPOSITORY } from "../../domain/repositories/budget.repository.interface";
+import { ICategoryRepository, CATEGORY_REPOSITORY } from "../../domain/repositories/category.repository.interface";
 import { CreateBudgetDto } from "../../../presentation/dtos/budgets/create-budget.dto";
 import { UpdateBudgetDto } from "../../../presentation/dtos/budgets/update-budget.dto";
 import {
@@ -17,8 +18,10 @@ import { BudgetEntity } from "../../domain/entities/budget.entity";
 @Injectable()
 export class BudgetsService {
   constructor(
-    private readonly budgetRepository: PrismaBudgetRepository,
-    private readonly categoryRepository: PrismaCategoryRepository,
+    @Inject(BUDGET_REPOSITORY)
+    private readonly budgetRepository: IBudgetRepository,
+    @Inject(CATEGORY_REPOSITORY)
+    private readonly categoryRepository: ICategoryRepository,
   ) {}
 
   async createOrUpdateBudget(

@@ -14,7 +14,7 @@ import {
   RegisterDto,
 } from '@/infrastructure/api/auth.api';
 
-interface AuthContextType {
+export interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;

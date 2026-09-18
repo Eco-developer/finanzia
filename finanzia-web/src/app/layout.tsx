@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import '@/presentation/styles/globals.css';
-import { AuthProvider } from '@/core/application/auth/auth.context';
+import { AuthProvider } from '@/presentation/context/auth.context';
 
 export const metadata: Metadata = {
   title: 'FinanZIA — Finanzas Personales con IA Verificable',

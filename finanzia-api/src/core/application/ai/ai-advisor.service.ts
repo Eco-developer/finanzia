@@ -1,16 +1,29 @@
-import { Injectable, NotFoundException, ForbiddenException, Logger } from "@nestjs/common";
-import { PrismaService } from "../../../infrastructure/database/prisma.service";
-import { GeminiAdvisorService } from "../../../infrastructure/ai/gemini-advisor.service";
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+  Inject,
+} from "@nestjs/common";
+import {
+  IAdvisorHistoryRepository,
+  ADVISOR_HISTORY_REPOSITORY,
+} from "../../domain/repositories/advisor-history.repository.interface";
+import {
+  IAiAdvisorPort,
+  AI_ADVISOR_PORT,
+} from "../ports/ai-advisor.port";
 import { SendChatMessageDto, ChatMessageResponseDto } from "./dtos/chat.dto";
-import { AiRole } from "@prisma/client";
 
 @Injectable()
 export class AiAdvisorService {
   private readonly logger = new Logger(AiAdvisorService.name);
 
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly geminiAdvisorService: GeminiAdvisorService,
+    @Inject(ADVISOR_HISTORY_REPOSITORY)
+    private readonly historyRepo: IAdvisorHistoryRepository,
+    @Inject(AI_ADVISOR_PORT)
+    private readonly advisorPort: IAiAdvisorPort,
   ) {}
 
   /**
@@ -23,76 +36,50 @@ export class AiAdvisorService {
     let conversationId = dto.conversationId;
 
     if (conversationId) {
-      const conv = await this.prisma.aiConversation.findUnique({
-        where: { id: conversationId },
-      });
-      if (!conv) {
+      const messages = await this.historyRepo.getConversationMessages(userId, conversationId);
+      if (!messages) {
         throw new NotFoundException("La conversación especificada no existe.");
-      }
-      if (conv.userId !== userId) {
-        throw new ForbiddenException("No tienes acceso a esta conversación.");
       }
     } else {
       const title =
         dto.message.trim().length > 45
           ? `${dto.message.trim().slice(0, 42)}...`
           : dto.message.trim();
-      const newConv = await this.prisma.aiConversation.create({
-        data: {
-          userId,
-          title,
-        },
-      });
+      const newConv = await this.historyRepo.createConversation(userId, title);
       conversationId = newConv.id;
     }
 
     // 1. Guardar mensaje del usuario
-    await this.prisma.aiMessage.create({
-      data: {
-        conversationId,
-        role: AiRole.USER,
-        content: dto.message.trim(),
-      },
+    await this.historyRepo.saveMessage({
+      conversationId: conversationId!,
+      role: "USER",
+      content: dto.message.trim(),
     });
 
     // 2. Recuperar historial reciente
-    const recentMessages = await this.prisma.aiMessage.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: "asc" },
-      take: 10,
-    });
-
-    const history = recentMessages.map((m) => ({
-      role: m.role,
+    const recentMessages = await this.historyRepo.getConversationMessages(userId, conversationId!);
+    const history = recentMessages.slice(-10).map((m) => ({
+      role: m.role.toLowerCase() as "user" | "assistant",
       content: m.content,
     }));
 
     // 3. Ejecutar asesor con herramientas deterministas
-    const advisorResult = await this.geminiAdvisorService.executeChat(
+    const advisorResult = await this.advisorPort.executeChat(
       userId,
       dto.message.trim(),
       history,
     );
 
     // 4. Guardar respuesta del asistente con trazabilidad de herramientas
-    const assistantMessage = await this.prisma.aiMessage.create({
-      data: {
-        conversationId,
-        role: AiRole.ASSISTANT,
-        content: advisorResult.content,
-        toolCalls: advisorResult.toolExecutions as any,
-        toolResults: advisorResult.toolExecutions.map((t) => t.result) as any,
-      },
-    });
-
-    // Actualizar timestamp de la conversación
-    await this.prisma.aiConversation.update({
-      where: { id: conversationId },
-      data: { updatedAt: new Date() },
+    const assistantMessage = await this.historyRepo.saveMessage({
+      conversationId: conversationId!,
+      role: "ASSISTANT",
+      content: advisorResult.content,
+      toolCalls: advisorResult.toolExecutions,
     });
 
     return {
-      conversationId,
+      conversationId: conversationId!,
       messageId: assistantMessage.id,
       content: assistantMessage.content,
       toolExecutions: advisorResult.toolExecutions,
@@ -104,20 +91,12 @@ export class AiAdvisorService {
    * Obtiene la lista de conversaciones del usuario
    */
   async getConversations(userId: string) {
-    const convs = await this.prisma.aiConversation.findMany({
-      where: { userId },
-      orderBy: { updatedAt: "desc" },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
-      },
-    });
+    const convs = await this.historyRepo.getUserConversations(userId);
 
     return convs.map((c) => ({
       id: c.id,
       title: c.title,
-      messageCount: c._count.messages,
+      messageCount: c._count?.messages ?? 0,
       createdAt: c.createdAt.toISOString(),
       updatedAt: c.updatedAt.toISOString(),
     }));
@@ -127,20 +106,7 @@ export class AiAdvisorService {
    * Obtiene los mensajes de una conversación
    */
   async getConversationMessages(userId: string, conversationId: string) {
-    const conv = await this.prisma.aiConversation.findUnique({
-      where: { id: conversationId },
-    });
-    if (!conv) {
-      throw new NotFoundException("La conversación no existe.");
-    }
-    if (conv.userId !== userId) {
-      throw new ForbiddenException("No tienes permiso para acceder a esta conversación.");
-    }
-
-    const messages = await this.prisma.aiMessage.findMany({
-      where: { conversationId },
-      orderBy: { createdAt: "asc" },
-    });
+    const messages = await this.historyRepo.getConversationMessages(userId, conversationId);
 
     return messages.map((m) => ({
       id: m.id,
@@ -157,20 +123,7 @@ export class AiAdvisorService {
    * Elimina una conversación
    */
   async deleteConversation(userId: string, conversationId: string) {
-    const conv = await this.prisma.aiConversation.findUnique({
-      where: { id: conversationId },
-    });
-    if (!conv) {
-      throw new NotFoundException("La conversación no existe.");
-    }
-    if (conv.userId !== userId) {
-      throw new ForbiddenException("No tienes permiso para eliminar esta conversación.");
-    }
-
-    await this.prisma.aiConversation.delete({
-      where: { id: conversationId },
-    });
-
+    await this.historyRepo.deleteConversation(userId, conversationId);
     return { deleted: true, conversationId };
   }
 }

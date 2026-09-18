@@ -5,7 +5,7 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
 import { Button } from '@/presentation/components/ui/Button';
-import { accountsApi, AccountType, AccountItem } from '@/infrastructure/api/accounts.api';
+import { useAccounts, type AccountType, type AccountItem } from '@/presentation/hooks/useAccounts';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateAccountModalProps {
@@ -27,6 +27,7 @@ export function CreateAccountModal({
   onClose,
   onSuccess,
 }: CreateAccountModalProps) {
+  const { createAccount } = useAccounts();
   const [name, setName] = useState('');
   const [type, setType] = useState<AccountType>('CHECKING');
   const [balanceInput, setBalanceInput] = useState('0');
@@ -53,7 +54,7 @@ export function CreateAccountModal({
 
     try {
       setIsLoading(true);
-      const account = await accountsApi.createAccount({
+      const account = await createAccount({
         name: name.trim(),
         type,
         initialBalanceCents,

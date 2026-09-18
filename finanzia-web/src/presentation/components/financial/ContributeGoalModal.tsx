@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Button } from '@/presentation/components/ui/Button';
-import { goalsApi, GoalItem } from '@/infrastructure/api/goals.api';
+import { useGoals, type GoalItem } from '@/presentation/hooks/useGoals';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 import { MoneyDisplay } from './MoneyDisplay';
 
@@ -21,6 +21,7 @@ export function ContributeGoalModal({
   onSuccess,
   goal,
 }: ContributeGoalModalProps) {
+  const { contributeToGoal } = useGoals();
   const [amountInput, setAmountInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,7 +46,7 @@ export function ContributeGoalModal({
 
     setIsLoading(true);
     try {
-      await goalsApi.contributeToGoal(goal.id, { amountCents });
+      await contributeToGoal(goal.id, { amountCents });
       setAmountInput('');
       onSuccess();
       onClose();

@@ -1,6 +1,6 @@
 import { AccountsService } from "../../src/core/application/accounts/accounts.service";
 import { AccountEntity } from "../../src/core/domain/entities/account.entity";
-import { AccountType } from "@prisma/client";
+import { AccountType } from "../../src/core/domain/types/financial.types";
 import { AccountNotFoundException } from "../../src/core/domain/exceptions/account-not-found.exception";
 import { UnauthorizedAccountAccessException } from "../../src/core/domain/exceptions/unauthorized-account-access.exception";
 

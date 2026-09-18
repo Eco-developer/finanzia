@@ -1,5 +1,5 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
-import { PrismaCategoryRepository } from "../../../infrastructure/database/repositories/prisma-category.repository";
+import { Injectable, BadRequestException, Inject } from "@nestjs/common";
+import { ICategoryRepository, CATEGORY_REPOSITORY } from "../../domain/repositories/category.repository.interface";
 import { CreateCategoryDto } from "../../../presentation/dtos/categories/create-category.dto";
 import { UpdateCategoryDto } from "../../../presentation/dtos/categories/update-category.dto";
 import { CategoryResponseDto } from "../../../presentation/dtos/categories/category-response.dto";
@@ -10,7 +10,10 @@ import { ParentCategoryNotFoundException } from "../../domain/exceptions/parent-
 
 @Injectable()
 export class CategoriesService {
-  constructor(private readonly categoryRepository: PrismaCategoryRepository) {}
+  constructor(
+    @Inject(CATEGORY_REPOSITORY)
+    private readonly categoryRepository: ICategoryRepository,
+  ) {}
 
   async createCategory(
     userId: string,

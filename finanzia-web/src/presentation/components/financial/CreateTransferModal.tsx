@@ -5,8 +5,8 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
 import { Button } from '@/presentation/components/ui/Button';
-import { transactionsApi } from '@/infrastructure/api/transactions.api';
-import { AccountItem } from '@/infrastructure/api/accounts.api';
+import { useTransactions } from '@/presentation/hooks/useTransactions';
+import type { AccountItem } from '@/infrastructure/api/accounts.api';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateTransferModalProps {
@@ -22,6 +22,7 @@ export function CreateTransferModal({
   onSuccess,
   accounts,
 }: CreateTransferModalProps) {
+  const { createTransfer } = useTransactions();
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id || '');
   const [toAccountId, setToAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
   const [amountInput, setAmountInput] = useState('');
@@ -60,7 +61,7 @@ export function CreateTransferModal({
 
     try {
       setIsLoading(true);
-      await transactionsApi.createTransfer({
+      await createTransfer({
         fromAccountId,
         toAccountId,
         amountCents,

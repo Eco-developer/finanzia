@@ -1,4 +1,4 @@
-import { AccountType } from "@prisma/client";
+import { AccountType } from "../types/financial.types";
 
 export class AccountEntity {
   constructor(

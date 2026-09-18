@@ -1,0 +1,144 @@
+import { Injectable, Logger } from "@nestjs/common";
+import { PrismaService } from "../prisma.service";
+import { RecommendationStatus as PrismaRecommendationStatus } from "@prisma/client";
+import {
+  IAiRecommendationRepository,
+  AiRecommendationRecord,
+} from "../../../core/domain/repositories/ai-recommendation.repository.interface";
+import { RecommendationStatus, RecommendationType } from "../../../core/domain/types/financial.types";
+
+@Injectable()
+export class PrismaAiRecommendationRepository implements IAiRecommendationRepository {
+  private readonly logger = new Logger(PrismaAiRecommendationRepository.name);
+
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findPending(userId: string): Promise<AiRecommendationRecord[]> {
+    const recs = await this.prisma.aiRecommendation.findMany({
+      where: {
+        userId,
+        status: PrismaRecommendationStatus.PROPOSED,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return recs.map((r) => ({
+      id: r.id,
+      userId: r.userId,
+      type: r.type as RecommendationType,
+      title: r.title,
+      details: r.details,
+      proposedAction: (r.proposedAction as Record<string, any>) || {},
+      status: r.status as RecommendationStatus,
+      createdAt: r.createdAt,
+      updatedAt: r.createdAt,
+    }));
+  }
+
+  async findById(id: string): Promise<AiRecommendationRecord | null> {
+    const r = await this.prisma.aiRecommendation.findUnique({
+      where: { id },
+    });
+    if (!r) return null;
+
+    return {
+      id: r.id,
+      userId: r.userId,
+      type: r.type as RecommendationType,
+      title: r.title,
+      details: r.details,
+      proposedAction: (r.proposedAction as Record<string, any>) || {},
+      status: r.status as RecommendationStatus,
+      createdAt: r.createdAt,
+      updatedAt: r.createdAt,
+    };
+  }
+
+  async create(data: {
+    userId: string;
+    type: RecommendationType;
+    title: string;
+    details: string;
+    proposedAction: Record<string, any>;
+  }): Promise<AiRecommendationRecord> {
+    const r = await this.prisma.aiRecommendation.create({
+      data: {
+        userId: data.userId,
+        type: data.type as any,
+        title: data.title,
+        details: data.details,
+        proposedAction: data.proposedAction,
+        status: PrismaRecommendationStatus.PROPOSED,
+      },
+    });
+
+    return {
+      id: r.id,
+      userId: r.userId,
+      type: r.type as RecommendationType,
+      title: r.title,
+      details: r.details,
+      proposedAction: (r.proposedAction as Record<string, any>) || {},
+      status: r.status as RecommendationStatus,
+      createdAt: r.createdAt,
+      updatedAt: r.createdAt,
+    };
+  }
+
+  async updateStatus(id: string, status: RecommendationStatus): Promise<AiRecommendationRecord> {
+    const r = await this.prisma.aiRecommendation.update({
+      where: { id },
+      data: {
+        status: status as any,
+        reviewedAt: new Date(),
+      },
+    });
+
+    return {
+      id: r.id,
+      userId: r.userId,
+      type: r.type as RecommendationType,
+      title: r.title,
+      details: r.details,
+      proposedAction: (r.proposedAction as Record<string, any>) || {},
+      status: r.status as RecommendationStatus,
+      createdAt: r.createdAt,
+      updatedAt: r.createdAt,
+    };
+  }
+
+  async applyAction(userId: string, actionType: string, payload: Record<string, any>): Promise<any> {
+    return await this.prisma.$transaction(async (tx) => {
+      if (actionType === "UPDATE_BUDGET_LIMIT" && payload.budgetId && payload.newLimitCents) {
+        this.logger.log(`Actualizando límite de presupuesto ${payload.budgetId} a ${payload.newLimitCents} céntimos`);
+        await tx.budget.update({
+          where: { id: payload.budgetId },
+          data: { amountLimitCents: BigInt(payload.newLimitCents) },
+        });
+      } else if (actionType === "SAVINGS_CONTRIBUTION" && payload.amountCents) {
+        this.logger.log(`Registrando aporte extraordinario de ${payload.amountCents} céntimos a meta de ahorro`);
+        let goal = null;
+        if (payload.goalId) {
+          goal = await tx.savingsGoal.findUnique({ where: { id: payload.goalId } });
+        } else {
+          goal = await tx.savingsGoal.findFirst({
+            where: { userId, isCompleted: false },
+            orderBy: { createdAt: "asc" },
+          });
+        }
+
+        if (goal) {
+          const newCurrent = BigInt(goal.currentAmountCents) + BigInt(payload.amountCents);
+          const isCompleted = newCurrent >= BigInt(goal.targetAmountCents);
+          await tx.savingsGoal.update({
+            where: { id: goal.id },
+            data: {
+              currentAmountCents: newCurrent,
+              isCompleted,
+            },
+          });
+        }
+      }
+    });
+  }
+}
