@@ -40,8 +40,12 @@ jobs:
       - name: Validar Linting (ESLint)
         run: npm run lint
 
+      - name: Validar Arquitectura Hexagonal (Dependency Cruiser)
+        run: npm run lint:arch
+
       - name: Compilar Backend (TypeScript Typecheck)
         run: npm run build
 
       - name: Ejecutar Tests Unitarios (Jest)
         run: npm test
+
