@@ -248,7 +248,10 @@ export default function BudgetsPage() {
       {/* Modal de Crear / Editar Presupuesto */}
       <CreateBudgetModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingItem(null);
+        }}
         onSuccess={loadData}
         categories={categories}
         initialMonth={selectedMonth}

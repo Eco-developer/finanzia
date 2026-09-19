@@ -5,6 +5,7 @@ services:
       dockerfile: docker/Dockerfile.dev
     container_name: finanzia-web
     restart: unless-stopped
+    command: sh -c "npx storybook dev -p 6006 --ci --host 0.0.0.0 & npm run dev"
     ports:
       - "3000:3000"
       - "6006:6006"

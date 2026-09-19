@@ -466,18 +466,17 @@ export default function HomePage() {
                 <button
                   key={filter}
                   type="button"
-                  className={`${styles.filterBtn} ${
-                    activeFilterType === filter ? styles.filterBtnActive : ''
-                  }`}
+                  className={`${styles.filterBtn} ${activeFilterType === filter ? styles.filterBtnActive : ''
+                    }`}
                   onClick={() => setActiveFilterType(filter)}
                 >
                   {filter === 'ALL'
                     ? 'Todos'
                     : filter === 'EXPENSE'
-                    ? 'Gastos'
-                    : filter === 'INCOME'
-                    ? 'Ingresos'
-                    : 'Traspasos'}
+                      ? 'Gastos'
+                      : filter === 'INCOME'
+                        ? 'Ingresos'
+                        : 'Traspasos'}
                 </button>
               ))}
             </div>
@@ -505,14 +504,15 @@ export default function HomePage() {
         onClose={() => setIsAccountModalOpen(false)}
         onSuccess={() => loadData()}
       />
-
-      <CreateTransactionModal
-        isOpen={isTransactionModalOpen}
-        onClose={() => setIsTransactionModalOpen(false)}
-        onSuccess={() => loadData()}
-        accounts={accounts}
-        categories={categories}
-      />
+      {accounts.length > 0 ?
+        <CreateTransactionModal
+          isOpen={isTransactionModalOpen}
+          onClose={() => setIsTransactionModalOpen(false)}
+          onSuccess={() => loadData()}
+          accounts={accounts}
+          categories={categories}
+        />
+        : null}
 
       <CreateTransferModal
         isOpen={isTransferModalOpen}

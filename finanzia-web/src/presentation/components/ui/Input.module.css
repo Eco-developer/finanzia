@@ -41,6 +41,10 @@
   color: var(--text-muted);
 }
 
+.input.hasRightElement {
+  padding-right: 2.5rem;
+}
+
 .input.hasError {
   border-color: var(--status-expense);
 }

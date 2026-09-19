@@ -125,10 +125,16 @@ export class TransactionsService {
       throw new UnauthorizedAccountAccessException(dto.toAccountId);
     }
 
-    // 3. Validar importe estrictamente positivo
+    // 3. Validar importe estrictamente positivo y fondos suficientes
     if (!dto.amountCents || dto.amountCents <= 0) {
       throw new InvalidTransferException(
         "El importe de la transferencia debe ser mayor a cero",
+      );
+    }
+
+    if (fromAccount.currentBalanceCents < BigInt(dto.amountCents)) {
+      throw new InvalidTransferException(
+        "El importe de la transferencia no puede superar el saldo disponible de la cuenta de origen",
       );
     }
 

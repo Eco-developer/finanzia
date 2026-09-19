@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
@@ -23,8 +23,8 @@ export function CreateTransferModal({
   accounts,
 }: CreateTransferModalProps) {
   const { createTransfer } = useTransactions();
-  const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id || '');
-  const [toAccountId, setToAccountId] = useState(accounts[1]?.id || accounts[0]?.id || '');
+  const [fromAccountId, setFromAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
   const [amountInput, setAmountInput] = useState('');
   const [description, setDescription] = useState('Traspaso entre cuentas propias');
   const [transactionDate, setTransactionDate] = useState(
@@ -33,14 +33,62 @@ export function CreateTransferModal({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const accountOptions = accounts.map((acc) => ({
-    value: acc.id,
-    label: `${acc.name} (${(acc.currentBalanceCents / 100).toFixed(2)} €)`,
-  }));
+  // Reiniciar formulario al abrir el modal sin valores por defecto
+  useEffect(() => {
+    if (isOpen) {
+      setFromAccountId('');
+      setToAccountId('');
+      setAmountInput('');
+      setDescription('Traspaso entre cuentas propias');
+      setError(null);
+    }
+  }, [isOpen]);
+
+  const selectedFromAccount = accounts.find((acc) => acc.id === fromAccountId);
+
+  // Opciones de cuenta de origen con placeholder
+  const fromAccountOptions = [
+    { value: '', label: 'Seleccionar cuenta' },
+    ...accounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.name} (${(acc.currentBalanceCents / 100).toFixed(2).replace('.', ',')} €)`,
+    })),
+  ];
+
+  // La cuenta de destino no incluye la cuenta de origen seleccionada
+  const availableToAccounts = fromAccountId
+    ? accounts.filter((acc) => acc.id !== fromAccountId)
+    : accounts;
+
+  const toAccountOptions = [
+    { value: '', label: 'Seleccionar cuenta' },
+    ...availableToAccounts.map((acc) => ({
+      value: acc.id,
+      label: `${acc.name} (${(acc.currentBalanceCents / 100).toFixed(2).replace('.', ',')} €)`,
+    })),
+  ];
+
+  const handleFromAccountChange = (newFromId: string) => {
+    setFromAccountId(newFromId);
+    if (toAccountId === newFromId) {
+      setToAccountId('');
+    }
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!fromAccountId) {
+      setError('Debes seleccionar una cuenta de origen');
+      return;
+    }
+
+    if (!toAccountId) {
+      setError('Debes seleccionar una cuenta de destino');
+      return;
+    }
 
     if (fromAccountId === toAccountId) {
       setError('La cuenta de origen y destino deben ser distintas');
@@ -59,6 +107,29 @@ export function CreateTransferModal({
       return;
     }
 
+    // Validación: el importe no debe ser mayor al total de la cuenta de origen
+    if (selectedFromAccount) {
+      if (selectedFromAccount.currentBalanceCents <= 0) {
+        setError(
+          `La cuenta de origen "${selectedFromAccount.name}" no dispone de saldo suficiente para transferir (Saldo disponible: ${(selectedFromAccount.currentBalanceCents / 100).toFixed(2).replace('.', ',')} €).`
+        );
+        return;
+      }
+
+      if (amountCents > selectedFromAccount.currentBalanceCents) {
+        const availableFormatted = (selectedFromAccount.currentBalanceCents / 100)
+          .toFixed(2)
+          .replace('.', ',');
+        const requestedFormatted = (amountCents / 100)
+          .toFixed(2)
+          .replace('.', ',');
+        setError(
+          `El importe (${requestedFormatted} €) no puede ser mayor al total de la cuenta de origen (${availableFormatted} €).`
+        );
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
       await createTransfer({
@@ -71,6 +142,8 @@ export function CreateTransferModal({
       onSuccess();
       onClose();
       setAmountInput('');
+      setFromAccountId('');
+      setToAccountId('');
     } catch (err: any) {
       setError(err.message || 'Error al ejecutar la transferencia');
     } finally {
@@ -103,23 +176,40 @@ export function CreateTransferModal({
 
         <Select
           label="Cuenta de Origen (Sale el dinero)"
-          options={accountOptions}
+          options={fromAccountOptions}
           value={fromAccountId}
-          onChange={(e) => setFromAccountId(e.target.value)}
+          onChange={(e) => handleFromAccountChange(e.target.value)}
+          required
         />
 
         <Select
           label="Cuenta de Destino (Entra el dinero)"
-          options={accountOptions}
+          options={toAccountOptions}
           value={toAccountId}
-          onChange={(e) => setToAccountId(e.target.value)}
+          onChange={(e) => {
+            setToAccountId(e.target.value);
+            setError(null);
+          }}
+          disabled={!fromAccountId}
+          helperText={
+            !fromAccountId ? 'Selecciona primero la cuenta de origen' : undefined
+          }
+          required
         />
 
         <Input
           label="Importe a transferir (€)"
           placeholder="0,00"
           value={amountInput}
-          onChange={(e) => setAmountInput(e.target.value)}
+          onChange={(e) => {
+            setAmountInput(e.target.value);
+            setError(null);
+          }}
+          helperText={
+            selectedFromAccount
+              ? `Saldo disponible en origen: ${(selectedFromAccount.currentBalanceCents / 100).toFixed(2).replace('.', ',')} €`
+              : undefined
+          }
           required
         />
 

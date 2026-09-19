@@ -55,7 +55,6 @@ export function CreateTransactionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     if (!accountId) {
       setError('Debes seleccionar una cuenta financiera');
       return;
