@@ -45,6 +45,7 @@ export default function BudgetsPage() {
   const [summary, setSummary] = useState<BudgetPacingSummary | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -133,8 +134,12 @@ export default function BudgetsPage() {
 
   return (
     <div className={styles.appContainer}>
-      <Sidebar activeSection="budgets" />
-      <MobileTopBar />
+      <Sidebar
+        activeSection="budgets"
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       <main className={styles.mainContent}>
         {/* Cabecera */}

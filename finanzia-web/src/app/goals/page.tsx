@@ -21,7 +21,8 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState<GoalItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modales
+  // Modales y menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<GoalItem | null>(null);
@@ -96,8 +97,12 @@ export default function GoalsPage() {
 
   return (
     <div className={styles.appContainer}>
-      <Sidebar activeSection="goals" />
-      <MobileTopBar />
+      <Sidebar
+        activeSection="goals"
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       <main className={styles.mainContent}>
         {/* Cabecera */}

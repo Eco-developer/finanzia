@@ -4,6 +4,7 @@
   background-color: #09090b;
   color: #f4f4f5;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  position: relative;
 }
 
 .main {
@@ -13,6 +14,7 @@
   height: 100vh;
   overflow: hidden;
   position: relative;
+  min-width: 0;
 }
 
 .container {
@@ -22,17 +24,152 @@
   overflow: hidden;
 }
 
-@media (max-width: 1200px) {
+/* Barra de pestañas móvil (< 1024px) */
+.mobileTabsBar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .historyPanel,
+  .chatSection,
+  .recommendationsPanel {
+    display: flex !important;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 1024px) {
   .container {
     grid-template-columns: 240px 1fr 300px;
   }
 }
 
-@media (max-width: 992px) {
+@media (max-width: 1023px) {
+  .layout {
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    padding-bottom: 64px; /* Espacio para MobileBottomNav fija */
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .main {
+    height: 100%;
+    min-height: 0;
+    flex: 1;
+    width: 100%;
+  }
+
+  .mobileTabsBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(18, 18, 21, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    gap: 6px;
+    z-index: 20;
+    flex-shrink: 0;
+  }
+
+  .tabBtn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: #a1a1aa;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .tabBtn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .tabBtnActive {
+    background: #1f2937;
+    color: #ffffff;
+    border-color: rgba(99, 102, 241, 0.4);
+    font-weight: 600;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .tabBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9999px;
+    background: rgba(99, 102, 241, 0.25);
+    border: 1px solid rgba(99, 102, 241, 0.45);
+    color: #c4b5fd;
+    font-size: 0.6875rem;
+    font-weight: 700;
+  }
+
+  .tabBtnActive .tabBadge {
+    background: #6366f1;
+    color: #ffffff;
+    border-color: transparent;
+  }
+
   .container {
-    grid-template-columns: 1fr;
-    height: calc(100vh - 60px);
-    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  .panelHiddenOnMobile {
+    display: none !important;
+  }
+
+  .panelVisibleOnMobile {
+    display: flex !important;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  .historyPanel {
+    border-right: none;
+    width: 100%;
+  }
+
+  .deleteConvBtn {
+    opacity: 1 !important;
+    color: #a1a1aa;
+  }
+
+  .recommendationsPanel {
+    border-left: none;
+    width: 100%;
+  }
+
+  .recsHeader {
+    padding: 14px 16px 8px;
+  }
+
+  .recsDescription {
+    margin: 0 16px 12px;
+  }
+
+  .recsList {
+    padding: 0 14px 16px;
   }
 }
 
@@ -565,4 +702,145 @@
   gap: 14px;
   background: #09090b;
   color: #a1a1aa;
+}
+
+/* Acciones en Cabecera de Chat */
+.chatHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.headerActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(99, 102, 241, 0.15);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.headerActionBtn:hover {
+  background: rgba(99, 102, 241, 0.25);
+  color: #ffffff;
+}
+
+.headerRecsBadgeBtn {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+@media (max-width: 1023px) {
+  .headerRecsBadgeBtn {
+    display: inline-flex;
+  }
+}
+
+/* Ajustes Responsive Específicos para Pantallas Móviles (< 768px) */
+@media (max-width: 767px) {
+  .chatHeader {
+    padding: 10px 14px;
+  }
+
+  .sparkleIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .chatHeaderTitle {
+    font-size: 0.95rem;
+  }
+
+  .chatHeaderSubtitle {
+    display: none;
+  }
+
+  .headerActionText {
+    display: none;
+  }
+
+  .messagesContainer {
+    padding: 12px 10px;
+  }
+
+  .welcomeCard {
+    padding: 20px 14px;
+    border-radius: 16px;
+    margin: 8px auto;
+  }
+
+  .welcomeIcon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .welcomeTitle {
+    font-size: 1.15rem;
+  }
+
+  .welcomeDesc {
+    font-size: 0.82rem;
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+
+  .chatInputWrapper {
+    padding: 8px 10px;
+  }
+
+  .promptChipsBar {
+    margin-bottom: 6px;
+  }
+
+  .inputBar {
+    padding: 4px 6px 4px 12px;
+    border-radius: 12px;
+  }
+
+  .chatInput {
+    font-size: 0.85rem;
+  }
+
+  .sendBtn {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobileTabsBar {
+    padding: 4px 8px;
+    gap: 4px;
+  }
+
+  .tabBtn {
+    padding: 6px 8px;
+    font-size: 0.75rem;
+    gap: 4px;
+  }
+
+  .tabBadge {
+    min-width: 16px;
+    height: 16px;
+    font-size: 0.625rem;
+    padding: 0 4px;
+  }
 }

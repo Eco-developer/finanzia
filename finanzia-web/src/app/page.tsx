@@ -54,7 +54,8 @@ export default function HomePage() {
   const [totalRecords, setTotalRecords] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Estados de modales
+  // Estados de modales y navegación móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -212,6 +213,10 @@ export default function HomePage() {
 
   // Navegación por secciones
   const handleNavigateSection = (sectionKey: string) => {
+    if (sectionKey === 'settings') {
+      setIsMobileMenuOpen(true);
+      return;
+    }
     setActiveSection(sectionKey);
     if (sectionKey === 'accounts') {
       document.getElementById('accounts-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -316,14 +321,16 @@ export default function HomePage() {
   // Vista Autenticada: Dashboard con Shell Responsive
   return (
     <div className={styles.appContainer}>
-      {/* Sidebar Fija Lateral para Desktop (260px) */}
+      {/* Sidebar (Desktop fija 260px / Mobile Drawer offcanvas con backdrop) */}
       <Sidebar
         activeSection={activeSection}
         onNavigateSection={handleNavigateSection}
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Barra Superior Móvil */}
-      <MobileTopBar />
+      {/* Barra Superior Móvil con botón hamburguesa */}
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       {/* Contenedor Principal de Contenido */}
       <main className={styles.mainContent}>
@@ -521,20 +528,6 @@ export default function HomePage() {
               </div>
             )}
           </div>
-
-          {/* Tarjeta de Recomendación FinanZIA AI (Human-in-the-Loop) */}
-          <div id="ai-section">
-            <RecommendationCard
-              title="Potenciar Meta 'Fondo Emergencia'"
-              description="Detectado un excedente de liquidez en tu cuenta corriente. Se sugiere programar un traspaso para maximizar rentabilidad."
-              onApprove={() => {
-                console.log('Propuesta aprobada por el usuario');
-              }}
-              onDismiss={() => {
-                console.log('Propuesta descartada por el usuario');
-              }}
-            />
-          </div>
         </section>
 
         {/* Sección: Histórico de Movimientos */}
@@ -552,18 +545,17 @@ export default function HomePage() {
                 <button
                   key={filter}
                   type="button"
-                  className={`${styles.filterBtn} ${
-                    activeFilterType === filter ? styles.filterBtnActive : ''
-                  }`}
+                  className={`${styles.filterBtn} ${activeFilterType === filter ? styles.filterBtnActive : ''
+                    }`}
                   onClick={() => handleFilterChange(filter)}
                 >
                   {filter === 'ALL'
                     ? 'Todos'
                     : filter === 'EXPENSE'
-                    ? 'Gastos'
-                    : filter === 'INCOME'
-                    ? 'Ingresos'
-                    : 'Traspasos'}
+                      ? 'Gastos'
+                      : filter === 'INCOME'
+                        ? 'Ingresos'
+                        : 'Traspasos'}
                 </button>
               ))}
             </div>

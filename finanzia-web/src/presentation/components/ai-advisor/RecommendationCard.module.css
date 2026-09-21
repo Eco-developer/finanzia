@@ -160,3 +160,42 @@
     transform: rotate(360deg);
   }
 }
+
+@media (max-width: 640px) {
+  .card {
+    padding: 14px;
+    gap: 10px;
+    border-radius: 12px;
+  }
+
+  .header {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .title {
+    font-size: 0.88rem;
+  }
+
+  .details {
+    font-size: 0.8rem;
+    line-height: 1.45;
+  }
+
+  .actionPreview {
+    padding: 6px 10px;
+  }
+
+  .footer {
+    gap: 8px;
+  }
+
+  .rejectBtn,
+  .applyBtn {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 10px;
+    font-size: 0.78rem;
+  }
+}

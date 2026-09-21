@@ -392,8 +392,8 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
             }}
           >
             <option value="">-- Asignar tipo --</option>
-            <option value="EXPENSE">🔴 Gasto</option>
             <option value="INCOME">🟢 Ingreso</option>
+            <option value="EXPENSE">🔴 Gasto</option>
           </select>
 
           <select
@@ -456,10 +456,10 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                 const parsedDate = new Date(row.date);
                 const formattedDate = !isNaN(parsedDate.getTime())
                   ? parsedDate.toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })
                   : row.date;
 
                 return (
@@ -509,8 +509,8 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                           handleTypeChange(row.rowId, e.target.value as 'EXPENSE' | 'INCOME')
                         }
                       >
-                        <option value="EXPENSE">🔴 Gasto</option>
                         <option value="INCOME">🟢 Ingreso</option>
+                        <option value="EXPENSE">🔴 Gasto</option>
                       </select>
                     </td>
                     <td>
@@ -522,15 +522,15 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                         <option value="">-- Sin categoría --</option>
                         {row.type === 'EXPENSE'
                           ? expenseCategories.map(({ category, formattedName }) => (
-                              <option key={category.id} value={category.id}>
-                                {formattedName}
-                              </option>
-                            ))
+                            <option key={category.id} value={category.id}>
+                              {formattedName}
+                            </option>
+                          ))
                           : incomeCategories.map(({ category, formattedName }) => (
-                              <option key={category.id} value={category.id}>
-                                {formattedName}
-                              </option>
-                            ))}
+                            <option key={category.id} value={category.id}>
+                              {formattedName}
+                            </option>
+                          ))}
                       </select>
                     </td>
                     <td style={{ textAlign: 'right' }}>
