@@ -16,3 +16,5 @@ export interface ICsvTemplateRepository {
   ): Promise<CsvTemplateEntity>;
   deleteById(userId: string, id: string): Promise<boolean>;
 }
+
+export const CSV_TEMPLATE_REPOSITORY = Symbol("ICsvTemplateRepository");

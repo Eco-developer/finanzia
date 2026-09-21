@@ -1,4 +1,4 @@
-import { CategoryType } from "@prisma/client";
+import { CategoryType } from "../types/financial.types";
 
 export class CategoryEntity {
   constructor(

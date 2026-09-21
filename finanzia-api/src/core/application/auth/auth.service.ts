@@ -1,7 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, Inject } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { PrismaUserRepository } from "../../../infrastructure/database/repositories/prisma-user.repository";
-import { HashingService } from "../../../infrastructure/security/hashing.service";
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from "../../domain/repositories/user.repository.interface";
+import { IHashingService, HASHING_SERVICE } from "../ports/hashing.port";
 import { RegisterDto } from "../../../presentation/dtos/auth/register.dto";
 import { LoginDto } from "../../../presentation/dtos/auth/login.dto";
 import {
@@ -16,8 +19,10 @@ import { UserEntity } from "../../domain/entities/user.entity";
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly userRepository: PrismaUserRepository,
-    private readonly hashingService: HashingService,
+    @Inject(USER_REPOSITORY)
+    private readonly userRepository: IUserRepository,
+    @Inject(HASHING_SERVICE)
+    private readonly hashingService: IHashingService,
     private readonly jwtService: JwtService,
   ) {}
 

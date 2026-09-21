@@ -13,7 +13,8 @@ export class SavingsGoalEntity {
 
   get progressPercentage(): number {
     if (this.targetAmountCents <= 0n) return 100;
-    const pct = Number((this.currentAmountCents * 10000n) / this.targetAmountCents) / 100;
+    const pct =
+      Number((this.currentAmountCents * 10000n) / this.targetAmountCents) / 100;
     return Math.min(100, Math.max(0, pct));
   }
 

@@ -23,7 +23,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           <input
             id={inputId}
             ref={ref}
-            className={`${styles.input} ${error ? styles.hasError : ''} ${className}`}
+            className={`${styles.input} ${error ? styles.hasError : ''} ${rightElement ? styles.hasRightElement : ''} ${className}`}
             {...props}
           />
           {rightElement && <div className={styles.rightElement}>{rightElement}</div>}

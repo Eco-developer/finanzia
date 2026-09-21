@@ -5,9 +5,9 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
 import { Button } from '@/presentation/components/ui/Button';
-import { transactionsApi, TransactionType } from '@/infrastructure/api/transactions.api';
-import { AccountItem } from '@/infrastructure/api/accounts.api';
-import { CategoryItem } from '@/infrastructure/api/categories.api';
+import { useTransactions, type TransactionType } from '@/presentation/hooks/useTransactions';
+import type { AccountItem } from '@/infrastructure/api/accounts.api';
+import type { CategoryItem } from '@/infrastructure/api/categories.api';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateTransactionModalProps {
@@ -25,6 +25,7 @@ export function CreateTransactionModal({
   accounts,
   categories,
 }: CreateTransactionModalProps) {
+  const { createTransaction } = useTransactions();
   const [accountId, setAccountId] = useState(accounts[0]?.id || '');
   const [categoryId, setCategoryId] = useState('');
   const [type, setType] = useState<TransactionType>('EXPENSE');
@@ -54,7 +55,6 @@ export function CreateTransactionModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     if (!accountId) {
       setError('Debes seleccionar una cuenta financiera');
       return;
@@ -79,7 +79,7 @@ export function CreateTransactionModal({
 
     try {
       setIsLoading(true);
-      await transactionsApi.createTransaction({
+      await createTransaction({
         accountId,
         categoryId: categoryId || null,
         type,

@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { Input } from '@/presentation/components/ui/Input';
 import { Button } from '@/presentation/components/ui/Button';
+import { Eye, EyeClosed } from 'lucide-react';
 import styles from './register.module.css';
 
 export default function RegisterPage() {
@@ -16,6 +17,7 @@ export default function RegisterPage() {
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -109,12 +111,23 @@ export default function RegisterPage() {
 
           <Input
             label="Contraseña *"
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="Mínimo 8 caracteres"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
             autoComplete="new-password"
+            rightElement={
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className={styles.passwordToggle}
+                aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                title={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+              >
+                {showPassword ? <EyeClosed size={18} /> : <Eye size={18} />}
+              </button>
+            }
           />
 
           {/* Checklist de requisitos de seguridad de contraseña */}

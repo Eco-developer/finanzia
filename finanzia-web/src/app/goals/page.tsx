@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { Sidebar } from '@/presentation/components/navigation/Sidebar';
 import { MobileTopBar } from '@/presentation/components/navigation/MobileTopBar';
 import { MobileBottomNav } from '@/presentation/components/navigation/MobileBottomNav';

@@ -1,8 +1,17 @@
-import { Injectable } from "@nestjs/common";
-import { TransactionType } from "@prisma/client";
-import { PrismaTransactionRepository } from "../../../infrastructure/database/repositories/prisma-transaction.repository";
-import { PrismaAccountRepository } from "../../../infrastructure/database/repositories/prisma-account.repository";
-import { PrismaCategoryRepository } from "../../../infrastructure/database/repositories/prisma-category.repository";
+import { Injectable, Inject } from "@nestjs/common";
+import { TransactionType } from "../../domain/types/financial.types";
+import {
+  ITransactionRepository,
+  TRANSACTION_REPOSITORY,
+} from "../../domain/repositories/transaction.repository.interface";
+import {
+  IAccountRepository,
+  ACCOUNT_REPOSITORY,
+} from "../../domain/repositories/account.repository.interface";
+import {
+  ICategoryRepository,
+  CATEGORY_REPOSITORY,
+} from "../../domain/repositories/category.repository.interface";
 import { CreateTransactionDto } from "../../../presentation/dtos/transactions/create-transaction.dto";
 import { CreateTransferDto } from "../../../presentation/dtos/transactions/create-transfer.dto";
 import { TransactionFilterDto } from "../../../presentation/dtos/transactions/transaction-filter.dto";
@@ -21,9 +30,12 @@ import { InvalidTransferException } from "../../domain/exceptions/invalid-transf
 @Injectable()
 export class TransactionsService {
   constructor(
-    private readonly transactionRepository: PrismaTransactionRepository,
-    private readonly accountRepository: PrismaAccountRepository,
-    private readonly categoryRepository: PrismaCategoryRepository,
+    @Inject(TRANSACTION_REPOSITORY)
+    private readonly transactionRepository: ITransactionRepository,
+    @Inject(ACCOUNT_REPOSITORY)
+    private readonly accountRepository: IAccountRepository,
+    @Inject(CATEGORY_REPOSITORY)
+    private readonly categoryRepository: ICategoryRepository,
   ) {}
 
   async createTransaction(
@@ -122,10 +134,16 @@ export class TransactionsService {
       throw new UnauthorizedAccountAccessException(dto.toAccountId);
     }
 
-    // 3. Validar importe estrictamente positivo
+    // 3. Validar importe estrictamente positivo y fondos suficientes
     if (!dto.amountCents || dto.amountCents <= 0) {
       throw new InvalidTransferException(
         "El importe de la transferencia debe ser mayor a cero",
+      );
+    }
+
+    if (fromAccount.currentBalanceCents < BigInt(dto.amountCents)) {
+      throw new InvalidTransferException(
+        "El importe de la transferencia no puede superar el saldo disponible de la cuenta de origen",
       );
     }
 

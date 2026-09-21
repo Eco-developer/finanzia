@@ -3,14 +3,13 @@ import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiToolsService } from "../../core/application/ai/ai-tools.service";
 import { ToolCallExecution } from "../../core/application/ai/dtos/chat.dto";
-
-export interface AdvisorExecutionResult {
-  content: string;
-  toolExecutions: ToolCallExecution[];
-}
+import {
+  IAiAdvisorPort,
+  AdvisorExecutionResult,
+} from "../../core/application/ports/ai-advisor.port";
 
 @Injectable()
-export class GeminiAdvisorService {
+export class GeminiAdvisorService implements IAiAdvisorPort {
   private readonly logger = new Logger(GeminiAdvisorService.name);
   private readonly aiClient: GoogleGenAI | null = null;
   private readonly apiKey: string | undefined;
@@ -32,13 +31,20 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     if (this.apiKey && this.apiKey.trim().length > 0) {
       try {
         this.aiClient = new GoogleGenAI({ apiKey: this.apiKey.trim() });
-        this.logger.log("Cliente Google Gen AI inicializado con GEMINI_API_KEY.");
+        this.logger.log(
+          "Cliente Google Gen AI inicializado con GEMINI_API_KEY.",
+        );
       } catch (error) {
-        this.logger.warn("Error al inicializar GoogleGenAI, se usará el motor ReAct local.", error);
+        this.logger.warn(
+          "Error al inicializar GoogleGenAI, se usará el motor ReAct local.",
+          error,
+        );
         this.aiClient = null;
       }
     } else {
-      this.logger.log("GEMINI_API_KEY no configurada. Activando Motor ReAct Local Determinista (Offline Ready).");
+      this.logger.log(
+        "GEMINI_API_KEY no configurada. Activando Motor ReAct Local Determinista (Offline Ready).",
+      );
     }
   }
 
@@ -80,32 +86,50 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
         functionDeclarations: [
           {
             name: "get_financial_summary",
-            description: "Obtiene el total de ingresos, gastos, ahorro neto y ratio de ahorro para un mes y año concretos.",
+            description:
+              "Obtiene el total de ingresos, gastos, ahorro neto y ratio de ahorro para un mes y año concretos.",
             parameters: {
               type: Type.OBJECT,
               properties: {
-                month: { type: Type.INTEGER, description: "Mes del año (1 a 12)" },
-                year: { type: Type.INTEGER, description: "Año de cuatro dígitos (ej. 2026)" },
+                month: {
+                  type: Type.INTEGER,
+                  description: "Mes del año (1 a 12)",
+                },
+                year: {
+                  type: Type.INTEGER,
+                  description: "Año de cuatro dígitos (ej. 2026)",
+                },
               },
               required: ["month", "year"],
             },
           },
           {
             name: "get_expenses_by_category",
-            description: "Desglose agrupado de gastos por categoría en un rango de fechas.",
+            description:
+              "Desglose agrupado de gastos por categoría en un rango de fechas.",
             parameters: {
               type: Type.OBJECT,
               properties: {
-                startDate: { type: Type.STRING, description: "Fecha inicial YYYY-MM-DD" },
-                endDate: { type: Type.STRING, description: "Fecha final YYYY-MM-DD" },
-                categoryId: { type: Type.STRING, description: "Opcional: ID de una categoría específica" },
+                startDate: {
+                  type: Type.STRING,
+                  description: "Fecha inicial YYYY-MM-DD",
+                },
+                endDate: {
+                  type: Type.STRING,
+                  description: "Fecha final YYYY-MM-DD",
+                },
+                categoryId: {
+                  type: Type.STRING,
+                  description: "Opcional: ID de una categoría específica",
+                },
               },
               required: ["startDate", "endDate"],
             },
           },
           {
             name: "get_budget_status",
-            description: "Consulta el estado de ejecución de los presupuestos del usuario para un mes y año.",
+            description:
+              "Consulta el estado de ejecución de los presupuestos del usuario para un mes y año.",
             parameters: {
               type: Type.OBJECT,
               properties: {
@@ -117,19 +141,28 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
           },
           {
             name: "propose_recommendation",
-            description: "Registra una propuesta de ajuste presupuestario o meta que requiere aprobación humana obligatoria.",
+            description:
+              "Registra una propuesta de ajuste presupuestario o meta que requiere aprobación humana obligatoria.",
             parameters: {
               type: Type.OBJECT,
               properties: {
                 type: {
                   type: Type.STRING,
-                  description: "Tipo: BUDGET_ADJUSTMENT, SAVINGS_BOOST, o EXPENSE_ALERT",
+                  description:
+                    "Tipo: BUDGET_ADJUSTMENT, SAVINGS_BOOST, o EXPENSE_ALERT",
                 },
-                title: { type: Type.STRING, description: "Título claro y conciso" },
-                details: { type: Type.STRING, description: "Explicación detallada y beneficio" },
+                title: {
+                  type: Type.STRING,
+                  description: "Título claro y conciso",
+                },
+                details: {
+                  type: Type.STRING,
+                  description: "Explicación detallada y beneficio",
+                },
                 actionPayload: {
                   type: Type.OBJECT,
-                  description: "Datos estructurados de la acción a ejecutar tras aprobación",
+                  description:
+                    "Datos estructurados de la acción a ejecutar tras aprobación",
                 },
               },
               required: ["type", "title", "details", "actionPayload"],
@@ -161,11 +194,15 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     });
 
     const candidate = response.candidates?.[0];
-    const functionCalls = candidate?.content?.parts?.filter((p: any) => p.functionCall) || [];
+    const functionCalls =
+      candidate?.content?.parts?.filter((p: any) => p.functionCall) || [];
 
     if (functionCalls.length === 0) {
-      const text = candidate?.content?.parts?.map((p: any) => p.text || "").join("").trim() ||
-        "No he podido generar una respuesta para tu consulta.";
+      const text =
+        candidate?.content?.parts
+          ?.map((p: any) => p.text || "")
+          .join("")
+          .trim() || "No he podido generar una respuesta para tu consulta.";
       return {
         content: text,
         toolExecutions: executedTools,
@@ -181,13 +218,32 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
       let result: any = {};
       if (toolName === "get_financial_summary") {
-        result = await this.aiToolsService.getFinancialSummary(userId, Number(args.month), Number(args.year));
+        result = await this.aiToolsService.getFinancialSummary(
+          userId,
+          Number(args.month),
+          Number(args.year),
+        );
       } else if (toolName === "get_expenses_by_category") {
-        result = await this.aiToolsService.getExpensesByCategory(userId, String(args.startDate), String(args.endDate), args.categoryId);
+        result = await this.aiToolsService.getExpensesByCategory(
+          userId,
+          String(args.startDate),
+          String(args.endDate),
+          args.categoryId,
+        );
       } else if (toolName === "get_budget_status") {
-        result = await this.aiToolsService.getBudgetStatus(userId, Number(args.month), Number(args.year));
+        result = await this.aiToolsService.getBudgetStatus(
+          userId,
+          Number(args.month),
+          Number(args.year),
+        );
       } else if (toolName === "propose_recommendation") {
-        result = await this.aiToolsService.proposeRecommendation(userId, args.type, args.title, args.details, args.actionPayload);
+        result = await this.aiToolsService.proposeRecommendation(
+          userId,
+          args.type,
+          args.title,
+          args.details,
+          args.actionPayload,
+        );
       }
 
       executedTools.push({
@@ -222,8 +278,11 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       },
     });
 
-    const finalText = followUpResponse.candidates?.[0]?.content?.parts?.map((p: any) => p.text || "").join("").trim() ||
-      "He procesado los datos de tu cuenta.";
+    const finalText =
+      followUpResponse.candidates?.[0]?.content?.parts
+        ?.map((p: any) => p.text || "")
+        .join("")
+        .trim() || "He procesado los datos de tu cuenta.";
 
     return {
       content: finalText,
@@ -236,8 +295,14 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
    * Analiza la intención de la consulta, ejecuta las herramientas SQL de PostgreSQL
    * y formatea la respuesta en euros con cero floats y estricta verificación.
    */
-  private async executeLocalFallback(userId: string, message: string): Promise<AdvisorExecutionResult> {
-    const textLower = message.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  private async executeLocalFallback(
+    userId: string,
+    message: string,
+  ): Promise<AdvisorExecutionResult> {
+    const textLower = message
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     const now = new Date();
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
@@ -251,7 +316,11 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       textLower.includes("limite") ||
       textLower.includes("desvio")
     ) {
-      const budgetStatus = await this.aiToolsService.getBudgetStatus(userId, currentMonth, currentYear);
+      const budgetStatus = await this.aiToolsService.getBudgetStatus(
+        userId,
+        currentMonth,
+        currentYear,
+      );
       executedTools.push({
         toolName: "get_budget_status",
         args: { month: currentMonth, year: currentYear },
@@ -311,7 +380,11 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       const lastDay = new Date(currentYear, currentMonth, 0).getDate();
       const endDate = `${currentYear}-${String(currentMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-      const categories = await this.aiToolsService.getExpensesByCategory(userId, startDate, endDate);
+      const categories = await this.aiToolsService.getExpensesByCategory(
+        userId,
+        startDate,
+        endDate,
+      );
       executedTools.push({
         toolName: "get_expenses_by_category",
         args: { startDate, endDate },
@@ -327,11 +400,16 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
       let reply = `🛒 **Desglose de Gastos por Categoría (${currentMonth}/${currentYear}):**\n\n`;
       for (const cat of categories.slice(0, 6)) {
-        const amount = (cat.totalAmountCents / 100).toFixed(2).replace(".", ",");
+        const amount = (cat.totalAmountCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
         reply += `- **${cat.categoryName}**: ${amount} € (${cat.percentageOfTotal}% del total, ${cat.transactionCount} operaciones)\n`;
       }
 
-      const totalCatSpent = categories.reduce((sum, c) => sum + c.totalAmountCents, 0);
+      const totalCatSpent = categories.reduce(
+        (sum, c) => sum + c.totalAmountCents,
+        0,
+      );
       const formattedTotal = (totalCatSpent / 100).toFixed(2).replace(".", ",");
       reply += `\n**Total gastos acumulados en el mes:** ${formattedTotal} €.`;
 
@@ -351,16 +429,26 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       textLower.includes("saldo") ||
       textLower.includes("balance")
     ) {
-      const summary = await this.aiToolsService.getFinancialSummary(userId, currentMonth, currentYear);
+      const summary = await this.aiToolsService.getFinancialSummary(
+        userId,
+        currentMonth,
+        currentYear,
+      );
       executedTools.push({
         toolName: "get_financial_summary",
         args: { month: currentMonth, year: currentYear },
         result: summary,
       });
 
-      const income = (summary.totalIncomeCents / 100).toFixed(2).replace(".", ",");
-      const expense = (summary.totalExpenseCents / 100).toFixed(2).replace(".", ",");
-      const savings = (summary.netSavingsCents / 100).toFixed(2).replace(".", ",");
+      const income = (summary.totalIncomeCents / 100)
+        .toFixed(2)
+        .replace(".", ",");
+      const expense = (summary.totalExpenseCents / 100)
+        .toFixed(2)
+        .replace(".", ",");
+      const savings = (summary.netSavingsCents / 100)
+        .toFixed(2)
+        .replace(".", ",");
 
       let reply = `📈 **Resumen Financiero del Mes (${currentMonth}/${currentYear}):**\n\n`;
       reply += `- 🟢 **Ingresos Totales:** ${income} €\n`;
@@ -390,8 +478,16 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       textLower.includes("optimizar") ||
       textLower.includes("propuesta")
     ) {
-      const summary = await this.aiToolsService.getFinancialSummary(userId, currentMonth, currentYear);
-      const budgetStatus = await this.aiToolsService.getBudgetStatus(userId, currentMonth, currentYear);
+      const summary = await this.aiToolsService.getFinancialSummary(
+        userId,
+        currentMonth,
+        currentYear,
+      );
+      const budgetStatus = await this.aiToolsService.getBudgetStatus(
+        userId,
+        currentMonth,
+        currentYear,
+      );
 
       executedTools.push({
         toolName: "get_financial_summary",

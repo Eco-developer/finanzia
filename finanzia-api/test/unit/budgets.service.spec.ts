@@ -6,7 +6,7 @@ import {
 import { BudgetsService } from "../../src/core/application/budgets/budgets.service";
 import { BudgetEntity } from "../../src/core/domain/entities/budget.entity";
 import { CategoryEntity } from "../../src/core/domain/entities/category.entity";
-import { CategoryType } from "@prisma/client";
+import { CategoryType } from "../../src/core/domain/types/financial.types";
 
 describe("BudgetsService (Unit Tests)", () => {
   let budgetsService: BudgetsService;

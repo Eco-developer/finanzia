@@ -22,10 +22,10 @@ jobs:
       - name: Checkout Repositorio
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 20
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'npm'
           cache-dependency-path: finanzia-web/package-lock.json
 
@@ -34,6 +34,9 @@ jobs:
 
       - name: Validar Linting (ESLint)
         run: npm run lint
+
+      - name: Validar Arquitectura Hexagonal (Dependency Cruiser)
+        run: npm run lint:arch
 
       - name: Ejecutar Tests Unitarios (Vitest / React Testing Library)
         run: npm test

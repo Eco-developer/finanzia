@@ -9,7 +9,9 @@ export class UpdateBudgetDto {
   })
   @IsOptional()
   @Type(() => Number)
-  @IsInt({ message: "El límite del presupuesto debe ser un entero en céntimos" })
+  @IsInt({
+    message: "El límite del presupuesto debe ser un entero en céntimos",
+  })
   @Min(1, { message: "El límite debe ser mayor que cero" })
   amountLimitCents?: number;
 

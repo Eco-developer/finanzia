@@ -1,4 +1,4 @@
-import { AccountType } from "@prisma/client";
+import { AccountType } from "../types/financial.types";
 import { AccountEntity } from "../entities/account.entity";
 
 export interface CreateAccountData {

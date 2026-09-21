@@ -5,8 +5,8 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Select } from '@/presentation/components/ui/Select';
 import { Button } from '@/presentation/components/ui/Button';
-import { budgetsApi, BudgetPacingItem } from '@/infrastructure/api/budgets.api';
-import { CategoryItem } from '@/infrastructure/api/categories.api';
+import { useBudgets, type BudgetPacingItem } from '@/presentation/hooks/useBudgets';
+import type { CategoryItem } from '@/infrastructure/api/categories.api';
 import { parseInputToCents } from '@/core/domain/formatters/money.formatter';
 
 interface CreateBudgetModalProps {
@@ -28,6 +28,7 @@ export function CreateBudgetModal({
   initialYear = new Date().getFullYear(),
   editingItem,
 }: CreateBudgetModalProps) {
+  const { createBudget, updateBudget } = useBudgets();
   // Filtrar solo categorías de tipo gasto (EXPENSE)
   const expenseCategories = categories.filter((c) => c.type === 'EXPENSE');
 
@@ -39,31 +40,52 @@ export function CreateBudgetModal({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Inicializar el formulario únicamente cuando se abre el modal
   useEffect(() => {
-    if (editingItem) {
-      setCategoryId(editingItem.categoryId);
-      setAmountInput((editingItem.amountLimitCents / 100).toFixed(2));
-      setAlertThresholdPct(editingItem.alertThresholdPct || 80);
-    } else {
-      setCategoryId(expenseCategories[0]?.id || '');
-      setAmountInput('');
-      setPeriodMonth(initialMonth);
-      setPeriodYear(initialYear);
-      setAlertThresholdPct(80);
+    if (isOpen) {
+      if (editingItem) {
+        // Modo Edición: Asignar datos del presupuesto seleccionado
+        setCategoryId(editingItem.categoryId);
+        setAmountInput((editingItem.amountLimitCents / 100).toFixed(2).replace('.', ','));
+        setAlertThresholdPct(editingItem.alertThresholdPct || 80);
+      } else {
+        // Modo Creación: Inicializar con valores por defecto
+        setCategoryId(expenseCategories[0]?.id || '');
+        setAmountInput('');
+        setPeriodMonth(initialMonth);
+        setPeriodYear(initialYear);
+        setAlertThresholdPct(80);
+      }
+      setError(null);
     }
-    setError(null);
-  }, [editingItem, isOpen, initialMonth, initialYear, expenseCategories]);
+  }, [isOpen, editingItem]);
 
-  const categoryOptions = expenseCategories.map((c) => ({
-    value: c.id,
-    label: c.name,
-  }));
+  // Función para reiniciar el formulario al cerrar (por botón, tecla Esc o clic afuera)
+  const handleClose = () => {
+    setCategoryId('');
+    setAmountInput('');
+    setPeriodMonth(initialMonth);
+    setPeriodYear(initialYear);
+    setAlertThresholdPct(80);
+    setError(null);
+    onClose();
+  };
+
+  const categoryOptions = [
+    ...(editingItem && !expenseCategories.some((c) => c.id === editingItem.categoryId)
+      ? [{ value: editingItem.categoryId, label: editingItem.categoryName }]
+      : []),
+    ...expenseCategories.map((c) => ({
+      value: c.id,
+      label: c.name,
+    })),
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!categoryId) {
+    if (!editingItem && !categoryId) {
       setError('Debes seleccionar una categoría de gasto');
       return;
     }
@@ -76,22 +98,31 @@ export function CreateBudgetModal({
         return;
       }
     } catch {
-      setError('Introduce un importe numérico válido (ej. 250.00)');
+      setError('Introduce un importe numérico válido (ej. 250,00)');
       return;
     }
 
     setIsLoading(true);
     try {
-      await budgetsApi.createBudget({
-        categoryId,
-        amountLimitCents,
-        periodMonth,
-        periodYear,
-        alertThresholdPct,
-      });
+      if (editingItem) {
+        // Modo Edición: Modificar EXCLUSIVAMENTE el presupuesto específico por su ID único
+        await updateBudget(editingItem.budgetId, {
+          amountLimitCents,
+          alertThresholdPct,
+        });
+      } else {
+        // Modo Creación: Registrar nuevo presupuesto para la categoría seleccionada
+        await createBudget({
+          categoryId,
+          amountLimitCents,
+          periodMonth,
+          periodYear,
+          alertThresholdPct,
+        });
+      }
 
+      handleClose();
       onSuccess();
-      onClose();
     } catch (err: any) {
       setError(
         err.message || 'Error al guardar el presupuesto. Inténtalo de nuevo.',
@@ -104,8 +135,13 @@ export function CreateBudgetModal({
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
-      title={editingItem ? 'Modificar Presupuesto' : 'Fijar Presupuesto Mensual'}
+      onClose={handleClose}
+      title={editingItem ? `Modificar Presupuesto: ${editingItem.categoryName}` : 'Fijar Presupuesto Mensual'}
+      description={
+        editingItem
+          ? `Ajusta el límite mensual exclusivo para la categoría "${editingItem.categoryName}".`
+          : 'Fija límites mensuales en tus categorías de gasto para recibir alertas automáticas.'
+      }
     >
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         {error && (
@@ -129,6 +165,7 @@ export function CreateBudgetModal({
           onChange={(e) => setCategoryId(e.target.value)}
           options={categoryOptions}
           disabled={!!editingItem || isLoading}
+          helperText={editingItem ? 'La categoría está bloqueada para garantizar que solo se edite este presupuesto' : undefined}
         />
 
         <Input
@@ -142,30 +179,32 @@ export function CreateBudgetModal({
           disabled={isLoading}
         />
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-          <Input
-            id="budget-month"
-            label="Mes (1 - 12)"
-            type="number"
-            min={1}
-            max={12}
-            value={periodMonth}
-            onChange={(e) => setPeriodMonth(parseInt(e.target.value, 10))}
-            required
-            disabled={!!editingItem || isLoading}
-          />
-          <Input
-            id="budget-year"
-            label="Año"
-            type="number"
-            min={2020}
-            max={2030}
-            value={periodYear}
-            onChange={(e) => setPeriodYear(parseInt(e.target.value, 10))}
-            required
-            disabled={!!editingItem || isLoading}
-          />
-        </div>
+        {!editingItem && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <Input
+              id="budget-month"
+              label="Mes (1 - 12)"
+              type="number"
+              min={1}
+              max={12}
+              value={periodMonth}
+              onChange={(e) => setPeriodMonth(parseInt(e.target.value, 10))}
+              required
+              disabled={isLoading}
+            />
+            <Input
+              id="budget-year"
+              label="Año"
+              type="number"
+              min={2020}
+              max={2030}
+              value={periodYear}
+              onChange={(e) => setPeriodYear(parseInt(e.target.value, 10))}
+              required
+              disabled={isLoading}
+            />
+          </div>
+        )}
 
         <Input
           id="budget-threshold"
@@ -177,10 +216,11 @@ export function CreateBudgetModal({
           onChange={(e) => setAlertThresholdPct(parseInt(e.target.value, 10))}
           required
           disabled={isLoading}
+          helperText="Porcentaje de gasto en el que se activará el aviso preventivo"
         />
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1rem' }}>
-          <Button variant="outline" type="button" onClick={onClose} disabled={isLoading}>
+          <Button variant="outline" type="button" onClick={handleClose} disabled={isLoading}>
             Cancelar
           </Button>
           <Button variant="primary" type="submit" isLoading={isLoading}>

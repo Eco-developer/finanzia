@@ -122,9 +122,7 @@ export class ImportsController {
     description: "Lista de plantillas del usuario",
     type: [CsvTemplateResponseDto],
   })
-  async getTemplates(
-    @CurrentUser() user: AuthenticatedUser,
-  ) {
+  async getTemplates(@CurrentUser() user: AuthenticatedUser) {
     const data = await this.importsService.getTemplates(user.id);
     return {
       success: true,

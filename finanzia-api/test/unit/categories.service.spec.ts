@@ -1,7 +1,7 @@
 import { BadRequestException } from "@nestjs/common";
 import { CategoriesService } from "../../src/core/application/categories/categories.service";
 import { CategoryEntity } from "../../src/core/domain/entities/category.entity";
-import { CategoryType } from "@prisma/client";
+import { CategoryType } from "../../src/core/domain/types/financial.types";
 import { CategoryNotFoundException } from "../../src/core/domain/exceptions/category-not-found.exception";
 import { UnauthorizedCategoryAccessException } from "../../src/core/domain/exceptions/unauthorized-category-access.exception";
 import { ParentCategoryNotFoundException } from "../../src/core/domain/exceptions/parent-category-not-found.exception";

@@ -86,7 +86,11 @@ export class PrismaBudgetRepository implements IBudgetRepository {
         ...(periodYear !== undefined ? { periodYear } : {}),
       },
       include: { category: true },
-      orderBy: [{ periodYear: "desc" }, { periodMonth: "desc" }, { createdAt: "asc" }],
+      orderBy: [
+        { periodYear: "desc" },
+        { periodMonth: "desc" },
+        { createdAt: "asc" },
+      ],
     });
     return records.map((r) => this.toDomain(r));
   }
@@ -133,7 +137,9 @@ export class PrismaBudgetRepository implements IBudgetRepository {
       return [];
     }
 
-    const startDate = new Date(Date.UTC(periodYear, periodMonth - 1, 1, 0, 0, 0, 0));
+    const startDate = new Date(
+      Date.UTC(periodYear, periodMonth - 1, 1, 0, 0, 0, 0),
+    );
     const endDate = new Date(Date.UTC(periodYear, periodMonth, 1, 0, 0, 0, 0));
 
     const categoryIds = budgets.map((b) => b.categoryId);
@@ -159,7 +165,8 @@ export class PrismaBudgetRepository implements IBudgetRepository {
     const categoryExpenseMap = new Map<string, bigint>();
     for (const tx of expenseTransactions) {
       if (!tx.categoryId) continue;
-      const positiveCents = tx.amountCents < 0n ? -tx.amountCents : tx.amountCents;
+      const positiveCents =
+        tx.amountCents < 0n ? -tx.amountCents : tx.amountCents;
       const current = categoryExpenseMap.get(tx.categoryId) || 0n;
       categoryExpenseMap.set(tx.categoryId, current + positiveCents);
     }

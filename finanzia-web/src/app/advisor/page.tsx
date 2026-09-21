@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { Sidebar } from '@/presentation/components/navigation/Sidebar';
 import { MobileTopBar } from '@/presentation/components/navigation/MobileTopBar';
 import { MobileBottomNav } from '@/presentation/components/navigation/MobileBottomNav';
@@ -292,7 +292,7 @@ export default function AdvisorPage() {
                 <div>
                   <h1 className={styles.chatHeaderTitle}>FinanZIA Advisor</h1>
                   <p className={styles.chatHeaderSubtitle}>
-                    Asistente determinista ReAct · Conexión directa a PostgreSQL
+                    Asistente financiero inteligente · Datos verificados en tiempo real
                   </p>
                 </div>
               </div>
@@ -313,7 +313,7 @@ export default function AdvisorPage() {
                   <h2 className={styles.welcomeTitle}>¿En qué puedo ayudarte hoy?</h2>
                   <p className={styles.welcomeDesc}>
                     Soy tu asesor financiero inteligente. Todas mis respuestas están basadas en
-                    consultas SQL reales a tus cuentas, categorías y presupuestos. Nunca invento datos ni
+                    datos reales de tus cuentas, categorías y presupuestos. Nunca invento datos ni
                     asumo cifras.
                   </p>
 
@@ -334,7 +334,7 @@ export default function AdvisorPage() {
                   <span className={styles.typingDot} />
                   <span className={styles.typingDot} />
                   <span className={styles.typingText}>
-                    Ejecutando consultas SQL backend verificadas...
+                    Analizando tus datos financieros...
                   </span>
                 </div>
               )}

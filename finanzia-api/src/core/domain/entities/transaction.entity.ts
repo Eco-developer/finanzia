@@ -1,4 +1,4 @@
-import { TransactionType } from "@prisma/client";
+import { TransactionType } from "../types/financial.types";
 
 export class TransactionEntity {
   constructor(

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/core/application/auth/auth.context';
+import { useAuth } from '@/presentation/context/auth.context';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
 import { Badge } from '@/presentation/components/ui/Badge';
@@ -466,18 +466,17 @@ export default function HomePage() {
                 <button
                   key={filter}
                   type="button"
-                  className={`${styles.filterBtn} ${
-                    activeFilterType === filter ? styles.filterBtnActive : ''
-                  }`}
+                  className={`${styles.filterBtn} ${activeFilterType === filter ? styles.filterBtnActive : ''
+                    }`}
                   onClick={() => setActiveFilterType(filter)}
                 >
                   {filter === 'ALL'
                     ? 'Todos'
                     : filter === 'EXPENSE'
-                    ? 'Gastos'
-                    : filter === 'INCOME'
-                    ? 'Ingresos'
-                    : 'Traspasos'}
+                      ? 'Gastos'
+                      : filter === 'INCOME'
+                        ? 'Ingresos'
+                        : 'Traspasos'}
                 </button>
               ))}
             </div>
@@ -505,14 +504,15 @@ export default function HomePage() {
         onClose={() => setIsAccountModalOpen(false)}
         onSuccess={() => loadData()}
       />
-
-      <CreateTransactionModal
-        isOpen={isTransactionModalOpen}
-        onClose={() => setIsTransactionModalOpen(false)}
-        onSuccess={() => loadData()}
-        accounts={accounts}
-        categories={categories}
-      />
+      {accounts.length > 0 ?
+        <CreateTransactionModal
+          isOpen={isTransactionModalOpen}
+          onClose={() => setIsTransactionModalOpen(false)}
+          onSuccess={() => loadData()}
+          accounts={accounts}
+          categories={categories}
+        />
+        : null}
 
       <CreateTransferModal
         isOpen={isTransferModalOpen}

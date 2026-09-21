@@ -1,7 +1,7 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { AuthProvider, useAuth } from '@/core/application/auth/auth.context';
+import { AuthProvider, useAuth } from '@/presentation/context/auth.context';
 import { authApi } from '@/infrastructure/api/auth.api';
 
 describe('AuthContext & useAuth', () => {

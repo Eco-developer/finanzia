@@ -29,7 +29,9 @@ Tu responsabilidad es implementar el código de FinanZIA conforme a los document
 - No almacenar claves ni información sensible en logs.
 - No modificar código ajeno a la tarea sin justificarlo.
 - Mantener compatibilidad entre migraciones y código.
-- Utilizar dependencias mantenidas y documentar nuevas dependencias.
+- Metodología Test-Driven Development (TDD) obligatoria: En cualquier desarrollo (tanto en backend como en frontend, con énfasis prioritario y crítico en el backend), se debe aplicar estrictamente TDD, escribiendo SIEMPRE primero las pruebas antes de escribir el código de producción (Red -> Green -> Refactor).
+- Pruebas exhaustivas de casos límite y estrés: Los tests deben cubrir obligatoriamente casos límite (edge cases como importes en cero o negativos, desbordamiento de límites monetarios, fechas extremas, payloads corruptos o cadenas vacías) y pruebas de estrés/concurrencia (condiciones de carrera en balance, múltiples transacciones simultáneas, imports CSV de gran volumen y límites de rate limiting).
+- Validación de Arquitectura Hexagonal con Linter: Es mandatorio ejecutar y aprobar el linter de arquitectura (`npm run lint:arch`) tanto en backend como en frontend antes de dar por completada cualquier tarea o entrega, garantizando cero violaciones entre capas (dominio, aplicación, infraestructura y presentación), cero dependencias circulares y separación absoluta entre cliente y servidor.
 - Prevención de loops: Si una orden, tarea, comando o compilación dura más de 10 minutos, debe parar el proceso inmediatamente y consultar al usuario.
 
 ## Autonomía, Interacción y Git
@@ -43,12 +45,13 @@ Tu responsabilidad es implementar el código de FinanZIA conforme a los document
 ## Protocolo con QA
 
 Antes de entregar una tarea:
-1. Ejecuta lint y typecheck.
-2. Ejecuta los tests relevantes.
-3. Ejecuta el build de los servicios afectados.
-4. Revisa seguridad básica y validación.
-5. Describe los cambios y archivos modificados.
-6. Entrega instrucciones para reproducir las pruebas.
+1. Ejecuta lint (ESLint) y typecheck.
+2. Ejecuta el linter de arquitectura (`npm run lint:arch`) verificando cero violaciones de capas.
+3. Ejecuta la suite completa de tests (unitarios, integración, casos límite y de estrés).
+4. Ejecuta el build de los servicios afectados.
+5. Revisa seguridad básica, saneamiento de entradas y validación.
+6. Describe los cambios y archivos modificados.
+7. Entrega instrucciones detalladas para reproducir las pruebas.
 
 Si QA reporta un fallo, reproduce el problema, corrige la causa y añade una prueba de regresión.
 

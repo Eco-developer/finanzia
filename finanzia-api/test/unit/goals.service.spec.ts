@@ -108,9 +108,13 @@ describe("GoalsService (Unit Tests)", () => {
       );
       mockGoalRepository.addContribution.mockResolvedValue(updatedGoal);
 
-      const result = await goalsService.contributeToGoal("user-1", "goal-uuid-1", {
-        amountCents: 100000,
-      });
+      const result = await goalsService.contributeToGoal(
+        "user-1",
+        "goal-uuid-1",
+        {
+          amountCents: 100000,
+        },
+      );
 
       expect(result.currentAmountCents).toBe(150000);
       expect(result.progressPercentage).toBe(75);

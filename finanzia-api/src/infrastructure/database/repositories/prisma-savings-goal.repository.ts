@@ -46,8 +46,13 @@ export class PrismaSavingsGoalRepository implements ISavingsGoalRepository {
     return records.map((r) => this.toDomain(r));
   }
 
-  async update(id: string, data: UpdateSavingsGoalData): Promise<SavingsGoalEntity> {
-    const existing = await this.prisma.savingsGoal.findUnique({ where: { id } });
+  async update(
+    id: string,
+    data: UpdateSavingsGoalData,
+  ): Promise<SavingsGoalEntity> {
+    const existing = await this.prisma.savingsGoal.findUnique({
+      where: { id },
+    });
     if (!existing) {
       throw new Error(`Meta de ahorro con ID ${id} no encontrada`);
     }
@@ -65,7 +70,9 @@ export class PrismaSavingsGoalRepository implements ISavingsGoalRepository {
         ...(data.targetAmountCents !== undefined
           ? { targetAmountCents: data.targetAmountCents }
           : {}),
-        ...(data.targetDate !== undefined ? { targetDate: data.targetDate } : {}),
+        ...(data.targetDate !== undefined
+          ? { targetDate: data.targetDate }
+          : {}),
         isCompleted,
       },
     });
@@ -73,7 +80,10 @@ export class PrismaSavingsGoalRepository implements ISavingsGoalRepository {
     return this.toDomain(record);
   }
 
-  async addContribution(id: string, amountCents: bigint): Promise<SavingsGoalEntity> {
+  async addContribution(
+    id: string,
+    amountCents: bigint,
+  ): Promise<SavingsGoalEntity> {
     return await this.prisma.$transaction(async (tx) => {
       const existing = await tx.savingsGoal.findUnique({ where: { id } });
       if (!existing) {

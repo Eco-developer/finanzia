@@ -19,7 +19,10 @@ import {
   ApiParam,
 } from "@nestjs/swagger";
 import { AiAdvisorService } from "../../core/application/ai/ai-advisor.service";
-import { SendChatMessageDto, ChatMessageResponseDto } from "../../core/application/ai/dtos/chat.dto";
+import {
+  SendChatMessageDto,
+  ChatMessageResponseDto,
+} from "../../core/application/ai/dtos/chat.dto";
 import { JwtAuthGuard } from "../../infrastructure/security/guards/jwt-auth.guard";
 import {
   CurrentUser,
@@ -37,13 +40,15 @@ export class AdvisorController {
   @Post("chat")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "Enviar consulta al Asistente FinanZIA AI (Principio de Cero Alucinaciones)",
+    summary:
+      "Enviar consulta al Asistente FinanZIA AI (Principio de Cero Alucinaciones)",
     description:
       "Recibe una consulta financiera, ejecuta herramientas deterministas de backend si es necesario y devuelve la respuesta verificada con el desglose de herramientas utilizadas.",
   })
   @ApiResponse({
     status: 200,
-    description: "Respuesta generada por el asesor financiero con trazabilidad de datos verificados",
+    description:
+      "Respuesta generada por el asesor financiero con trazabilidad de datos verificados",
     type: ChatMessageResponseDto,
   })
   async chat(
@@ -63,7 +68,8 @@ export class AdvisorController {
   })
   @ApiResponse({
     status: 200,
-    description: "Lista de conversaciones ordenadas por fecha de actualización reciente",
+    description:
+      "Lista de conversaciones ordenadas por fecha de actualización reciente",
   })
   async getConversations(@CurrentUser() user: AuthenticatedUser) {
     const conversations = await this.advisorService.getConversations(user.id);
@@ -82,7 +88,10 @@ export class AdvisorController {
     @CurrentUser() user: AuthenticatedUser,
     @Param("id", ParseUUIDPipe) id: string,
   ) {
-    const messages = await this.advisorService.getConversationMessages(user.id, id);
+    const messages = await this.advisorService.getConversationMessages(
+      user.id,
+      id,
+    );
     return {
       success: true,
       data: messages,
@@ -93,7 +102,10 @@ export class AdvisorController {
   @ApiOperation({
     summary: "Eliminar una sesión de conversación",
   })
-  @ApiParam({ name: "id", description: "ID de la conversación a eliminar (UUID)" })
+  @ApiParam({
+    name: "id",
+    description: "ID de la conversación a eliminar (UUID)",
+  })
   async deleteConversation(
     @CurrentUser() user: AuthenticatedUser,
     @Param("id", ParseUUIDPipe) id: string,

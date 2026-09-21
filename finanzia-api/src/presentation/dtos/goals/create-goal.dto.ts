@@ -47,6 +47,9 @@ export class CreateGoalDto {
     description: "Fecha estimada para alcanzar el objetivo (ISO 8601)",
   })
   @IsOptional()
-  @IsDateString({}, { message: "La fecha objetivo debe ser una fecha ISO válida" })
+  @IsDateString(
+    {},
+    { message: "La fecha objetivo debe ser una fecha ISO válida" },
+  )
   targetDate?: string;
 }
