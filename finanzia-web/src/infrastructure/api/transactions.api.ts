@@ -28,6 +28,16 @@ export interface CreateTransactionDto {
   notes?: string;
 }
 
+export interface UpdateTransactionDto {
+  accountId?: string;
+  categoryId?: string | null;
+  amountCents?: number;
+  type?: TransactionType;
+  transactionDate?: string;
+  description?: string;
+  notes?: string;
+}
+
 export interface CreateTransferDto {
   fromAccountId: string;
   toAccountId: string;
@@ -104,5 +114,25 @@ export const transactionsApi = {
     await apiClient(`/transactions/${id}`, {
       method: 'DELETE',
     });
+  },
+
+  async updateTransaction(id: string, dto: UpdateTransactionDto): Promise<TransactionItem> {
+    const res = await apiClient<TransactionItem>(`/transactions/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+    return res.data;
+  },
+
+  async deleteMultipleTransactions(ids: string[]): Promise<void> {
+    try {
+      await apiClient('/transactions/batch-delete', {
+        method: 'POST',
+        body: JSON.stringify({ ids }),
+      });
+    } catch {
+      // Fallback: eliminar una por una
+      await Promise.all(ids.map((id) => this.deleteTransaction(id)));
+    }
   },
 };

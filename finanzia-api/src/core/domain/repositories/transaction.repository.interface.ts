@@ -25,6 +25,16 @@ export interface CreateTransferData {
   notes?: string | null;
 }
 
+export interface UpdateTransactionData {
+  accountId?: string;
+  categoryId?: string | null;
+  amountCents?: bigint;
+  type?: TransactionType;
+  transactionDate?: Date;
+  description?: string;
+  notes?: string | null;
+}
+
 export interface TransactionFilterData {
   accountId?: string;
   categoryId?: string;
@@ -46,6 +56,14 @@ export interface ITransactionRepository {
     toTransaction: TransactionEntity;
     newFromBalanceCents: bigint;
     newToBalanceCents: bigint;
+  }>;
+
+  updateTransactionWithBalance(
+    id: string,
+    data: UpdateTransactionData,
+  ): Promise<{
+    transaction: TransactionEntity;
+    affectedAccountIds: string[];
   }>;
 
   findAllByUserId(

@@ -14,6 +14,7 @@ import {
 } from "../../domain/repositories/category.repository.interface";
 import { CreateTransactionDto } from "../../../presentation/dtos/transactions/create-transaction.dto";
 import { CreateTransferDto } from "../../../presentation/dtos/transactions/create-transfer.dto";
+import { UpdateTransactionDto } from "../../../presentation/dtos/transactions/update-transaction.dto";
 import { TransactionFilterDto } from "../../../presentation/dtos/transactions/transaction-filter.dto";
 import { TransactionResponseDto } from "../../../presentation/dtos/transactions/transaction-response.dto";
 import { TransferResponseDto } from "../../../presentation/dtos/transactions/transfer-response.dto";
@@ -214,7 +215,7 @@ export class TransactionsService {
       page,
       limit,
       totalRecords: result.totalRecords,
-      totalPages: Math.ceil(result.totalRecords / limit),
+      totalPages: Math.max(1, Math.ceil(result.totalRecords / limit)),
     };
   }
 
@@ -248,6 +249,125 @@ export class TransactionsService {
     }
 
     return this.transactionRepository.deleteTransactionWithBalance(id);
+  }
+
+  async updateTransaction(
+    userId: string,
+    id: string,
+    dto: UpdateTransactionDto,
+  ): Promise<{
+    transaction: TransactionResponseDto;
+    affectedAccountIds: string[];
+  }> {
+    const existing = await this.transactionRepository.findById(id);
+    if (!existing) {
+      throw new TransactionNotFoundException(id);
+    }
+    if (existing.userId !== userId) {
+      throw new UnauthorizedTransactionAccessException(id);
+    }
+
+    if (
+      existing.type === TransactionType.TRANSFER ||
+      existing.transferCounterpartId
+    ) {
+      throw new InvalidTransferException(
+        "Los traspasos entre cuentas no se pueden modificar directamente. Deben eliminarse y crearse de nuevo.",
+      );
+    }
+
+    if (dto.accountId && dto.accountId !== existing.accountId) {
+      const account = await this.accountRepository.findById(dto.accountId);
+      if (!account) {
+        throw new AccountNotFoundException(dto.accountId);
+      }
+      if (account.userId !== userId) {
+        throw new UnauthorizedAccountAccessException(dto.accountId);
+      }
+    }
+
+    const effectiveType = dto.type ?? existing.type;
+
+    if (dto.categoryId !== undefined && dto.categoryId !== null) {
+      const category = await this.categoryRepository.findById(dto.categoryId);
+      if (!category) {
+        throw new CategoryNotFoundException(dto.categoryId);
+      }
+      if (category.userId && category.userId !== userId) {
+        throw new UnauthorizedCategoryAccessException(dto.categoryId);
+      }
+    }
+
+    let normalizedAmountCents: bigint | undefined = undefined;
+    if (dto.amountCents !== undefined) {
+      const absCents = BigInt(Math.abs(dto.amountCents));
+      if (absCents === 0n) {
+        throw new InvalidTransactionAmountException(
+          "El importe de la transacción no puede ser cero",
+        );
+      }
+      normalizedAmountCents =
+        effectiveType === TransactionType.EXPENSE ? -absCents : absCents;
+    } else if (dto.type !== undefined && dto.type !== existing.type) {
+      const absCents =
+        existing.amountCents < 0n
+          ? -existing.amountCents
+          : existing.amountCents;
+      normalizedAmountCents =
+        effectiveType === TransactionType.EXPENSE ? -absCents : absCents;
+    }
+
+    let transactionDate: Date | undefined = undefined;
+    if (dto.transactionDate) {
+      transactionDate = new Date(dto.transactionDate);
+      if (isNaN(transactionDate.getTime())) {
+        throw new InvalidTransactionAmountException("La fecha no es válida");
+      }
+    }
+
+    const result =
+      await this.transactionRepository.updateTransactionWithBalance(id, {
+        accountId: dto.accountId,
+        categoryId: dto.categoryId,
+        amountCents: normalizedAmountCents,
+        type: dto.type,
+        transactionDate,
+        description: dto.description,
+        notes: dto.notes,
+      });
+
+    return {
+      transaction: this.toResponseDto(result.transaction),
+      affectedAccountIds: result.affectedAccountIds,
+    };
+  }
+
+  async deleteMultipleTransactions(
+    userId: string,
+    ids: string[],
+  ): Promise<{ deletedCount: number; affectedAccountIds: string[] }> {
+    const allAffectedAccounts = new Set<string>();
+    let deletedCount = 0;
+
+    for (const id of ids) {
+      const tx = await this.transactionRepository.findById(id);
+      if (!tx) {
+        throw new TransactionNotFoundException(id);
+      }
+      if (tx.userId !== userId) {
+        throw new UnauthorizedTransactionAccessException(id);
+      }
+
+      const res =
+        await this.transactionRepository.deleteTransactionWithBalance(id);
+      deletedCount++;
+      res.affectedAccountIds.forEach((accId) => allAffectedAccounts.add(accId));
+    }
+
+    return {
+      deletedCount,
+      affectedAccountIds: Array.from(allAffectedAccounts),
+    };
   }
 
   private toResponseDto(entity: TransactionEntity): TransactionResponseDto {

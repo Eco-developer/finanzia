@@ -1,0 +1,65 @@
+﻿.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.typeSelector {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.25rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--bg-card-border);
+}
+
+.typeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  transition: all var(--transition-fast);
+}
+
+.typeBtnExpenseActive {
+  background: rgba(244, 63, 94, 0.15);
+  color: var(--status-expense);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+}
+
+.typeBtnIncomeActive {
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--status-income);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.errorBanner {
+  padding: 0.75rem 1rem;
+  background: rgba(244, 63, 94, 0.1);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  border-radius: var(--radius-md);
+  color: #fda4af;
+  font-size: 0.85rem;
+}
+
+.footerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}

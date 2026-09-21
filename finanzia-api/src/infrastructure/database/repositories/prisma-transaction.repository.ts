@@ -6,6 +6,7 @@ import {
   ITransactionRepository,
   CreateTransactionData,
   CreateTransferData,
+  UpdateTransactionData,
   TransactionFilterData,
 } from "../../../core/domain/repositories/transaction.repository.interface";
 import { TransactionNotFoundException } from "../../../core/domain/exceptions/transaction-not-found.exception";
@@ -175,6 +176,94 @@ export class PrismaTransactionRepository implements ITransactionRepository {
     });
     if (!record) return null;
     return this.toDomain(record);
+  }
+
+  async updateTransactionWithBalance(
+    id: string,
+    data: UpdateTransactionData,
+  ): Promise<{
+    transaction: TransactionEntity;
+    affectedAccountIds: string[];
+  }> {
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.transaction.findUnique({
+        where: { id },
+      });
+
+      if (!existing) {
+        throw new TransactionNotFoundException(id);
+      }
+
+      const affectedAccountIds: string[] = [existing.accountId];
+
+      const oldAccountId = existing.accountId;
+      const newAccountId = data.accountId ?? oldAccountId;
+
+      const oldAmountCents = existing.amountCents;
+      const newAmountCents =
+        data.amountCents !== undefined ? data.amountCents : oldAmountCents;
+
+      // Si cambia de cuenta o de importe, actualizar saldos atómicamente
+      if (oldAccountId === newAccountId) {
+        if (oldAmountCents !== newAmountCents) {
+          const deltaCents = newAmountCents - oldAmountCents;
+          await tx.account.update({
+            where: { id: oldAccountId },
+            data: {
+              currentBalanceCents: {
+                increment: deltaCents,
+              },
+            },
+          });
+        }
+      } else {
+        affectedAccountIds.push(newAccountId);
+
+        // Revertir importe de la cuenta anterior
+        await tx.account.update({
+          where: { id: oldAccountId },
+          data: {
+            currentBalanceCents: {
+              decrement: oldAmountCents,
+            },
+          },
+        });
+
+        // Aplicar nuevo importe a la nueva cuenta
+        await tx.account.update({
+          where: { id: newAccountId },
+          data: {
+            currentBalanceCents: {
+              increment: newAmountCents,
+            },
+          },
+        });
+      }
+
+      const updatePayload: any = {};
+      if (data.accountId !== undefined)
+        updatePayload.accountId = data.accountId;
+      if (data.categoryId !== undefined)
+        updatePayload.categoryId = data.categoryId;
+      if (data.amountCents !== undefined)
+        updatePayload.amountCents = data.amountCents;
+      if (data.type !== undefined) updatePayload.type = data.type;
+      if (data.transactionDate !== undefined)
+        updatePayload.transactionDate = data.transactionDate;
+      if (data.description !== undefined)
+        updatePayload.description = data.description.trim();
+      if (data.notes !== undefined) updatePayload.notes = data.notes;
+
+      const updated = await tx.transaction.update({
+        where: { id },
+        data: updatePayload,
+      });
+
+      return {
+        transaction: this.toDomain(updated),
+        affectedAccountIds: Array.from(new Set(affectedAccountIds)),
+      };
+    });
   }
 
   async deleteTransactionWithBalance(

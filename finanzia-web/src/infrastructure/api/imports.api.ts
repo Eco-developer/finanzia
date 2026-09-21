@@ -28,6 +28,7 @@ export interface PreviewImportResult {
 }
 
 export interface CommitRowPayload {
+  accountId?: string;
   date: string;
   description: string;
   amountCents: number;

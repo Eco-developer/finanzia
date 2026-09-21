@@ -220,9 +220,8 @@ export default function AdvisorPage() {
         {/* Toast Notification */}
         {toastMessage && (
           <div
-            className={`${styles.toast} ${
-              toastMessage.type === 'error' ? styles.toastError : styles.toastSuccess
-            }`}
+            className={`${styles.toast} ${toastMessage.type === 'error' ? styles.toastError : styles.toastSuccess
+              }`}
           >
             {toastMessage.type === 'error' ? (
               <AlertCircle size={18} />
@@ -295,9 +294,6 @@ export default function AdvisorPage() {
                     Asistente financiero inteligente · Datos verificados en tiempo real
                   </p>
                 </div>
-              </div>
-              <div className={styles.statusPill}>
-                <span className={styles.greenDot} /> Cero Alucinaciones
               </div>
             </div>
 

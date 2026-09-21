@@ -200,6 +200,7 @@ export default function ImportsPage() {
   // Manejador del Paso 3: Confirmar inserción en bloque
   const handleCommit = async (
     selectedRows: Array<{
+      accountId?: string;
       date: string;
       description: string;
       amountCents: number;
@@ -372,6 +373,8 @@ export default function ImportsPage() {
                       },
                   }))}
                   categories={categories}
+                  accounts={accounts}
+                  defaultAccountId={selectedAccountId}
                   onCommit={handleCommit}
                   onBack={() => setCurrentStep(2)}
                   isCommitting={isCommitting}

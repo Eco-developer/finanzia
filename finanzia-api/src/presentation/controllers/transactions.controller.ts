@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Delete,
   Body,
   Param,
@@ -22,6 +23,8 @@ import {
 import { TransactionsService } from "../../core/application/transactions/transactions.service";
 import { CreateTransactionDto } from "../dtos/transactions/create-transaction.dto";
 import { CreateTransferDto } from "../dtos/transactions/create-transfer.dto";
+import { UpdateTransactionDto } from "../dtos/transactions/update-transaction.dto";
+import { BatchDeleteTransactionsDto } from "../dtos/transactions/batch-delete-transactions.dto";
 import { TransactionFilterDto } from "../dtos/transactions/transaction-filter.dto";
 import { TransactionResponseDto } from "../dtos/transactions/transaction-response.dto";
 import { TransferResponseDto } from "../dtos/transactions/transfer-response.dto";
@@ -220,6 +223,93 @@ export class TransactionsController {
       data: result,
       meta: {
         message: "Transacción eliminada y saldos revertidos con éxito",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Patch(":id")
+  @ApiOperation({
+    summary: "Modificar transacción y recalcular saldos",
+    description:
+      "Actualiza los datos de un gasto o ingreso. Los traspasos no se pueden modificar. Si cambia el importe o la cuenta, se recalculan y ajustan atómicamente los saldos correspondientes.",
+  })
+  @ApiParam({
+    name: "id",
+    description: "UUID de la transacción a modificar",
+    type: String,
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Transacción actualizada y saldos sincronizados exitosamente",
+    type: TransactionResponseDto,
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Datos inválidos o intento de modificar un traspaso",
+  })
+  @ApiResponse({
+    status: 403,
+    description:
+      "No autorizado a modificar esta transacción o asociar cuenta/categoría ajena",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Transacción, cuenta o categoría no encontrada",
+  })
+  async update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTransactionDto,
+  ) {
+    const result = await this.transactionsService.updateTransaction(
+      user.id,
+      id,
+      dto,
+    );
+    return {
+      success: true,
+      data: result.transaction,
+      meta: {
+        affectedAccountIds: result.affectedAccountIds,
+        message: "Transacción modificada y saldos actualizados con éxito",
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("batch-delete")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Eliminar múltiples transacciones y revertir saldos en bloque",
+    description:
+      "Elimina una lista de transacciones por sus IDs y revierte sus respectivos saldos en una operación atómica.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Transacciones eliminadas exitosamente",
+  })
+  @ApiResponse({
+    status: 403,
+    description: "Una o más transacciones no pertenecen al usuario autenticado",
+  })
+  @ApiResponse({
+    status: 404,
+    description: "Una o más transacciones no fueron encontradas",
+  })
+  async batchDelete(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: BatchDeleteTransactionsDto,
+  ) {
+    const result = await this.transactionsService.deleteMultipleTransactions(
+      user.id,
+      dto.ids,
+    );
+    return {
+      success: true,
+      data: result,
+      meta: {
+        message: `${result.deletedCount} transacciones eliminadas y saldos revertidos con éxito`,
         timestamp: new Date().toISOString(),
       },
     };
