@@ -132,7 +132,11 @@ export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort 
         ...item,
         percentageOfTotal:
           totalGlobalExpenses > 0
-            ? Number(((item.totalAmountCents / totalGlobalExpenses) * 100).toFixed(1))
+            ? Number(
+                ((item.totalAmountCents / totalGlobalExpenses) * 100).toFixed(
+                  1,
+                ),
+              )
             : 0,
       }),
     );
@@ -226,7 +230,8 @@ export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort 
     details: string,
     actionPayload: any,
   ): Promise<ProposeRecommendationResult> {
-    let validRecommendationType: PrismaRecommendationType = PrismaRecommendationType.BUDGET_ADJUSTMENT;
+    let validRecommendationType: PrismaRecommendationType =
+      PrismaRecommendationType.BUDGET_ADJUSTMENT;
     if (type === "SAVINGS_BOOST") {
       validRecommendationType = PrismaRecommendationType.SAVINGS_BOOST;
     } else if (type === "EXPENSE_ALERT") {

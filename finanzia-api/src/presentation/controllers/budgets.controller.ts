@@ -46,7 +46,10 @@ export class BudgetsController {
     description:
       "Asigna un límite de gasto en céntimos para una categoría específica en un periodo mes/año.",
   })
-  @ApiResponse({ status: 201, description: "Presupuesto guardado exitosamente" })
+  @ApiResponse({
+    status: 201,
+    description: "Presupuesto guardado exitosamente",
+  })
   @ApiResponse({ status: 400, description: "Datos del presupuesto inválidos" })
   @ApiResponse({ status: 404, description: "Categoría no encontrada" })
   async createBudget(
@@ -63,10 +66,21 @@ export class BudgetsController {
   @Get()
   @ApiOperation({
     summary: "Listar presupuestos del usuario",
-    description: "Devuelve los presupuestos configurados opcionalmente filtrados por mes y año.",
+    description:
+      "Devuelve los presupuestos configurados opcionalmente filtrados por mes y año.",
   })
-  @ApiQuery({ name: "month", required: false, type: Number, description: "Mes (1-12)" })
-  @ApiQuery({ name: "year", required: false, type: Number, description: "Año (ej. 2026)" })
+  @ApiQuery({
+    name: "month",
+    required: false,
+    type: Number,
+    description: "Mes (1-12)",
+  })
+  @ApiQuery({
+    name: "year",
+    required: false,
+    type: Number,
+    description: "Año (ej. 2026)",
+  })
   async getBudgets(
     @CurrentUser() user: AuthenticatedUser,
     @Query("month") month?: string,

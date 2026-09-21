@@ -10,7 +10,6 @@ import {
   IAiRecommendationRepository,
   AI_RECOMMENDATION_REPOSITORY,
 } from "../../domain/repositories/ai-recommendation.repository.interface";
-import { RecommendationStatus } from "../../domain/types/financial.types";
 
 @Injectable()
 export class RecommendationsService {
@@ -48,10 +47,14 @@ export class RecommendationsService {
       throw new NotFoundException("La recomendación no existe.");
     }
     if (rec.userId !== userId) {
-      throw new ForbiddenException("No tienes permiso sobre esta recomendación.");
+      throw new ForbiddenException(
+        "No tienes permiso sobre esta recomendación.",
+      );
     }
     if (rec.status !== "PROPOSED") {
-      throw new BadRequestException(`Esta recomendación ya fue procesada (estado actual: ${rec.status}).`);
+      throw new BadRequestException(
+        `Esta recomendación ya fue procesada (estado actual: ${rec.status}).`,
+      );
     }
 
     const payload = (rec.proposedAction as Record<string, any>) || {};
@@ -77,10 +80,14 @@ export class RecommendationsService {
       throw new NotFoundException("La recomendación no existe.");
     }
     if (rec.userId !== userId) {
-      throw new ForbiddenException("No tienes permiso sobre esta recomendación.");
+      throw new ForbiddenException(
+        "No tienes permiso sobre esta recomendación.",
+      );
     }
     if (rec.status !== "PROPOSED") {
-      throw new BadRequestException(`Esta recomendación ya fue procesada (estado actual: ${rec.status}).`);
+      throw new BadRequestException(
+        `Esta recomendación ya fue procesada (estado actual: ${rec.status}).`,
+      );
     }
 
     await this.recRepo.updateStatus(id, "REJECTED");

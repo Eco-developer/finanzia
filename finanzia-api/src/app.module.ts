@@ -120,9 +120,18 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     { provide: CSV_TEMPLATE_REPOSITORY, useClass: PrismaCsvTemplateRepository },
     { provide: BUDGET_REPOSITORY, useClass: PrismaBudgetRepository },
     { provide: SAVINGS_GOAL_REPOSITORY, useClass: PrismaSavingsGoalRepository },
-    { provide: AI_RECOMMENDATION_REPOSITORY, useClass: PrismaAiRecommendationRepository },
-    { provide: ADVISOR_HISTORY_REPOSITORY, useClass: PrismaAdvisorHistoryRepository },
-    { provide: FINANCIAL_ANALYTICS_PORT, useClass: PrismaFinancialAnalyticsAdapter },
+    {
+      provide: AI_RECOMMENDATION_REPOSITORY,
+      useClass: PrismaAiRecommendationRepository,
+    },
+    {
+      provide: ADVISOR_HISTORY_REPOSITORY,
+      useClass: PrismaAdvisorHistoryRepository,
+    },
+    {
+      provide: FINANCIAL_ANALYTICS_PORT,
+      useClass: PrismaFinancialAnalyticsAdapter,
+    },
     { provide: HASHING_SERVICE, useClass: HashingService },
     { provide: AI_ADVISOR_PORT, useClass: GeminiAdvisorService },
     // Application Services

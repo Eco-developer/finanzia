@@ -47,21 +47,38 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
 
     const result = await service.getFinancialSummary("user-1", 9, 2026);
     expect(result).toEqual(summary);
-    expect(mockAnalytics.getFinancialSummary).toHaveBeenCalledWith("user-1", 9, 2026);
+    expect(mockAnalytics.getFinancialSummary).toHaveBeenCalledWith(
+      "user-1",
+      9,
+      2026,
+    );
   });
 
   it("debe delegar getExpensesByCategory al port de analíticas", async () => {
     mockAnalytics.getExpensesByCategory.mockResolvedValue([]);
-    const result = await service.getExpensesByCategory("user-1", "2026-09-01", "2026-09-30");
+    const result = await service.getExpensesByCategory(
+      "user-1",
+      "2026-09-01",
+      "2026-09-30",
+    );
     expect(result).toEqual([]);
-    expect(mockAnalytics.getExpensesByCategory).toHaveBeenCalledWith("user-1", "2026-09-01", "2026-09-30", undefined);
+    expect(mockAnalytics.getExpensesByCategory).toHaveBeenCalledWith(
+      "user-1",
+      "2026-09-01",
+      "2026-09-30",
+      undefined,
+    );
   });
 
   it("debe delegar getBudgetStatus al port de analíticas", async () => {
     mockAnalytics.getBudgetStatus.mockResolvedValue([]);
     const result = await service.getBudgetStatus("user-1", 9, 2026);
     expect(result).toEqual([]);
-    expect(mockAnalytics.getBudgetStatus).toHaveBeenCalledWith("user-1", 9, 2026);
+    expect(mockAnalytics.getBudgetStatus).toHaveBeenCalledWith(
+      "user-1",
+      9,
+      2026,
+    );
   });
 
   it("debe delegar proposeRecommendation al port de analíticas", async () => {
@@ -179,7 +196,11 @@ describe("PrismaFinancialAnalyticsAdapter (Deterministic Calculations & Edge Cas
         },
       ]);
 
-      const result = await adapter.getExpensesByCategory("user-1", "2026-09-01", "2026-09-30");
+      const result = await adapter.getExpensesByCategory(
+        "user-1",
+        "2026-09-01",
+        "2026-09-30",
+      );
 
       expect(result.length).toBe(2);
       expect(result[0].categoryId).toBe("cat-ocio");
@@ -194,7 +215,11 @@ describe("PrismaFinancialAnalyticsAdapter (Deterministic Calculations & Edge Cas
     it("debe manejar rango vacío sin gastos de forma segura", async () => {
       prisma.transaction.findMany.mockResolvedValue([]);
 
-      const result = await adapter.getExpensesByCategory("user-1", "2026-09-01", "2026-09-30");
+      const result = await adapter.getExpensesByCategory(
+        "user-1",
+        "2026-09-01",
+        "2026-09-30",
+      );
 
       expect(result).toEqual([]);
     });

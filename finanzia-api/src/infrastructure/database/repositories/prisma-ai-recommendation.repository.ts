@@ -5,7 +5,10 @@ import {
   IAiRecommendationRepository,
   AiRecommendationRecord,
 } from "../../../core/domain/repositories/ai-recommendation.repository.interface";
-import { RecommendationStatus, RecommendationType } from "../../../core/domain/types/financial.types";
+import {
+  RecommendationStatus,
+  RecommendationType,
+} from "../../../core/domain/types/financial.types";
 
 @Injectable()
 export class PrismaAiRecommendationRepository implements IAiRecommendationRepository {
@@ -85,7 +88,10 @@ export class PrismaAiRecommendationRepository implements IAiRecommendationReposi
     };
   }
 
-  async updateStatus(id: string, status: RecommendationStatus): Promise<AiRecommendationRecord> {
+  async updateStatus(
+    id: string,
+    status: RecommendationStatus,
+  ): Promise<AiRecommendationRecord> {
     const r = await this.prisma.aiRecommendation.update({
       where: { id },
       data: {
@@ -107,19 +113,33 @@ export class PrismaAiRecommendationRepository implements IAiRecommendationReposi
     };
   }
 
-  async applyAction(userId: string, actionType: string, payload: Record<string, any>): Promise<any> {
+  async applyAction(
+    userId: string,
+    actionType: string,
+    payload: Record<string, any>,
+  ): Promise<any> {
     return await this.prisma.$transaction(async (tx) => {
-      if (actionType === "UPDATE_BUDGET_LIMIT" && payload.budgetId && payload.newLimitCents) {
-        this.logger.log(`Actualizando límite de presupuesto ${payload.budgetId} a ${payload.newLimitCents} céntimos`);
+      if (
+        actionType === "UPDATE_BUDGET_LIMIT" &&
+        payload.budgetId &&
+        payload.newLimitCents
+      ) {
+        this.logger.log(
+          `Actualizando límite de presupuesto ${payload.budgetId} a ${payload.newLimitCents} céntimos`,
+        );
         await tx.budget.update({
           where: { id: payload.budgetId },
           data: { amountLimitCents: BigInt(payload.newLimitCents) },
         });
       } else if (actionType === "SAVINGS_CONTRIBUTION" && payload.amountCents) {
-        this.logger.log(`Registrando aporte extraordinario de ${payload.amountCents} céntimos a meta de ahorro`);
+        this.logger.log(
+          `Registrando aporte extraordinario de ${payload.amountCents} céntimos a meta de ahorro`,
+        );
         let goal = null;
         if (payload.goalId) {
-          goal = await tx.savingsGoal.findUnique({ where: { id: payload.goalId } });
+          goal = await tx.savingsGoal.findUnique({
+            where: { id: payload.goalId },
+          });
         } else {
           goal = await tx.savingsGoal.findFirst({
             where: { userId, isCompleted: false },
@@ -128,7 +148,8 @@ export class PrismaAiRecommendationRepository implements IAiRecommendationReposi
         }
 
         if (goal) {
-          const newCurrent = BigInt(goal.currentAmountCents) + BigInt(payload.amountCents);
+          const newCurrent =
+            BigInt(goal.currentAmountCents) + BigInt(payload.amountCents);
           const isCompleted = newCurrent >= BigInt(goal.targetAmountCents);
           await tx.savingsGoal.update({
             where: { id: goal.id },

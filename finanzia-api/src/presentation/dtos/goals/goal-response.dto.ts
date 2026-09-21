@@ -10,19 +10,32 @@ export class GoalResponseDto {
   @ApiProperty({ example: 300000, description: "Monto objetivo en céntimos" })
   targetAmountCents: number;
 
-  @ApiProperty({ example: 100000, description: "Monto actual acumulado en céntimos" })
+  @ApiProperty({
+    example: 100000,
+    description: "Monto actual acumulado en céntimos",
+  })
   currentAmountCents: number;
 
-  @ApiProperty({ example: 200000, description: "Monto restante para completar la meta" })
+  @ApiProperty({
+    example: 200000,
+    description: "Monto restante para completar la meta",
+  })
   remainingCents: number;
 
-  @ApiProperty({ example: 33.33, description: "Porcentaje de cumplimiento (0 - 100)" })
+  @ApiProperty({
+    example: 33.33,
+    description: "Porcentaje de cumplimiento (0 - 100)",
+  })
   progressPercentage: number;
 
   @ApiProperty({ example: "2026-12-31T23:59:59.000Z", nullable: true })
   targetDate: string | null;
 
-  @ApiProperty({ example: 106, description: "Días restantes hasta la fecha objetivo", nullable: true })
+  @ApiProperty({
+    example: 106,
+    description: "Días restantes hasta la fecha objetivo",
+    nullable: true,
+  })
   daysRemaining: number | null;
 
   @ApiProperty({ example: false })

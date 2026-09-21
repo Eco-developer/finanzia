@@ -59,7 +59,9 @@ export class AiToolsService {
     month: number,
     year: number,
   ): Promise<FinancialSummaryResult> {
-    this.logger.log(`[Tool] getFinancialSummary para usuario ${userId}, ${month}/${year}`);
+    this.logger.log(
+      `[Tool] getFinancialSummary para usuario ${userId}, ${month}/${year}`,
+    );
     return await this.analytics.getFinancialSummary(userId, month, year);
   }
 
@@ -91,7 +93,9 @@ export class AiToolsService {
     month: number,
     year: number,
   ): Promise<BudgetStatusItem[]> {
-    this.logger.log(`[Tool] getBudgetStatus para usuario ${userId}, ${month}/${year}`);
+    this.logger.log(
+      `[Tool] getBudgetStatus para usuario ${userId}, ${month}/${year}`,
+    );
     return await this.analytics.getBudgetStatus(userId, month, year);
   }
 
@@ -105,7 +109,9 @@ export class AiToolsService {
     details: string,
     actionPayload: any,
   ): Promise<ProposeRecommendationResult> {
-    this.logger.log(`[Tool] proposeRecommendation: ${title} para usuario ${userId}`);
+    this.logger.log(
+      `[Tool] proposeRecommendation: ${title} para usuario ${userId}`,
+    );
     return await this.analytics.proposeRecommendation(
       userId,
       type,

@@ -18,4 +18,3 @@ export interface ICsvTemplateRepository {
 }
 
 export const CSV_TEMPLATE_REPOSITORY = Symbol("ICsvTemplateRepository");
-

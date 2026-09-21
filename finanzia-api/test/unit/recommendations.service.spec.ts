@@ -96,7 +96,10 @@ describe("RecommendationsService (Human-in-the-Loop)", () => {
           newLimitCents: 25000,
         },
       );
-      expect(mockRecRepo.updateStatus).toHaveBeenCalledWith("rec-1", "ACCEPTED");
+      expect(mockRecRepo.updateStatus).toHaveBeenCalledWith(
+        "rec-1",
+        "ACCEPTED",
+      );
     });
 
     it("debe lanzar ForbiddenException si el usuario no es el propietario", async () => {
@@ -163,7 +166,10 @@ describe("RecommendationsService (Human-in-the-Loop)", () => {
       expect(result.rejected).toBe(true);
       expect(result.status).toBe(RecommendationStatus.REJECTED);
       expect(mockRecRepo.applyAction).not.toHaveBeenCalled();
-      expect(mockRecRepo.updateStatus).toHaveBeenCalledWith("rec-1", "REJECTED");
+      expect(mockRecRepo.updateStatus).toHaveBeenCalledWith(
+        "rec-1",
+        "REJECTED",
+      );
     });
 
     it("debe lanzar ForbiddenException si el usuario no es el propietario al rechazar", async () => {

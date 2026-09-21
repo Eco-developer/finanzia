@@ -2,7 +2,11 @@ import { TransactionsService } from "../../src/core/application/transactions/tra
 import { TransactionEntity } from "../../src/core/domain/entities/transaction.entity";
 import { AccountEntity } from "../../src/core/domain/entities/account.entity";
 import { CategoryEntity } from "../../src/core/domain/entities/category.entity";
-import { AccountType, CategoryType, TransactionType } from "../../src/core/domain/types/financial.types";
+import {
+  AccountType,
+  CategoryType,
+  TransactionType,
+} from "../../src/core/domain/types/financial.types";
 import { AccountNotFoundException } from "../../src/core/domain/exceptions/account-not-found.exception";
 import { UnauthorizedAccountAccessException } from "../../src/core/domain/exceptions/unauthorized-account-access.exception";
 import { CategoryNotFoundException } from "../../src/core/domain/exceptions/category-not-found.exception";

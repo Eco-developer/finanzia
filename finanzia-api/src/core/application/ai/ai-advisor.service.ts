@@ -1,18 +1,9 @@
-import {
-  Injectable,
-  NotFoundException,
-  ForbiddenException,
-  Logger,
-  Inject,
-} from "@nestjs/common";
+import { Injectable, NotFoundException, Logger, Inject } from "@nestjs/common";
 import {
   IAdvisorHistoryRepository,
   ADVISOR_HISTORY_REPOSITORY,
 } from "../../domain/repositories/advisor-history.repository.interface";
-import {
-  IAiAdvisorPort,
-  AI_ADVISOR_PORT,
-} from "../ports/ai-advisor.port";
+import { IAiAdvisorPort, AI_ADVISOR_PORT } from "../ports/ai-advisor.port";
 import { SendChatMessageDto, ChatMessageResponseDto } from "./dtos/chat.dto";
 
 @Injectable()
@@ -36,7 +27,10 @@ export class AiAdvisorService {
     let conversationId = dto.conversationId;
 
     if (conversationId) {
-      const messages = await this.historyRepo.getConversationMessages(userId, conversationId);
+      const messages = await this.historyRepo.getConversationMessages(
+        userId,
+        conversationId,
+      );
       if (!messages) {
         throw new NotFoundException("La conversación especificada no existe.");
       }
@@ -57,7 +51,10 @@ export class AiAdvisorService {
     });
 
     // 2. Recuperar historial reciente
-    const recentMessages = await this.historyRepo.getConversationMessages(userId, conversationId!);
+    const recentMessages = await this.historyRepo.getConversationMessages(
+      userId,
+      conversationId!,
+    );
     const history = recentMessages.slice(-10).map((m) => ({
       role: m.role.toLowerCase() as "user" | "assistant",
       content: m.content,
@@ -106,7 +103,10 @@ export class AiAdvisorService {
    * Obtiene los mensajes de una conversación
    */
   async getConversationMessages(userId: string, conversationId: string) {
-    const messages = await this.historyRepo.getConversationMessages(userId, conversationId);
+    const messages = await this.historyRepo.getConversationMessages(
+      userId,
+      conversationId,
+    );
 
     return messages.map((m) => ({
       id: m.id,

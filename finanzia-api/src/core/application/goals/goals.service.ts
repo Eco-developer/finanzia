@@ -5,7 +5,10 @@ import {
   BadRequestException,
   Inject,
 } from "@nestjs/common";
-import { ISavingsGoalRepository, SAVINGS_GOAL_REPOSITORY } from "../../domain/repositories/savings-goal.repository.interface";
+import {
+  ISavingsGoalRepository,
+  SAVINGS_GOAL_REPOSITORY,
+} from "../../domain/repositories/savings-goal.repository.interface";
 import { CreateGoalDto } from "../../../presentation/dtos/goals/create-goal.dto";
 import { UpdateGoalDto } from "../../../presentation/dtos/goals/update-goal.dto";
 import { ContributeGoalDto } from "../../../presentation/dtos/goals/contribute-goal.dto";
@@ -19,10 +22,15 @@ export class GoalsService {
     private readonly goalRepository: ISavingsGoalRepository,
   ) {}
 
-  async createGoal(userId: string, dto: CreateGoalDto): Promise<GoalResponseDto> {
+  async createGoal(
+    userId: string,
+    dto: CreateGoalDto,
+  ): Promise<GoalResponseDto> {
     const targetDate = dto.targetDate ? new Date(dto.targetDate) : null;
     if (targetDate && isNaN(targetDate.getTime())) {
-      throw new BadRequestException("La fecha objetivo proporcionada no es válida.");
+      throw new BadRequestException(
+        "La fecha objetivo proporcionada no es válida.",
+      );
     }
 
     const goal = await this.goalRepository.create({
@@ -51,7 +59,9 @@ export class GoalsService {
     }
 
     if (goal.userId !== userId) {
-      throw new ForbiddenException("No tienes permisos para consultar esta meta.");
+      throw new ForbiddenException(
+        "No tienes permisos para consultar esta meta.",
+      );
     }
 
     return this.toResponse(goal);
@@ -68,7 +78,9 @@ export class GoalsService {
     }
 
     if (existing.userId !== userId) {
-      throw new ForbiddenException("No tienes permisos para modificar esta meta.");
+      throw new ForbiddenException(
+        "No tienes permisos para modificar esta meta.",
+      );
     }
 
     const targetDate =
@@ -102,7 +114,9 @@ export class GoalsService {
     }
 
     if (existing.userId !== userId) {
-      throw new ForbiddenException("No tienes permisos para operar en esta meta.");
+      throw new ForbiddenException(
+        "No tienes permisos para operar en esta meta.",
+      );
     }
 
     const updated = await this.goalRepository.addContribution(
@@ -120,7 +134,9 @@ export class GoalsService {
     }
 
     if (existing.userId !== userId) {
-      throw new ForbiddenException("No tienes permisos para eliminar esta meta.");
+      throw new ForbiddenException(
+        "No tienes permisos para eliminar esta meta.",
+      );
     }
 
     await this.goalRepository.delete(id);

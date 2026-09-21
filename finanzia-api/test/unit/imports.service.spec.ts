@@ -2,7 +2,10 @@ import { ImportsService } from "../../src/core/application/imports/imports.servi
 import { AccountEntity } from "../../src/core/domain/entities/account.entity";
 import { CategoryEntity } from "../../src/core/domain/entities/category.entity";
 import { CsvTemplateEntity } from "../../src/core/domain/entities/csv-template.entity";
-import { AccountType, CategoryType, TransactionType } from "../../src/core/domain/types/financial.types";
+import {
+  AccountType,
+  CategoryType,
+} from "../../src/core/domain/types/financial.types";
 import { AccountNotFoundException } from "../../src/core/domain/exceptions/account-not-found.exception";
 import { UnauthorizedAccountAccessException } from "../../src/core/domain/exceptions/unauthorized-account-access.exception";
 

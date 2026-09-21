@@ -35,7 +35,10 @@ export class UpdateGoalDto {
     description: "Nueva fecha objetivo (ISO 8601)",
   })
   @IsOptional()
-  @IsDateString({}, { message: "La fecha objetivo debe ser una fecha ISO válida" })
+  @IsDateString(
+    {},
+    { message: "La fecha objetivo debe ser una fecha ISO válida" },
+  )
   targetDate?: string;
 
   @ApiPropertyOptional({

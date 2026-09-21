@@ -5,8 +5,14 @@ import {
   BadRequestException,
   Inject,
 } from "@nestjs/common";
-import { IBudgetRepository, BUDGET_REPOSITORY } from "../../domain/repositories/budget.repository.interface";
-import { ICategoryRepository, CATEGORY_REPOSITORY } from "../../domain/repositories/category.repository.interface";
+import {
+  IBudgetRepository,
+  BUDGET_REPOSITORY,
+} from "../../domain/repositories/budget.repository.interface";
+import {
+  ICategoryRepository,
+  CATEGORY_REPOSITORY,
+} from "../../domain/repositories/category.repository.interface";
 import { CreateBudgetDto } from "../../../presentation/dtos/budgets/create-budget.dto";
 import { UpdateBudgetDto } from "../../../presentation/dtos/budgets/update-budget.dto";
 import {
@@ -72,7 +78,9 @@ export class BudgetsService {
     year: number,
   ): Promise<BudgetPacingResponseDto> {
     if (!month || month < 1 || month > 12) {
-      throw new BadRequestException("El mes debe estar comprendido entre 1 y 12.");
+      throw new BadRequestException(
+        "El mes debe estar comprendido entre 1 y 12.",
+      );
     }
     if (!year || year < 2000 || year > 2100) {
       throw new BadRequestException("El año especificado no es válido.");

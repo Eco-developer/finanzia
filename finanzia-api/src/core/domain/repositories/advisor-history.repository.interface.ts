@@ -1,6 +1,9 @@
 export interface IAdvisorHistoryRepository {
   getUserConversations(userId: string): Promise<any[]>;
-  getConversationMessages(userId: string, conversationId: string): Promise<any[]>;
+  getConversationMessages(
+    userId: string,
+    conversationId: string,
+  ): Promise<any[]>;
   createConversation(userId: string, title?: string): Promise<any>;
   saveMessage(data: {
     conversationId: string;

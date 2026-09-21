@@ -23,7 +23,9 @@ export class CreateBudgetDto {
     description: "Límite mensual en céntimos enteros (ej. 30000 = 300,00 €)",
   })
   @Type(() => Number)
-  @IsInt({ message: "El límite del presupuesto debe ser un entero en céntimos" })
+  @IsInt({
+    message: "El límite del presupuesto debe ser un entero en céntimos",
+  })
   @Min(1, { message: "El límite debe ser mayor que cero" })
   amountLimitCents: number;
 
@@ -53,7 +55,8 @@ export class CreateBudgetDto {
 
   @ApiPropertyOptional({
     example: 80,
-    description: "Porcentaje de consumo para disparar advertencia de alerta (default 80%)",
+    description:
+      "Porcentaje de consumo para disparar advertencia de alerta (default 80%)",
     default: 80,
   })
   @IsOptional()

@@ -29,11 +29,14 @@ import {
 @UseGuards(JwtAuthGuard)
 @Controller("recommendations")
 export class RecommendationsController {
-  constructor(private readonly recommendationsService: RecommendationsService) {}
+  constructor(
+    private readonly recommendationsService: RecommendationsService,
+  ) {}
 
   @Get("pending")
   @ApiOperation({
-    summary: "Listar recomendaciones activas generadas por la IA esperando aprobación humana",
+    summary:
+      "Listar recomendaciones activas generadas por la IA esperando aprobación humana",
     description:
       "Devuelve las recomendaciones en estado PROPOSED creadas por el asesor para revisión y decisión del usuario.",
   })
@@ -42,7 +45,8 @@ export class RecommendationsController {
     description: "Lista de recomendaciones pendientes",
   })
   async getPending(@CurrentUser() user: AuthenticatedUser) {
-    const recommendations = await this.recommendationsService.getPendingRecommendations(user.id);
+    const recommendations =
+      await this.recommendationsService.getPendingRecommendations(user.id);
     return {
       success: true,
       data: recommendations,
@@ -52,7 +56,8 @@ export class RecommendationsController {
   @Post(":id/apply")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "Aprobar y aplicar una recomendación propuesta (Human-in-the-Loop)",
+    summary:
+      "Aprobar y aplicar una recomendación propuesta (Human-in-the-Loop)",
     description:
       "Ejecuta de forma atómica la acción propuesta por la IA (ej. actualizar límite de presupuesto o aportar a una meta) tras el clic voluntario del usuario.",
   })
@@ -65,7 +70,10 @@ export class RecommendationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param("id", ParseUUIDPipe) id: string,
   ) {
-    const result = await this.recommendationsService.applyRecommendation(user.id, id);
+    const result = await this.recommendationsService.applyRecommendation(
+      user.id,
+      id,
+    );
     return {
       success: true,
       data: result,
@@ -76,7 +84,8 @@ export class RecommendationsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
     summary: "Rechazar/descartar una recomendación propuesta",
-    description: "Marca la recomendación como REJECTED sin realizar ninguna modificación en los datos del usuario.",
+    description:
+      "Marca la recomendación como REJECTED sin realizar ninguna modificación en los datos del usuario.",
   })
   @ApiParam({ name: "id", description: "ID de la recomendación (UUID)" })
   @ApiResponse({
@@ -87,7 +96,10 @@ export class RecommendationsController {
     @CurrentUser() user: AuthenticatedUser,
     @Param("id", ParseUUIDPipe) id: string,
   ) {
-    const result = await this.recommendationsService.rejectRecommendation(user.id, id);
+    const result = await this.recommendationsService.rejectRecommendation(
+      user.id,
+      id,
+    );
     return {
       success: true,
       data: result,

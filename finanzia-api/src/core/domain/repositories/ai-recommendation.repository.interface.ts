@@ -1,4 +1,7 @@
-import { RecommendationType, RecommendationStatus } from "../types/financial.types";
+import {
+  RecommendationType,
+  RecommendationStatus,
+} from "../types/financial.types";
 
 export interface AiRecommendationRecord {
   id: string;
@@ -22,8 +25,17 @@ export interface IAiRecommendationRepository {
     details: string;
     proposedAction: Record<string, any>;
   }): Promise<AiRecommendationRecord>;
-  updateStatus(id: string, status: RecommendationStatus): Promise<AiRecommendationRecord>;
-  applyAction(userId: string, actionType: string, payload: Record<string, any>): Promise<any>;
+  updateStatus(
+    id: string,
+    status: RecommendationStatus,
+  ): Promise<AiRecommendationRecord>;
+  applyAction(
+    userId: string,
+    actionType: string,
+    payload: Record<string, any>,
+  ): Promise<any>;
 }
 
-export const AI_RECOMMENDATION_REPOSITORY = Symbol("IAiRecommendationRepository");
+export const AI_RECOMMENDATION_REPOSITORY = Symbol(
+  "IAiRecommendationRepository",
+);

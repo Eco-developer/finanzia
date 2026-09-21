@@ -17,7 +17,10 @@ export class PrismaAdvisorHistoryRepository implements IAdvisorHistoryRepository
     });
   }
 
-  async getConversationMessages(userId: string, conversationId: string): Promise<any[]> {
+  async getConversationMessages(
+    userId: string,
+    conversationId: string,
+  ): Promise<any[]> {
     return await this.prisma.aiMessage.findMany({
       where: {
         conversationId,
@@ -52,7 +55,10 @@ export class PrismaAdvisorHistoryRepository implements IAdvisorHistoryRepository
     });
   }
 
-  async deleteConversation(userId: string, conversationId: string): Promise<void> {
+  async deleteConversation(
+    userId: string,
+    conversationId: string,
+  ): Promise<void> {
     await this.prisma.aiConversation.deleteMany({
       where: { id: conversationId, userId },
     });

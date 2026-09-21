@@ -1,6 +1,9 @@
 import { Injectable, Inject } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { IUserRepository, USER_REPOSITORY } from "../../domain/repositories/user.repository.interface";
+import {
+  IUserRepository,
+  USER_REPOSITORY,
+} from "../../domain/repositories/user.repository.interface";
 import { IHashingService, HASHING_SERVICE } from "../ports/hashing.port";
 import { RegisterDto } from "../../../presentation/dtos/auth/register.dto";
 import { LoginDto } from "../../../presentation/dtos/auth/login.dto";

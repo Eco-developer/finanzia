@@ -1,5 +1,8 @@
 import { Injectable, Inject } from "@nestjs/common";
-import { IAccountRepository, ACCOUNT_REPOSITORY } from "../../domain/repositories/account.repository.interface";
+import {
+  IAccountRepository,
+  ACCOUNT_REPOSITORY,
+} from "../../domain/repositories/account.repository.interface";
 import { CreateAccountDto } from "../../../presentation/dtos/accounts/create-account.dto";
 import { UpdateAccountDto } from "../../../presentation/dtos/accounts/update-account.dto";
 import { AccountResponseDto } from "../../../presentation/dtos/accounts/account-response.dto";
