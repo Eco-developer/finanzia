@@ -470,6 +470,13 @@ export default function AdvisorPage() {
                   <Send size={18} />
                 </button>
               </div>
+
+              <div className={styles.legalDisclaimer}>
+                <span className={styles.legalIcon}>ℹ️</span>
+                <span>
+                  <strong>Aviso legal:</strong> FinanZIA AI Advisor ofrece información y análisis financiero personal. Sus propuestas no constituyen asesoramiento financiero regulado bajo MiFID II / CNMV. Ninguna acción se aplica sin tu aprobación explícita.
+                </span>
+              </div>
             </div>
           </section>
 

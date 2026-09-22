@@ -600,7 +600,10 @@ describe("TransactionsService (Unit Tests)", () => {
         totalRecords: 1,
       });
 
-      const result = await transactionsService.getTransactions("user-owner-id", {});
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {},
+      );
 
       expect(result.page).toBe(1);
       expect(result.limit).toBe(20);
@@ -623,10 +626,13 @@ describe("TransactionsService (Unit Tests)", () => {
         totalRecords: 45,
       });
 
-      const result = await transactionsService.getTransactions("user-owner-id", {
-        page: 3,
-        limit: 10,
-      });
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          page: 3,
+          limit: 10,
+        },
+      );
 
       expect(result.page).toBe(3);
       expect(result.limit).toBe(10);
@@ -647,10 +653,13 @@ describe("TransactionsService (Unit Tests)", () => {
         totalRecords: 0,
       });
 
-      const result = await transactionsService.getTransactions("user-owner-id", {
-        page: 1,
-        limit: 10,
-      });
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          page: 1,
+          limit: 10,
+        },
+      );
 
       expect(result.totalRecords).toBe(0);
       expect(result.totalPages).toBe(1);
@@ -663,11 +672,16 @@ describe("TransactionsService (Unit Tests)", () => {
         totalRecords: 0,
       });
 
-      const result = await transactionsService.getTransactions("user-owner-id", {
-        accountId: "acc-owner-1",
-      });
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          accountId: "acc-owner-1",
+        },
+      );
 
-      expect(mockAccountRepository.findById).toHaveBeenCalledWith("acc-owner-1");
+      expect(mockAccountRepository.findById).toHaveBeenCalledWith(
+        "acc-owner-1",
+      );
       expect(result.totalRecords).toBe(0);
     });
 

@@ -45,6 +45,9 @@ import { GoalsService } from "./core/application/goals/goals.service";
 import { AiToolsService } from "./core/application/ai/ai-tools.service";
 import { GeminiAdvisorService } from "./infrastructure/ai/gemini-advisor.service";
 import { AiAdvisorService } from "./core/application/ai/ai-advisor.service";
+import { FinancialProfileService } from "./core/application/ai/financial-profile.service";
+import { MultiStepPlannerService } from "./core/application/ai/multi-step-planner.service";
+import { TransactionLearningService } from "./core/application/ai/transaction-learning.service";
 import { RecommendationsService } from "./core/application/recommendations/recommendations.service";
 
 // Presentation
@@ -145,6 +148,9 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     AiToolsService,
     GeminiAdvisorService,
     AiAdvisorService,
+    FinancialProfileService,
+    MultiStepPlannerService,
+    TransactionLearningService,
     RecommendationsService,
     {
       provide: APP_FILTER,
@@ -175,6 +181,9 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     AiToolsService,
     GeminiAdvisorService,
     AiAdvisorService,
+    FinancialProfileService,
+    MultiStepPlannerService,
+    TransactionLearningService,
     RecommendationsService,
   ],
 })

@@ -159,6 +159,41 @@ export class PrismaAiRecommendationRepository implements IAiRecommendationReposi
             },
           });
         }
+      } else if (
+        actionType === "CREATE_SAVINGS_GOAL" &&
+        payload.targetAmountCents
+      ) {
+        this.logger.log(
+          `Creando meta de ahorro "${payload.goalName}" de ${payload.targetAmountCents} céntimos`,
+        );
+        await tx.savingsGoal.create({
+          data: {
+            userId,
+            name: payload.goalName || "Nueva Meta",
+            targetAmountCents: BigInt(payload.targetAmountCents),
+            currentAmountCents: BigInt(payload.initialAmountCents || 0),
+            targetDate: payload.targetDate
+              ? new Date(payload.targetDate)
+              : null,
+          },
+        });
+      } else if (
+        actionType === "SAVE_CATEGORY_RULE" &&
+        payload.pattern &&
+        payload.categoryId
+      ) {
+        this.logger.log(
+          `Guardando regla aprendida "${payload.pattern}" -> ${payload.categoryId}`,
+        );
+        await tx.userCategoryRule.upsert({
+          where: { userId_pattern: { userId, pattern: payload.pattern } },
+          create: {
+            userId,
+            pattern: payload.pattern,
+            categoryId: payload.categoryId,
+          },
+          update: { categoryId: payload.categoryId },
+        });
       }
     });
   }

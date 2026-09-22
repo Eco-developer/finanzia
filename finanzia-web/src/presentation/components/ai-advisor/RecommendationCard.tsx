@@ -32,6 +32,13 @@ const TYPE_CONFIG = {
     bg: 'rgba(245, 158, 11, 0.12)',
     border: 'rgba(245, 158, 11, 0.3)',
   },
+  GOAL_CREATION: {
+    label: 'Nueva Meta de Ahorro',
+    icon: '🎯',
+    color: '#38bdf8',
+    bg: 'rgba(56, 189, 248, 0.12)',
+    border: 'rgba(56, 189, 248, 0.3)',
+  },
 };
 
 export function RecommendationCard({
@@ -100,6 +107,15 @@ export function RecommendationCard({
             <strong>
               {(payload.amountCents / 100).toFixed(2).replace('.', ',')} €
             </strong>
+          </span>
+        )}
+        {payload.actionType === 'CREATE_SAVINGS_GOAL' && payload.targetAmountCents && (
+          <span className={styles.previewValue}>
+            Crear meta &quot;{payload.goalName || 'Meta de Ahorro'}&quot; de{' '}
+            <strong>
+              {(payload.targetAmountCents / 100).toFixed(2).replace('.', ',')} €
+            </strong>
+            {payload.targetMonths && ` (${payload.targetMonths} meses)`}
           </span>
         )}
       </div>

@@ -4,12 +4,16 @@ import {
   IFinancialAnalyticsPort,
   FINANCIAL_ANALYTICS_PORT,
 } from "../../src/core/application/ports/financial-analytics.port";
+import { MultiStepPlannerService } from "../../src/core/application/ai/multi-step-planner.service";
+import { TransactionLearningService } from "../../src/core/application/ai/transaction-learning.service";
 import { PrismaFinancialAnalyticsAdapter } from "../../src/infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaService } from "../../src/infrastructure/database/prisma.service";
 
 describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
   let service: AiToolsService;
   let mockAnalytics: jest.Mocked<IFinancialAnalyticsPort>;
+  let mockPlanner: { calculateGoalPlan: jest.Mock };
+  let mockLearning: { categorizeTransaction: jest.Mock; learnRule: jest.Mock };
 
   beforeEach(async () => {
     mockAnalytics = {
@@ -17,6 +21,21 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       getExpensesByCategory: jest.fn(),
       getBudgetStatus: jest.fn(),
       proposeRecommendation: jest.fn(),
+      getAccountBalances: jest.fn(),
+      getSavingsGoals: jest.fn(),
+      getHistoricalBaseline: jest.fn(),
+      getProactiveInsights: jest.fn(),
+      saveUserCategoryRule: jest.fn(),
+      findUserCategoryRule: jest.fn(),
+    };
+
+    mockPlanner = {
+      calculateGoalPlan: jest.fn(),
+    };
+
+    mockLearning = {
+      categorizeTransaction: jest.fn(),
+      learnRule: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -25,6 +44,14 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
         {
           provide: FINANCIAL_ANALYTICS_PORT,
           useValue: mockAnalytics,
+        },
+        {
+          provide: MultiStepPlannerService,
+          useValue: mockPlanner,
+        },
+        {
+          provide: TransactionLearningService,
+          useValue: mockLearning,
         },
       ],
     }).compile();
@@ -105,6 +132,97 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       "Razón",
       { amountCents: 5000 },
     );
+  });
+
+  it("debe delegar getAccountBalances al port de analíticas", async () => {
+    const balances = {
+      totalBalanceCents: 150000,
+      accounts: [],
+      currency: "EUR",
+    };
+    mockAnalytics.getAccountBalances.mockResolvedValue(balances);
+
+    const result = await service.getAccountBalances("user-1");
+    expect(result).toEqual(balances);
+    expect(mockAnalytics.getAccountBalances).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar getSavingsGoals al port de analíticas", async () => {
+    mockAnalytics.getSavingsGoals.mockResolvedValue([]);
+    const result = await service.getSavingsGoals("user-1");
+    expect(result).toEqual([]);
+    expect(mockAnalytics.getSavingsGoals).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar calculateSavingsPlan a MultiStepPlannerService", async () => {
+    const plan = {
+      goalName: "Vacaciones",
+      targetAmountCents: 300000,
+      months: 6,
+      monthlyQuotaCents: 50000,
+      averageNetSavingsCents: 30000,
+      gapCents: 20000,
+      isViableWithCurrentSavings: false,
+      suggestedCuts: [],
+      summary: "Plan",
+    };
+    mockPlanner.calculateGoalPlan.mockResolvedValue(plan);
+
+    const result = await service.calculateSavingsPlan(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones",
+    );
+    expect(result).toEqual(plan);
+    expect(mockPlanner.calculateGoalPlan).toHaveBeenCalledWith(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones",
+    );
+  });
+
+  it("debe delegar categorizeTransaction a TransactionLearningService", async () => {
+    const cat = {
+      suggestedCategoryId: "cat-1",
+      suggestedCategoryName: "Supermercado",
+      source: "PATTERN_MATCH" as const,
+      confidence: 0.9,
+    };
+    mockLearning.categorizeTransaction.mockResolvedValue(cat);
+
+    const result = await service.categorizeTransaction("user-1", "Mercadona");
+    expect(result).toEqual(cat);
+    expect(mockLearning.categorizeTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "Mercadona",
+    );
+  });
+
+  it("debe delegar getProactiveInsights al port de analíticas", async () => {
+    mockAnalytics.getProactiveInsights.mockResolvedValue([]);
+    const result = await service.getProactiveInsights("user-1");
+    expect(result).toEqual([]);
+    expect(mockAnalytics.getProactiveInsights).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar getHistoricalBaseline al port de analíticas", async () => {
+    const baseline = {
+      monthsAnalyzed: 3,
+      averageMonthlyIncomeCents: 200000,
+      averageMonthlyFixedExpensesCents: 100000,
+      averageMonthlyVariableExpensesCents: 50000,
+      averageMonthlyTotalExpensesCents: 150000,
+      averageMonthlyNetSavingsCents: 50000,
+      averageSavingsRatePercent: 25,
+      topVariableCategories: [],
+    };
+    mockAnalytics.getHistoricalBaseline.mockResolvedValue(baseline);
+
+    const result = await service.getHistoricalBaseline("user-1");
+    expect(result).toEqual(baseline);
+    expect(mockAnalytics.getHistoricalBaseline).toHaveBeenCalledWith("user-1");
   });
 });
 

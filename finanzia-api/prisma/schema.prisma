@@ -34,6 +34,7 @@ enum RecommendationType {
   BUDGET_ADJUSTMENT // Ajuste sugerido en presupuesto
   SAVINGS_BOOST     // Aporte extraordinario a meta de ahorro
   EXPENSE_ALERT     // Alerta de gasto excesivo o suscripción recurrente
+  GOAL_CREATION     // Propuesta para crear una nueva meta de ahorro
 }
 
 enum RecommendationStatus {
@@ -73,6 +74,7 @@ model User {
   csvTemplates    CsvTemplate[]
   aiConversations AiConversation[]
   recommendations AiRecommendation[]
+  categoryRules   UserCategoryRule[]
 
   @@map("users")
 }
@@ -115,6 +117,7 @@ model Category {
   subCategories   Category[]     @relation("SubCategories")
   transactions    Transaction[]
   budgets         Budget[]
+  userRules       UserCategoryRule[]
 
   @@index([userId])
   @@index([parentId])
@@ -256,4 +259,21 @@ model AiRecommendation {
 
   @@index([userId, status])
   @@map("ai_recommendations")
+}
+
+/// Regla aprendida de categorización automática por usuario (Feedback Loop)
+model UserCategoryRule {
+  id         String   @id @default(uuid())
+  userId     String
+  pattern    String   // Palabra clave o concepto en mayúsculas/normalizado (ej. "MERCADONA", "DECATHLON")
+  categoryId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, pattern])
+  @@index([userId])
+  @@map("user_category_rules")
 }
