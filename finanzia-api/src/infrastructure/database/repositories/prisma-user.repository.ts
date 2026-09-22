@@ -26,6 +26,19 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toDomain(record);
   }
 
+  async findByVerificationToken(token: string): Promise<UserEntity | null> {
+    const record = await this.prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpires: {
+          gt: new Date(),
+        },
+      },
+    });
+    if (!record) return null;
+    return this.toDomain(record);
+  }
+
   async create(data: CreateUserData): Promise<UserEntity> {
     const record = await this.prisma.user.create({
       data: {
@@ -34,9 +47,39 @@ export class PrismaUserRepository implements IUserRepository {
         firstName: data.firstName.trim(),
         lastName: data.lastName ? data.lastName.trim() : null,
         defaultCurrency: data.defaultCurrency || "EUR",
+        emailVerified: false,
       },
     });
     return this.toDomain(record);
+  }
+
+  async updateEmailVerified(
+    id: string,
+    verified: boolean,
+  ): Promise<UserEntity> {
+    const record = await this.prisma.user.update({
+      where: { id },
+      data: {
+        emailVerified: verified,
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      },
+    });
+    return this.toDomain(record);
+  }
+
+  async saveVerificationToken(
+    userId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        emailVerificationToken: token,
+        emailVerificationExpires: expiresAt,
+      },
+    });
   }
 
   private toDomain(record: {
@@ -48,6 +91,7 @@ export class PrismaUserRepository implements IUserRepository {
     defaultCurrency: string;
     createdAt: Date;
     updatedAt: Date;
+    emailVerified?: boolean;
   }): UserEntity {
     return new UserEntity(
       record.id,
@@ -58,6 +102,7 @@ export class PrismaUserRepository implements IUserRepository {
       record.defaultCurrency,
       record.createdAt,
       record.updatedAt,
+      record.emailVerified ?? false,
     );
   }
 }

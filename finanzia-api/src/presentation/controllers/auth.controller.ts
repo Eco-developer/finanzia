@@ -20,6 +20,10 @@ import { AuthService } from "../../core/application/auth/auth.service";
 import { RegisterDto } from "../dtos/auth/register.dto";
 import { LoginDto } from "../dtos/auth/login.dto";
 import {
+  VerifyEmailDto,
+  ResendVerificationDto,
+} from "../dtos/auth/verify-email.dto";
+import {
   UserResponseDto,
   AuthResponseDto,
 } from "../dtos/auth/user-response.dto";
@@ -42,11 +46,12 @@ export class AuthController {
   @ApiOperation({
     summary: "Registrar nuevo usuario",
     description:
-      "Crea un nuevo usuario en la plataforma, cifra la contraseña con Argon2id y emite un token JWT en una cookie HttpOnly segura.",
+      "Crea un nuevo usuario en la plataforma, cifra la contraseña con Argon2id y envía un correo de verificación.",
   })
   @ApiResponse({
     status: 201,
-    description: "Usuario registrado exitosamente",
+    description:
+      "Usuario registrado exitosamente (requiere verificación de correo)",
     type: AuthResponseDto,
   })
   @ApiResponse({
@@ -62,12 +67,63 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const result = await this.authService.register(dto);
-    this.setAuthCookie(response, result.token!);
+    if (result.token) {
+      this.setAuthCookie(response, result.token);
+    }
 
     return {
       success: true,
       data: result.user,
       token: result.token,
+      requiresVerification: result.requiresVerification,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("verify-email")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Verificar correo electrónico",
+    description:
+      "Valida el token enviado por correo electrónico y activa la cuenta del usuario.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Correo verificado exitosamente",
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Token inválido o expirado",
+  })
+  async verifyEmail(@Body() dto: VerifyEmailDto) {
+    const result = await this.authService.verifyEmail(dto.token);
+    return {
+      success: true,
+      data: result,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("resend-verification")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Reenviar correo de verificación",
+    description:
+      "Genera un nuevo token de verificación y lo envía al correo del usuario.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Correo de verificación reenviado exitosamente",
+  })
+  async resendVerification(@Body() dto: ResendVerificationDto) {
+    const result = await this.authService.resendVerification(dto.email);
+    return {
+      success: true,
+      data: result,
       meta: {
         timestamp: new Date().toISOString(),
       },

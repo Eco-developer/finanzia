@@ -6,6 +6,7 @@ export interface UserProfile {
   firstName: string;
   lastName?: string | null;
   defaultCurrency?: string;
+  emailVerified?: boolean;
   createdAt?: string;
 }
 
@@ -35,7 +36,9 @@ export const authApi = {
     };
   },
 
-  async register(dto: RegisterDto): Promise<{ user: UserProfile; token?: string }> {
+  async register(
+    dto: RegisterDto
+  ): Promise<{ user: UserProfile; token?: string; requiresVerification?: boolean }> {
     const res = await apiClient<UserProfile>('/auth/register', {
       method: 'POST',
       body: JSON.stringify(dto),
@@ -44,7 +47,34 @@ export const authApi = {
     return {
       user: res.data,
       token: res.token,
+      requiresVerification: (res as any).requiresVerification,
     };
+  },
+
+  async verifyEmail(
+    token: string
+  ): Promise<{ verified: boolean; email?: string; message?: string }> {
+    const res = await apiClient<{ verified: boolean; email?: string; message?: string }>(
+      '/auth/verify-email',
+      {
+        method: 'POST',
+        body: JSON.stringify({ token }),
+      }
+    );
+    return res.data;
+  },
+
+  async resendVerification(
+    email: string
+  ): Promise<{ sent: boolean; message: string }> {
+    const res = await apiClient<{ sent: boolean; message: string }>(
+      '/auth/resend-verification',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }
+    );
+    return res.data;
   },
 
   async logout(): Promise<void> {

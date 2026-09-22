@@ -62,9 +62,12 @@ model User {
   passwordHash    String
   firstName       String
   lastName        String?
-  defaultCurrency String         @default("EUR")
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  defaultCurrency          String         @default("EUR")
+  emailVerified            Boolean        @default(false) @map("email_verified")
+  emailVerificationToken   String?        @unique @map("email_verification_token")
+  emailVerificationExpires DateTime?      @map("email_verification_expires")
+  createdAt                DateTime       @default(now())
+  updatedAt                DateTime       @updatedAt
 
   accounts        Account[]
   categories      Category[]

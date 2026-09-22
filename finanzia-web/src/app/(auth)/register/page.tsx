@@ -54,14 +54,20 @@ export default function RegisterPage() {
 
     try {
       setIsLoading(true);
-      await register({
+      const normalizedEmail = email.trim().toLowerCase();
+      const res = await register({
         firstName: firstName.trim(),
         lastName: lastName.trim() || undefined,
-        email: email.trim().toLowerCase(),
+        email: normalizedEmail,
         password,
         defaultCurrency: 'EUR',
       });
-      router.push('/');
+
+      if (res?.requiresVerification) {
+        router.push(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`);
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Error al registrar la cuenta. El email puede estar ya en uso.');
     } finally {

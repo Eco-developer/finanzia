@@ -2,6 +2,8 @@ import { AuthService } from "../../src/core/application/auth/auth.service";
 import { UserAlreadyExistsException } from "../../src/core/domain/exceptions/user-already-exists.exception";
 import { InvalidCredentialsException } from "../../src/core/domain/exceptions/invalid-credentials.exception";
 import { UserNotFoundException } from "../../src/core/domain/exceptions/user-not-found.exception";
+import { EmailNotVerifiedException } from "../../src/core/domain/exceptions/email-not-verified.exception";
+import { InvalidVerificationTokenException } from "../../src/core/domain/exceptions/invalid-verification-token.exception";
 import { UserEntity } from "../../src/core/domain/entities/user.entity";
 
 describe("AuthService (Unit Tests)", () => {
@@ -9,8 +11,10 @@ describe("AuthService (Unit Tests)", () => {
   let mockUserRepository: any;
   let mockHashingService: any;
   let mockJwtService: any;
+  let mockEmailPort: any;
+  let mockConfigService: any;
 
-  const mockUser = new UserEntity(
+  const mockUserVerified = new UserEntity(
     "user-uuid-1",
     "test@example.com",
     "hashed_password_123",
@@ -19,13 +23,29 @@ describe("AuthService (Unit Tests)", () => {
     "EUR",
     new Date(),
     new Date(),
+    true, // emailVerified = true
+  );
+
+  const mockUserUnverified = new UserEntity(
+    "user-uuid-2",
+    "unverified@example.com",
+    "hashed_password_123",
+    "Carlos",
+    "Gómez",
+    "EUR",
+    new Date(),
+    new Date(),
+    false, // emailVerified = false
   );
 
   beforeEach(() => {
     mockUserRepository = {
       findById: jest.fn(),
       findByEmail: jest.fn(),
+      findByVerificationToken: jest.fn(),
       create: jest.fn(),
+      saveVerificationToken: jest.fn().mockResolvedValue(undefined),
+      updateEmailVerified: jest.fn().mockResolvedValue(undefined),
     };
 
     mockHashingService = {
@@ -37,41 +57,63 @@ describe("AuthService (Unit Tests)", () => {
       sign: jest.fn().mockReturnValue("mocked.jwt.token"),
     };
 
+    mockEmailPort = {
+      sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockConfigService = {
+      get: jest.fn((key: string) => {
+        if (key === "FRONTEND_URL") return "http://localhost:3000";
+        return null;
+      }),
+    };
+
     authService = new AuthService(
       mockUserRepository,
       mockHashingService,
+      mockEmailPort,
       mockJwtService,
+      mockConfigService,
     );
   });
 
   describe("Registro de usuarios", () => {
-    it("debe registrar un usuario nuevo correctamente y generar token JWT", async () => {
+    it("debe registrar un usuario nuevo, generar token de verificación y enviar correo de bienvenida", async () => {
       mockUserRepository.findByEmail.mockResolvedValue(null);
-      mockUserRepository.create.mockResolvedValue(mockUser);
+      mockUserRepository.create.mockResolvedValue(mockUserUnverified);
 
       const result = await authService.register({
-        email: "test@example.com",
+        email: "unverified@example.com",
         password: "Password123!",
-        firstName: "Juan",
-        lastName: "Pérez",
+        firstName: "Carlos",
+        lastName: "Gómez",
         defaultCurrency: "EUR",
       });
 
       expect(mockUserRepository.findByEmail).toHaveBeenCalledWith(
-        "test@example.com",
+        "unverified@example.com",
       );
       expect(mockHashingService.hash).toHaveBeenCalledWith("Password123!");
       expect(mockUserRepository.create).toHaveBeenCalled();
-      expect(mockJwtService.sign).toHaveBeenCalledWith({
-        sub: mockUser.id,
-        email: mockUser.email,
-      });
-      expect(result.user.id).toBe(mockUser.id);
-      expect(result.token).toBe("mocked.jwt.token");
+      expect(mockUserRepository.saveVerificationToken).toHaveBeenCalledWith(
+        mockUserUnverified.id,
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(mockEmailPort.sendVerificationEmail).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: "unverified@example.com",
+          firstName: "Carlos",
+          verificationLink: expect.stringContaining("/verify-email?token="),
+        }),
+      );
+      expect(result.user.id).toBe(mockUserUnverified.id);
+      expect(result.requiresVerification).toBe(true);
+      expect(result.token).toBeUndefined();
     });
 
     it("debe lanzar UserAlreadyExistsException si el email ya existe", async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(mockUser);
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserVerified);
 
       await expect(
         authService.register({
@@ -82,12 +124,13 @@ describe("AuthService (Unit Tests)", () => {
       ).rejects.toThrow(UserAlreadyExistsException);
 
       expect(mockUserRepository.create).not.toHaveBeenCalled();
+      expect(mockEmailPort.sendVerificationEmail).not.toHaveBeenCalled();
     });
   });
 
   describe("Inicio de sesión (Login)", () => {
-    it("debe iniciar sesión con credenciales correctas", async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(mockUser);
+    it("debe iniciar sesión con credenciales correctas y correo verificado", async () => {
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserVerified);
       mockHashingService.verify.mockResolvedValue(true);
 
       const result = await authService.login({
@@ -99,11 +142,26 @@ describe("AuthService (Unit Tests)", () => {
         "test@example.com",
       );
       expect(mockHashingService.verify).toHaveBeenCalledWith(
-        mockUser.passwordHash,
+        mockUserVerified.passwordHash,
         "Password123!",
       );
       expect(result.token).toBe("mocked.jwt.token");
       expect(result.user.email).toBe("test@example.com");
+      expect(result.user.emailVerified).toBe(true);
+    });
+
+    it("debe lanzar EmailNotVerifiedException si el usuario tiene credenciales válidas pero email sin verificar", async () => {
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserUnverified);
+      mockHashingService.verify.mockResolvedValue(true);
+
+      await expect(
+        authService.login({
+          email: "unverified@example.com",
+          password: "Password123!",
+        }),
+      ).rejects.toThrow(EmailNotVerifiedException);
+
+      expect(mockJwtService.sign).not.toHaveBeenCalled();
     });
 
     it("debe lanzar InvalidCredentialsException si el usuario no existe", async () => {
@@ -118,7 +176,7 @@ describe("AuthService (Unit Tests)", () => {
     });
 
     it("debe lanzar InvalidCredentialsException si la contraseña no coincide", async () => {
-      mockUserRepository.findByEmail.mockResolvedValue(mockUser);
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserVerified);
       mockHashingService.verify.mockResolvedValue(false);
 
       await expect(
@@ -130,13 +188,85 @@ describe("AuthService (Unit Tests)", () => {
     });
   });
 
+  describe("Verificación de correo electrónico", () => {
+    it("debe verificar el correo exitosamente con token válido y retornar sesión", async () => {
+      const validToken = "valid-hex-token-12345";
+      mockUserRepository.findByVerificationToken.mockResolvedValue(
+        mockUserUnverified,
+      );
+      mockUserRepository.updateEmailVerified.mockResolvedValue(
+        mockUserVerified,
+      );
+
+      const result = await authService.verifyEmail(validToken);
+
+      expect(mockUserRepository.findByVerificationToken).toHaveBeenCalledWith(
+        validToken,
+      );
+      expect(mockUserRepository.updateEmailVerified).toHaveBeenCalledWith(
+        mockUserUnverified.id,
+        true,
+      );
+      expect(result.success).toBe(true);
+      expect(result.user.email).toBe(mockUserVerified.email);
+      expect(result.token).toBe("mocked.jwt.token");
+    });
+
+    it("debe lanzar InvalidVerificationTokenException si el token no existe o ha expirado", async () => {
+      mockUserRepository.findByVerificationToken.mockResolvedValue(null);
+
+      await expect(authService.verifyEmail("invalid-token")).rejects.toThrow(
+        InvalidVerificationTokenException,
+      );
+      expect(mockUserRepository.updateEmailVerified).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Reenvío de verificación de correo", () => {
+    it("debe reenviar correo de verificación si el usuario no está verificado", async () => {
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserUnverified);
+
+      const result = await authService.resendVerification(
+        "unverified@example.com",
+      );
+
+      expect(mockUserRepository.saveVerificationToken).toHaveBeenCalledWith(
+        mockUserUnverified.id,
+        expect.any(String),
+        expect.any(Date),
+      );
+      expect(mockEmailPort.sendVerificationEmail).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("reenviado");
+    });
+
+    it("debe informar que ya está verificado sin enviar correo nuevo", async () => {
+      mockUserRepository.findByEmail.mockResolvedValue(mockUserVerified);
+
+      const result = await authService.resendVerification("test@example.com");
+
+      expect(mockUserRepository.saveVerificationToken).not.toHaveBeenCalled();
+      expect(mockEmailPort.sendVerificationEmail).not.toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.message).toContain("ya está verificado");
+    });
+
+    it("debe lanzar UserNotFoundException si el correo no existe en el sistema", async () => {
+      mockUserRepository.findByEmail.mockResolvedValue(null);
+
+      await expect(
+        authService.resendVerification("nonexistent@example.com"),
+      ).rejects.toThrow(UserNotFoundException);
+    });
+  });
+
   describe("Consulta de usuario actual", () => {
     it("debe devolver el usuario si existe", async () => {
-      mockUserRepository.findById.mockResolvedValue(mockUser);
+      mockUserRepository.findById.mockResolvedValue(mockUserVerified);
 
-      const result = await authService.getCurrentUser(mockUser.id);
-      expect(result.id).toBe(mockUser.id);
-      expect(result.email).toBe(mockUser.email);
+      const result = await authService.getCurrentUser(mockUserVerified.id);
+      expect(result.id).toBe(mockUserVerified.id);
+      expect(result.email).toBe(mockUserVerified.email);
     });
 
     it("debe lanzar UserNotFoundException si el usuario no existe", async () => {

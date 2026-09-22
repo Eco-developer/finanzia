@@ -32,6 +32,13 @@ export class UserResponseDto {
   defaultCurrency: string;
 
   @ApiProperty({
+    example: true,
+    description:
+      "Indica si la dirección de correo electrónico ha sido verificada",
+  })
+  emailVerified: boolean;
+
+  @ApiProperty({
     example: "2026-09-13T10:00:00.000Z",
     description: "Fecha y hora de creación de la cuenta",
   })
@@ -51,4 +58,11 @@ export class AuthResponseDto {
     example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   })
   token?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Indica si el usuario requiere verificar su correo antes de acceder",
+    example: false,
+  })
+  requiresVerification?: boolean;
 }

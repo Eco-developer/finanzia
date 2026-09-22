@@ -19,6 +19,8 @@ import { TransactionNotFoundException } from "../../core/domain/exceptions/trans
 import { UnauthorizedTransactionAccessException } from "../../core/domain/exceptions/unauthorized-transaction-access.exception";
 import { InvalidTransactionAmountException } from "../../core/domain/exceptions/invalid-transaction-amount.exception";
 import { InvalidTransferException } from "../../core/domain/exceptions/invalid-transfer.exception";
+import { EmailNotVerifiedException } from "../../core/domain/exceptions/email-not-verified.exception";
+import { InvalidVerificationTokenException } from "../../core/domain/exceptions/invalid-verification-token.exception";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -34,7 +36,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let message = "Ha ocurrido un error interno inesperado en el servidor";
     let errors: any[] | undefined = undefined;
 
-    if (exception instanceof UserAlreadyExistsException) {
+    if (exception instanceof EmailNotVerifiedException) {
+      status = HttpStatus.FORBIDDEN;
+      errorCode = "EMAIL_NOT_VERIFIED";
+      message = exception.message;
+      errors = [{ field: "email", message: exception.email }];
+    } else if (exception instanceof InvalidVerificationTokenException) {
+      status = HttpStatus.BAD_REQUEST;
+      errorCode = "INVALID_VERIFICATION_TOKEN";
+      message = exception.message;
+    } else if (exception instanceof UserAlreadyExistsException) {
       status = HttpStatus.CONFLICT;
       errorCode = "USER_ALREADY_EXISTS";
       message = exception.message;

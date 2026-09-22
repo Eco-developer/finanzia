@@ -33,6 +33,8 @@ import { ADVISOR_HISTORY_REPOSITORY } from "./core/domain/repositories/advisor-h
 import { FINANCIAL_ANALYTICS_PORT } from "./core/application/ports/financial-analytics.port";
 import { HASHING_SERVICE } from "./core/application/ports/hashing.port";
 import { AI_ADVISOR_PORT } from "./core/application/ports/ai-advisor.port";
+import { EMAIL_PORT } from "./core/application/ports/email.port";
+import { NodemailerEmailAdapter } from "./infrastructure/email/nodemailer-email.adapter";
 
 // Application
 import { AuthService } from "./core/application/auth/auth.service";
@@ -137,6 +139,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     },
     { provide: HASHING_SERVICE, useClass: HashingService },
     { provide: AI_ADVISOR_PORT, useClass: GeminiAdvisorService },
+    { provide: EMAIL_PORT, useClass: NodemailerEmailAdapter },
     // Application Services
     AuthService,
     AccountsService,
@@ -171,6 +174,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     FINANCIAL_ANALYTICS_PORT,
     HASHING_SERVICE,
     AI_ADVISOR_PORT,
+    EMAIL_PORT,
     AuthService,
     AccountsService,
     CategoriesService,

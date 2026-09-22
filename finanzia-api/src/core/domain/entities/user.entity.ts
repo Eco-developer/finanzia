@@ -8,5 +8,6 @@ export class UserEntity {
     public readonly defaultCurrency: string,
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
+    public readonly emailVerified: boolean = false,
   ) {}
 }

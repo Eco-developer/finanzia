@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { ChatMessage } from '@/infrastructure/api/advisor.api';
-import { VerifiedDataSeal } from './VerifiedDataSeal';
 import { MultiModalWidgets } from './MultiModalWidgets';
 import styles from './ChatBubble.module.css';
 
@@ -53,11 +52,6 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         {/* Widgets visuales multi-modales */}
         {!isUser && message.toolCalls && (
           <MultiModalWidgets toolExecutions={message.toolCalls} />
-        )}
-
-        {/* Sello de verificación y auditoría de herramientas */}
-        {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
-          <VerifiedDataSeal toolExecutions={message.toolCalls} />
         )}
 
         <div className={styles.time}>

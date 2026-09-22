@@ -19,7 +19,7 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (dto: LoginDto) => Promise<void>;
-  register: (dto: RegisterDto) => Promise<void>;
+  register: (dto: RegisterDto) => Promise<{ requiresVerification?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -70,12 +70,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   };
 
-  const register = async (dto: RegisterDto) => {
+  const register = async (
+    dto: RegisterDto
+  ): Promise<{ requiresVerification?: boolean }> => {
     const res = await authApi.register(dto);
     if (res.token && typeof window !== 'undefined') {
       localStorage.setItem('finanzia_token', res.token);
+      setUser(res.user);
+    } else {
+      setUser(null);
     }
-    setUser(res.user);
+    return { requiresVerification: res.requiresVerification };
   };
 
   const logout = async () => {

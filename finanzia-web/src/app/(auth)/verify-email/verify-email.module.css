@@ -1,0 +1,260 @@
+.container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.08), transparent 50%),
+              radial-gradient(circle at 80% 80%, rgba(139, 92, 246, 0.06), transparent 50%),
+              var(--bg-primary);
+}
+
+.authCard {
+  width: 100%;
+  max-width: 480px;
+  background: var(--bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--bg-card-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 2.5rem 2rem;
+  animation: fadeIn 250ms ease-out;
+  text-align: center;
+}
+
+.brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.iconWrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  color: var(--brand-primary);
+  margin-bottom: 1.25rem;
+  position: relative;
+  transition: transform var(--transition-normal);
+}
+
+.iconWrapperPulse {
+  animation: iconPulse 2.5s infinite ease-in-out;
+}
+
+.iconWrapperSuccess {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #10b981;
+}
+
+.iconWrapperError {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #f43f5e;
+}
+
+.title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  font-size: 0.925rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.emailBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem auto 1.25rem;
+  padding: 0.4rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full, 9999px);
+  color: var(--brand-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: var(--font-mono, monospace);
+  word-break: break-all;
+}
+
+.warningAlert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.successAlert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.errorAlert {
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-sm);
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: var(--status-expense, #f43f5e);
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.instructionsBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  text-align: left;
+  font-size: 0.825rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.instructionsBox ul {
+  margin: 0.5rem 0 0 1.2rem;
+  padding: 0;
+}
+
+.instructionsBox li {
+  margin-bottom: 0.25rem;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.actionBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.resendCooldown {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.spinner {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(16, 185, 129, 0.2);
+  border-radius: 50%;
+  border-top-color: var(--brand-primary);
+  animation: spin 0.8s linear infinite;
+  margin: 1.5rem auto;
+}
+
+.mailpitDevLink {
+  margin-top: 1.25rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px dashed rgba(99, 102, 241, 0.35);
+  font-size: 0.8rem;
+  color: #a5b4fc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-decoration: none;
+  transition: all var(--transition-fast);
+}
+
+.mailpitDevLink:hover {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(99, 102, 241, 0.6);
+  color: #c7d2fe;
+}
+
+.footer {
+  margin-top: 1.75rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--bg-card-border);
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.link {
+  color: var(--brand-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.link:hover {
+  color: var(--brand-primary-hover);
+  text-decoration: underline;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes iconPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.25);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+    transform: scale(1.04);
+  }
+}
