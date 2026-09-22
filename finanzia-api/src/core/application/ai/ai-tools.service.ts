@@ -5,6 +5,43 @@ import {
 } from "../ports/financial-analytics.port";
 import { MultiStepPlannerService } from "./multi-step-planner.service";
 import { TransactionLearningService } from "./transaction-learning.service";
+import { BudgetsService } from "../budgets/budgets.service";
+import { TransactionsService } from "../transactions/transactions.service";
+import {
+  IAccountRepository,
+  ACCOUNT_REPOSITORY,
+} from "../../domain/repositories/account.repository.interface";
+import {
+  ICategoryRepository,
+  CATEGORY_REPOSITORY,
+} from "../../domain/repositories/category.repository.interface";
+import { TransactionType } from "../../domain/types/financial.types";
+
+export interface CreateBudgetToolResult {
+  budgetId: string;
+  categoryId: string;
+  categoryName: string;
+  amountLimitCents: number;
+  amountLimitEur: number;
+  periodMonth: number;
+  periodYear: number;
+  alertThresholdPct: number;
+}
+
+export interface CreateTransactionToolResult {
+  transactionId: string;
+  type: "EXPENSE" | "INCOME";
+  amountCents: number;
+  amountEur: number;
+  description: string;
+  transactionDate: string;
+  accountId: string;
+  accountName: string;
+  categoryId?: string | null;
+  categoryName?: string | null;
+  newAccountBalanceCents: number;
+  newAccountBalanceEur: number;
+}
 
 export interface FinancialSummaryResult {
   month: number;
@@ -136,6 +173,14 @@ export class AiToolsService {
     private readonly multiStepPlanner: MultiStepPlannerService,
     @Inject(forwardRef(() => TransactionLearningService))
     private readonly transactionLearning: TransactionLearningService,
+    @Inject(forwardRef(() => BudgetsService))
+    private readonly budgetsService: BudgetsService,
+    @Inject(forwardRef(() => TransactionsService))
+    private readonly transactionsService: TransactionsService,
+    @Inject(ACCOUNT_REPOSITORY)
+    private readonly accountRepository: IAccountRepository,
+    @Inject(CATEGORY_REPOSITORY)
+    private readonly categoryRepository: ICategoryRepository,
   ) {}
 
   /**
@@ -276,5 +321,296 @@ export class AiToolsService {
   ): Promise<HistoricalBaselineResult> {
     this.logger.log(`[Tool] getHistoricalBaseline para usuario ${userId}`);
     return await this.analytics.getHistoricalBaseline(userId);
+  }
+
+  /**
+   * Herramienta 11: Crear o actualizar presupuesto para una categoría a partir de lenguaje natural
+   */
+  async createBudget(
+    userId: string,
+    params: {
+      categoryNameOrId: string;
+      amountLimitEur: number;
+      month?: number;
+      year?: number;
+      alertThresholdPct?: number;
+    },
+  ): Promise<CreateBudgetToolResult> {
+    this.logger.log(
+      `[Tool] createBudget para usuario ${userId}: categoría "${params.categoryNameOrId}", ${params.amountLimitEur} €`,
+    );
+
+    const now = new Date();
+    const periodMonth =
+      params.month && params.month >= 1 && params.month <= 12
+        ? params.month
+        : now.getMonth() + 1;
+    const periodYear =
+      params.year && params.year >= 2000 ? params.year : now.getFullYear();
+    const alertThresholdPct = params.alertThresholdPct || 80;
+    const amountLimitCents = Math.round(params.amountLimitEur * 100);
+
+    if (amountLimitCents <= 0) {
+      throw new Error(
+        "El límite del presupuesto debe ser un importe positivo mayor a cero.",
+      );
+    }
+
+    // Resolver la categoría (por ID o por nombre difuso, priorizando categorías de gasto EXPENSE)
+    const allCategories = await this.categoryRepository.findAllForUser(userId);
+    const expenseCategories = allCategories.filter((c) => c.type === "EXPENSE");
+    const categories = expenseCategories.length > 0 ? expenseCategories : allCategories;
+
+    const searchTarget = (params.categoryNameOrId || "")
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    let matchedCategory = categories.find(
+      (c) => c.id === params.categoryNameOrId,
+    );
+    if (!matchedCategory) {
+      // Coincidencia exacta de nombre
+      matchedCategory = categories.find((c) => {
+        const catNorm = c.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return catNorm === searchTarget;
+      });
+    }
+    if (!matchedCategory) {
+      // Coincidencia por palabra completa o prefijo (ej: "ocio" -> "Ocio y Estilo de Vida")
+      const words = searchTarget.split(/\s+/).filter((w) => w.length >= 3);
+      matchedCategory = categories.find((c) => {
+        const catNorm = c.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        const catWords = catNorm.split(/\s+/);
+        return words.some((w) =>
+          catWords.some((cw) => cw === w || cw.startsWith(w) || w.startsWith(cw)),
+        );
+      });
+    }
+
+    if (!matchedCategory) {
+      // Fallback a coincidencia parcial por inclusión completa
+      matchedCategory = categories.find((c) => {
+        const catNorm = c.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return catNorm.includes(searchTarget) || searchTarget.includes(catNorm);
+      });
+    }
+
+    if (!matchedCategory) {
+      const availableNames = categories
+        .slice(0, 8)
+        .map((c) => c.name)
+        .join(", ");
+      throw new Error(
+        `No se ha encontrado ninguna categoría que coincida con "${params.categoryNameOrId}". Categorías disponibles: ${availableNames}.`,
+      );
+    }
+
+    const budget = await this.budgetsService.createOrUpdateBudget(userId, {
+      categoryId: matchedCategory.id,
+      amountLimitCents,
+      periodMonth,
+      periodYear,
+      alertThresholdPct,
+    });
+
+    return {
+      budgetId: budget.id,
+      categoryId: matchedCategory.id,
+      categoryName: matchedCategory.name,
+      amountLimitCents,
+      amountLimitEur: params.amountLimitEur,
+      periodMonth,
+      periodYear,
+      alertThresholdPct,
+    };
+  }
+
+  /**
+   * Herramienta 12: Registrar un gasto o ingreso a partir de lenguaje natural
+   */
+  async createTransaction(
+    userId: string,
+    params: {
+      type: "EXPENSE" | "INCOME";
+      amountEur: number;
+      description: string;
+      accountNameOrId?: string;
+      categoryNameOrId?: string;
+      date?: string;
+    },
+  ): Promise<CreateTransactionToolResult> {
+    this.logger.log(
+      `[Tool] createTransaction (${params.type}) para usuario ${userId}: "${params.description}", ${params.amountEur} €`,
+    );
+
+    const absAmountEur = Math.abs(params.amountEur);
+    const amountCents = Math.round(absAmountEur * 100);
+
+    if (amountCents <= 0) {
+      throw new Error("El importe de la transacción debe ser mayor a cero.");
+    }
+
+    // 1. Resolver cuenta del usuario
+    const accounts = await this.accountRepository.findAllByUserId(userId);
+    if (!accounts || accounts.length === 0) {
+      throw new Error(
+        "No tienes ninguna cuenta bancaria registrada para vincular esta transacción. Por favor, añade primero una cuenta.",
+      );
+    }
+
+    let targetAccount = accounts[0];
+    if (params.accountNameOrId) {
+      const accSearch = params.accountNameOrId
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      const matchedAcc =
+        accounts.find((a) => a.id === params.accountNameOrId) ||
+        accounts.find((a) => {
+          const nameNorm = a.name
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+          return (
+            nameNorm === accSearch ||
+            nameNorm.includes(accSearch) ||
+            accSearch.includes(nameNorm)
+          );
+        });
+
+      if (matchedAcc) {
+        targetAccount = matchedAcc;
+      }
+    } else {
+      // Buscar cuenta de tipo CHECKING (corriente) por defecto si tiene varias
+      const checkingAccount = accounts.find((a) => a.type === "CHECKING");
+      if (checkingAccount) {
+        targetAccount = checkingAccount;
+      }
+    }
+
+    // 2. Resolver categoría
+    const categories = await this.categoryRepository.findAllForUser(userId);
+    let targetCategory: any = null;
+
+    if (params.categoryNameOrId) {
+      const catSearch = params.categoryNameOrId
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      targetCategory =
+        categories.find((c) => c.id === params.categoryNameOrId) ||
+        categories.find((c) => {
+          const nameNorm = c.name
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .trim();
+          return (
+            nameNorm === catSearch ||
+            nameNorm.includes(catSearch) ||
+            catSearch.includes(nameNorm)
+          );
+        });
+    }
+
+    // Si no se especificó o no se encontró categoría, predecir con categorización inteligente
+    if (!targetCategory && params.description) {
+      const autoCat = await this.transactionLearning.categorizeTransaction(
+        userId,
+        params.description,
+      );
+      if (autoCat && (autoCat.suggestedCategoryId || autoCat.suggestedCategoryName)) {
+        targetCategory =
+          categories.find((c) => c.id === autoCat.suggestedCategoryId) ||
+          categories.find((c) => {
+            const nameNorm = c.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim();
+            const sugNorm = (autoCat.suggestedCategoryName || "")
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim();
+            if (
+              nameNorm === sugNorm ||
+              nameNorm.includes(sugNorm) ||
+              sugNorm.includes(nameNorm)
+            ) {
+              return true;
+            }
+            const sugWords = sugNorm.split(/\s+/).filter((w) => w.length >= 3);
+            const nameWords = nameNorm.split(/\s+/);
+            return sugWords.some((w) =>
+              nameWords.some((nw) => nw === w || nw.startsWith(w) || w.startsWith(nw)),
+            );
+          }) ||
+          null;
+      }
+    }
+
+    // 3. Resolver fecha
+    let transactionDate = new Date();
+    if (params.date) {
+      const parsedDate = new Date(params.date);
+      if (!isNaN(parsedDate.getTime())) {
+        transactionDate = parsedDate;
+      }
+    }
+
+    const typeEnum =
+      params.type === "INCOME"
+        ? TransactionType.INCOME
+        : TransactionType.EXPENSE;
+
+    const result = await this.transactionsService.createTransaction(userId, {
+      accountId: targetAccount.id,
+      categoryId: targetCategory ? targetCategory.id : undefined,
+      amountCents,
+      type: typeEnum,
+      transactionDate: transactionDate.toISOString(),
+      description:
+        params.description.trim() ||
+        (params.type === "INCOME" ? "Ingreso" : "Gasto"),
+    });
+
+    return {
+      transactionId: result.transaction.id,
+      type: params.type,
+      amountCents: Number(result.transaction.amountCents),
+      amountEur: absAmountEur,
+      description: result.transaction.description,
+      transactionDate:
+        result.transaction.transactionDate instanceof Date
+          ? result.transaction.transactionDate.toISOString()
+          : String(result.transaction.transactionDate),
+      accountId: targetAccount.id,
+      accountName: targetAccount.name,
+      categoryId: targetCategory?.id || null,
+      categoryName: targetCategory?.name || "Sin categoría",
+      newAccountBalanceCents: result.newAccountBalanceCents,
+      newAccountBalanceEur: result.newAccountBalanceCents / 100,
+    };
   }
 }

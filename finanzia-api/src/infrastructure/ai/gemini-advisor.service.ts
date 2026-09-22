@@ -21,7 +21,7 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 1. NUNCA inventes cifras, saldos, importes, transacciones ni fechas. Si necesitas conocer cualquier dato del usuario para responder, DEBES invocar la herramienta correspondiente antes de emitir tu respuesta.
 2. Si una herramienta devuelve 0 resultados o no hay transacciones para un periodo, infórmalo con total claridad. No asumas gastos no registrados.
 3. Todos los importes en las herramientas se expresan en CÉNTIMOS ENTEROS (ejemplo: 1250 céntimos = 12,50 €). Siempre debes formatear las cifras para el usuario en euros legibles con dos decimales (ejemplo: 12,50 €) utilizando coma como separador decimal.
-4. NUNCA apliques cambios en la base de datos por iniciativa propia. Si detectas una oportunidad de ahorro o creación de meta, debes invocar la herramienta 'propose_recommendation' o 'calculate_savings_plan' para que el usuario pueda revisarla y aprobarla voluntariamente en su interfaz (Human-in-the-Loop).
+4. NUNCA apliques cambios en la base de datos por iniciativa propia cuando solo detectes oportunidades o sugerencias; en esos casos invoca 'propose_recommendation' o 'calculate_savings_plan' para aprobación humana (Human-in-the-Loop). SIN EMBARGO, cuando el usuario te pida EXPRESAMENTE registrar un gasto o ingreso (ej. 'añade un gasto de 45€...', 'apunta un ingreso de...', 'he gastado...') o crear un presupuesto (ej. 'crea un presupuesto de 300€ para Ocio...'), DEBES utilizar de inmediato las herramientas 'create_transaction' o 'create_budget' para registrar la operación directamente y confirmar los datos guardados y el saldo resultante.
 5. DIFERENCIACIÓN FINANCIERA ESTRICTA: Diferencia siempre entre gastos fijos esenciales (vivienda, suministros, salud, impuestos) y gastos variables o discrecionales (restaurantes, ocio, compras). Cuando propongas recortes, hazlo ÚNICAMENTE sobre gastos variables, jamás sobre obligaciones fijas.
 6. TONO Y EMPATÍA: Sé siempre empático, motivador, no juzgón y constructivo. Las finanzas pueden generar estrés; nunca digas "has gastado demasiado" o "tu control es malo", sino "veo una oportunidad de ahorro aquí" o "podemos ajustar este apartado".
 7. CUMPLIMIENTO REGULATORIO: NO eres un asesor financiero regulado bajo MiFID II ni CNMV. No recomiendes productos de inversión específicos ni prometas rentabilidades garantizadas. Incluye siempre una actitud prudente de educación financiera.`;
@@ -242,6 +242,82 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
               required: ["type", "title", "details", "actionPayload"],
             },
           },
+          {
+            name: "create_budget",
+            description:
+              "Crea o actualiza un presupuesto mensual asignando un límite de gasto en euros para una categoría concreta.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                categoryName: {
+                  type: Type.STRING,
+                  description:
+                    "Nombre o descripción de la categoría (ej. 'Ocio', 'Restaurantes y Bares', 'Alimentación', 'Transporte')",
+                },
+                amountLimitEur: {
+                  type: Type.NUMBER,
+                  description:
+                    "Límite máximo de gasto mensual en euros (ej. 300, 150.50)",
+                },
+                month: {
+                  type: Type.INTEGER,
+                  description:
+                    "Mes opcional (1 a 12). Si se omite, se usa el mes actual.",
+                },
+                year: {
+                  type: Type.INTEGER,
+                  description:
+                    "Año opcional de cuatro dígitos (ej. 2026). Si se omite, se usa el año actual.",
+                },
+                alertThresholdPct: {
+                  type: Type.INTEGER,
+                  description:
+                    "Porcentaje de alerta temprana (por defecto 80)",
+                },
+              },
+              required: ["categoryName", "amountLimitEur"],
+            },
+          },
+          {
+            name: "create_transaction",
+            description:
+              "Registra un nuevo gasto o ingreso en las cuentas bancarias del usuario cuando este lo pida explícitamente.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                type: {
+                  type: Type.STRING,
+                  description:
+                    "Tipo de transacción: 'EXPENSE' para gastos, 'INCOME' para ingresos",
+                },
+                amountEur: {
+                  type: Type.NUMBER,
+                  description: "Importe positivo en euros (ej. 45.50)",
+                },
+                description: {
+                  type: Type.STRING,
+                  description:
+                    "Concepto, comercio o motivo de la transacción (ej. 'Gasolina Repsol', 'Mercadona', 'Nómina')",
+                },
+                accountName: {
+                  type: Type.STRING,
+                  description:
+                    "Nombre opcional de la cuenta bancaria. Si se omite, se usa la cuenta principal.",
+                },
+                categoryName: {
+                  type: Type.STRING,
+                  description:
+                    "Nombre opcional de la categoría. Si se omite, el sistema la predecirá automáticamente.",
+                },
+                date: {
+                  type: Type.STRING,
+                  description:
+                    "Fecha opcional YYYY-MM-DD. Si se omite, se usa hoy.",
+                },
+              },
+              required: ["type", "amountEur", "description"],
+            },
+          },
         ],
       },
     ];
@@ -341,6 +417,30 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
           args.details,
           args.actionPayload,
         );
+      } else if (toolName === "create_budget") {
+        result = await this.aiToolsService.createBudget(userId, {
+          categoryNameOrId: String(args.categoryName),
+          amountLimitEur: Number(args.amountLimitEur),
+          month: args.month ? Number(args.month) : undefined,
+          year: args.year ? Number(args.year) : undefined,
+          alertThresholdPct: args.alertThresholdPct
+            ? Number(args.alertThresholdPct)
+            : undefined,
+        });
+      } else if (toolName === "create_transaction") {
+        result = await this.aiToolsService.createTransaction(userId, {
+          type:
+            String(args.type).toUpperCase() === "INCOME" ? "INCOME" : "EXPENSE",
+          amountEur: Number(args.amountEur),
+          description: String(args.description),
+          accountNameOrId: args.accountName
+            ? String(args.accountName)
+            : undefined,
+          categoryNameOrId: args.categoryName
+            ? String(args.categoryName)
+            : undefined,
+          date: args.date ? String(args.date) : undefined,
+        });
       }
 
       executedTools.push({
@@ -414,6 +514,341 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       .map((h) => h.content)
       .join(" ")
       .toLowerCase();
+
+    // =========================================================================
+    // INTENCIÓN 0A: CREAR O ACTUALIZAR PRESUPUESTO DESDE TEXTO NATURAL
+    // Ej: "crea un presupuesto de 300 euros para Ocio", "pon límite de 200€ al mes en Supermercado"
+    // =========================================================================
+    const isBudgetCreationIntent =
+      (textLower.includes("presupuesto") || textLower.includes("limite")) &&
+      (textLower.includes("crea") ||
+        textLower.includes("pon") ||
+        textLower.includes("asigna") ||
+        textLower.includes("defin") ||
+        textLower.includes("nuevo") ||
+        textLower.includes("establec"));
+
+    if (isBudgetCreationIntent) {
+      const amountMatch =
+        textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i) ||
+        textLower.match(/(?:de|en|por)\s+([\d\.,]+)/i);
+
+      if (amountMatch) {
+        const rawAmount = amountMatch[1].replace(/\./g, "").replace(",", ".");
+        const amountLimitEur = parseFloat(rawAmount);
+
+        if (amountLimitEur && amountLimitEur > 0) {
+          // Extraer categoría: buscar primero si alguna conocida está en el texto
+          let categoryCandidate = "";
+          const commonCats = [
+            "restaurantes y bares",
+            "restaurantes",
+            "alimentacion",
+            "supermercado",
+            "ocio y estilo de vida",
+            "ocio y cultura",
+            "ocio",
+            "transporte",
+            "combustible",
+            "gasolina",
+            "viajes",
+            "salud",
+            "hogar",
+            "vivienda",
+            "ropa",
+            "compras",
+            "suministros",
+            "educacion",
+          ];
+          for (const c of commonCats) {
+            if (textLower.includes(c)) {
+              categoryCandidate = c;
+              break;
+            }
+          }
+
+          // Si no coincide con ninguna conocida, buscar tras conectores
+          if (!categoryCandidate) {
+            const catMatch =
+              textLower.match(
+                /(?:para|en|categoria|de la categoria)\s+([a-z0-9\s]+?)(?:\s+(?:este mes|al mes|mensual|para el mes|con alerta|en este mes)|\.|$)/i,
+              ) ||
+              textLower.match(
+                /(?:presupuesto|limite)\s+(?:para|de)\s+([a-z0-9\s]+?)(?:de|en|\d|\.|$)/i,
+              );
+
+            if (catMatch && catMatch[1]) {
+              categoryCandidate = catMatch[1]
+                .replace(/[\d\.,]+/, "")
+                .replace(/(?:€|euros?|eur)/i, "")
+                .replace(/\s+(?:en|de|para|este|mes)$/i, "")
+                .trim();
+            }
+          }
+
+          if (categoryCandidate) {
+            try {
+              const budgetResult = await this.aiToolsService.createBudget(
+                userId,
+                {
+                  categoryNameOrId: categoryCandidate,
+                  amountLimitEur,
+                  month: currentMonth,
+                  year: currentYear,
+                },
+              );
+
+              executedTools.push({
+                toolName: "create_budget",
+                args: {
+                  categoryName: categoryCandidate,
+                  amountLimitEur,
+                  month: currentMonth,
+                  year: currentYear,
+                },
+                result: budgetResult,
+              });
+
+              const limitEurStr = budgetResult.amountLimitEur
+                .toFixed(2)
+                .replace(".", ",");
+              let reply = `✅ **Presupuesto creado con éxito:**\n\n`;
+              reply += `- 🏷️ **Categoría:** ${budgetResult.categoryName}\n`;
+              reply += `- 💶 **Límite mensual:** ${limitEurStr} €\n`;
+              reply += `- 📅 **Periodo:** ${budgetResult.periodMonth}/${budgetResult.periodYear}\n`;
+              reply += `- 🔔 **Alerta de ritmo:** Al superar el ${budgetResult.alertThresholdPct}% del límite.\n\n`;
+              reply += `Ya puedes consultar su evolución en la sección de **Presupuestos**.`;
+
+              return {
+                content: reply,
+                toolExecutions: executedTools,
+              };
+            } catch (err: any) {
+              return {
+                content: `⚠️ No he podido crear el presupuesto: ${err.message || err}`,
+                toolExecutions: executedTools,
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // INTENCIÓN 0B: SUBIR O REGISTRAR UN GASTO (EXPENSE) DESDE TEXTO
+    // Ej: "añade un gasto de 45 euros en gasolina", "he gastado 12,50€ en Mercadona"
+    // =========================================================================
+    const isExpenseCreationIntent =
+      textLower.match(
+        /(?:crear?|nuevo|registra(?:r)?|anad(?:e|ir)|agreg(?:a|ar)|apunt(?:a|ar)|anot(?:a|ar))\s+(?:un\s+)?gasto/i,
+      ) ||
+      textLower.match(
+        /(?:he\s+gastado|he\s+pagado|pague|compre|pago\s+de|gasto\s+de|compra\s+de)\s+([\d\.,]+)\s*(?:€|euros?|eur)?/i,
+      ) ||
+      (textLower.includes("gasto") &&
+        /[\d\.,]+\s*(?:€|euros?|eur)/i.test(textLower) &&
+        !textLower.includes("cuanto") &&
+        !textLower.includes("desglose"));
+
+    if (isExpenseCreationIntent) {
+      const amountMatch =
+        textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i) ||
+        textLower.match(/(?:de|por)\s+([\d\.,]+)/i);
+
+      if (amountMatch) {
+        const rawAmount = amountMatch[1].replace(/\./g, "").replace(",", ".");
+        const amountEur = parseFloat(rawAmount);
+
+        if (amountEur && amountEur > 0) {
+          // Extraer concepto / comercio: buscar tras la cifra (ej. "45 euros en gasolina" -> "gasolina")
+          let description = "Gasto";
+          const afterAmountMatch = message.match(
+            /[\d\.,]+\s*(?:€|euros?|eur)?\s+(?:en|de|para|por)\s+([^,\.]+?)(?:\s+(?:pagado|con|hoy|ayer)|\.|$)/i,
+          );
+          if (afterAmountMatch && afterAmountMatch[1]) {
+            description = afterAmountMatch[1].trim();
+          } else {
+            const descMatch =
+              message.match(/(?:compre|he gastado|pague|gasto de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:en\s*)?([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i) ||
+              message.match(/(?:en|concepto|por|para)\s+([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i);
+            if (descMatch && descMatch[1]) {
+              const candidate = descMatch[1]
+                .replace(/[\d\.,]+/, "")
+                .replace(/(?:€|euros?|eur)/i, "")
+                .trim();
+              if (candidate.length >= 2) {
+                description = candidate;
+              }
+            }
+          }
+
+          // Extraer posible cuenta si se menciona
+          let accountName: string | undefined = undefined;
+          if (textLower.includes("cuenta corriente") || textLower.includes("corriente")) {
+            accountName = "Cuenta Corriente";
+          } else if (textLower.includes("ahorro")) {
+            accountName = "Cuenta de Ahorro";
+          } else if (textLower.includes("tarjeta")) {
+            accountName = "Tarjeta";
+          } else if (textLower.includes("efectivo")) {
+            accountName = "Efectivo";
+          }
+
+          try {
+            const transResult = await this.aiToolsService.createTransaction(
+              userId,
+              {
+                type: "EXPENSE",
+                amountEur,
+                description,
+                accountNameOrId: accountName,
+              },
+            );
+
+            executedTools.push({
+              toolName: "create_transaction",
+              args: {
+                type: "EXPENSE",
+                amountEur,
+                description,
+                accountName,
+              },
+              result: transResult,
+            });
+
+            const amountEurStr = transResult.amountEur
+              .toFixed(2)
+              .replace(".", ",");
+            const balanceEurStr = transResult.newAccountBalanceEur
+              .toFixed(2)
+              .replace(".", ",");
+
+            let reply = `💸 **Gasto registrado correctamente:**\n\n`;
+            reply += `- 📝 **Concepto:** ${transResult.description}\n`;
+            reply += `- 🔻 **Importe:** -${amountEurStr} €\n`;
+            reply += `- 🏷️ **Categoría:** ${transResult.categoryName}\n`;
+            reply += `- 🏦 **Cuenta:** ${transResult.accountName}\n`;
+            reply += `- 💳 **Nuevo saldo disponible:** ${balanceEurStr} €\n\n`;
+            reply += `El movimiento ha sido registrado y el balance de tu cuenta se ha actualizado en tiempo real.`;
+
+            return {
+              content: reply,
+              toolExecutions: executedTools,
+            };
+          } catch (err: any) {
+            return {
+              content: `⚠️ No he podido registrar el gasto: ${err.message || err}`,
+              toolExecutions: executedTools,
+            };
+          }
+        }
+      }
+    }
+
+    // =========================================================================
+    // INTENCIÓN 0C: SUBIR O REGISTRAR UN INGRESO (INCOME) DESDE TEXTO
+    // Ej: "registra un ingreso de 1500 euros de nómina", "he cobrado mi nómina de 2100 euros"
+    // =========================================================================
+    const isIncomeCreationIntent =
+      textLower.match(
+        /(?:crear?|nuevo|registra(?:r)?|anad(?:e|ir)|agreg(?:a|ar)|apunt(?:a|ar)|anot(?:a|ar))\s+(?:un\s+)?ingreso/i,
+      ) ||
+      textLower.match(
+        /(?:he\s+cobrado|recibi|recibido|ingreso\s+de|nomina\s+de)\s+([\d\.,]+)\s*(?:€|euros?|eur)?/i,
+      ) ||
+      (textLower.includes("ingreso") &&
+        /[\d\.,]+\s*(?:€|euros?|eur)/i.test(textLower) &&
+        !textLower.includes("cuanto"));
+
+    if (isIncomeCreationIntent) {
+      const amountMatch =
+        textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i) ||
+        textLower.match(/(?:de|por)\s+([\d\.,]+)/i);
+
+      if (amountMatch) {
+        const rawAmount = amountMatch[1].replace(/\./g, "").replace(",", ".");
+        const amountEur = parseFloat(rawAmount);
+
+        if (amountEur && amountEur > 0) {
+          let description = "Nómina / Ingreso";
+          const afterAmountMatch = message.match(
+            /[\d\.,]+\s*(?:€|euros?|eur)?\s+(?:de|por|en|concepto|motivo)\s+([^,\.]+?)(?:\s+(?:en|a|hoy|ayer)|\.|$)/i,
+          );
+          if (afterAmountMatch && afterAmountMatch[1]) {
+            description = afterAmountMatch[1].trim();
+          } else {
+            const descMatch =
+              message.match(/(?:he cobrado|recibi|ingreso de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:de\s*)?([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i) ||
+              message.match(/(?:de|concepto|por|en|motivo)\s+([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i);
+            if (descMatch && descMatch[1]) {
+              const candidate = descMatch[1]
+                .replace(/[\d\.,]+/, "")
+                .replace(/(?:€|euros?|eur)/i, "")
+                .trim();
+              if (candidate.length >= 2) {
+                description = candidate;
+              }
+            }
+          }
+
+          // Extraer posible cuenta si se menciona
+          let accountName: string | undefined = undefined;
+          if (textLower.includes("cuenta corriente") || textLower.includes("corriente")) {
+            accountName = "Cuenta Corriente";
+          } else if (textLower.includes("ahorro")) {
+            accountName = "Cuenta de Ahorro";
+          }
+
+          try {
+            const transResult = await this.aiToolsService.createTransaction(
+              userId,
+              {
+                type: "INCOME",
+                amountEur,
+                description,
+                accountNameOrId: accountName,
+              },
+            );
+
+            executedTools.push({
+              toolName: "create_transaction",
+              args: {
+                type: "INCOME",
+                amountEur,
+                description,
+                accountName,
+              },
+              result: transResult,
+            });
+
+            const amountEurStr = transResult.amountEur
+              .toFixed(2)
+              .replace(".", ",");
+            const balanceEurStr = transResult.newAccountBalanceEur
+              .toFixed(2)
+              .replace(".", ",");
+
+            let reply = `💰 **Ingreso registrado correctamente:**\n\n`;
+            reply += `- 📝 **Concepto:** ${transResult.description}\n`;
+            reply += `- 🔺 **Importe:** +${amountEurStr} €\n`;
+            reply += `- 🏷️ **Categoría:** ${transResult.categoryName}\n`;
+            reply += `- 🏦 **Cuenta:** ${transResult.accountName}\n`;
+            reply += `- 💳 **Nuevo saldo acumulado:** ${balanceEurStr} €\n\n`;
+            reply += `El saldo de tu cuenta se ha incrementado inmediatamente.`;
+
+            return {
+              content: reply,
+              toolExecutions: executedTools,
+            };
+          } catch (err: any) {
+            return {
+              content: `⚠️ No he podido registrar el ingreso: ${err.message || err}`,
+              toolExecutions: executedTools,
+            };
+          }
+        }
+      }
+    }
 
     // Intención 1: Planificación multi-paso de ahorro (ej. "quiero ahorrar 5.000€ en 8 meses", "meta de 3000 en 6 meses")
     const cleanForPlan = textLower.replace(/\?/g, " ");

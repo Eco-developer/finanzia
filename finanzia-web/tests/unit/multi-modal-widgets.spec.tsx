@@ -87,4 +87,89 @@ describe('MultiModalWidgets Component (Charts, Goals & Plan Visualizers)', () =>
     expect(screen.getByText(/Restaurantes/)).toBeDefined();
     expect(screen.getByText(/reducir 75,00 €\/mes/)).toBeDefined();
   });
+
+  it('debe renderizar la tarjeta de presupuesto asignado cuando create_budget se ejecuta', () => {
+    const tools: ToolCallExecution[] = [
+      {
+        toolName: 'create_budget',
+        args: { categoryName: 'Ocio', amountEur: 300, periodMonth: 9, periodYear: 2026 },
+        result: {
+          budgetId: 'b-123',
+          categoryName: 'Ocio',
+          amountLimitEur: 300,
+          amountLimitCents: 30000,
+          periodMonth: 9,
+          periodYear: 2026,
+          alertThresholdPct: 80,
+        },
+      },
+    ];
+
+    render(<MultiModalWidgets toolExecutions={tools} />);
+
+    expect(screen.getByText('Presupuesto Asignado')).toBeDefined();
+    expect(screen.getByText(/🏷️ Ocio/)).toBeDefined();
+    expect(screen.getByText(/300,00 € \/ mes/)).toBeDefined();
+    expect(screen.getByText('9/2026')).toBeDefined();
+    expect(screen.getByText(/Alerta temprana activada al superar el 80%/)).toBeDefined();
+  });
+
+  it('debe renderizar la tarjeta de gasto contabilizado cuando create_transaction se ejecuta con EXPENSE', () => {
+    const tools: ToolCallExecution[] = [
+      {
+        toolName: 'create_transaction',
+        args: { amountEur: 45, type: 'EXPENSE', description: 'Gasolina' },
+        result: {
+          transactionId: 'tx-456',
+          type: 'EXPENSE',
+          amountEur: 45,
+          amountCents: 4500,
+          description: 'Gasolina',
+          accountName: 'Cuenta Principal',
+          categoryName: 'Transporte',
+          newAccountBalanceEur: 1955,
+          transactionDate: '2026-09-22T21:00:00.000Z',
+        },
+      },
+    ];
+
+    render(<MultiModalWidgets toolExecutions={tools} />);
+
+    expect(screen.getByText('Gasto Contabilizado')).toBeDefined();
+    expect(screen.getByText('Gasolina')).toBeDefined();
+    expect(screen.getByText('-45,00 €')).toBeDefined();
+    expect(screen.getByText(/🏦 Cuenta Principal/)).toBeDefined();
+    expect(screen.getByText(/🏷️ Transporte/)).toBeDefined();
+    expect(screen.getByText(/1955,00 €/)).toBeDefined();
+  });
+
+  it('debe renderizar la tarjeta de ingreso contabilizado cuando create_transaction se ejecuta con INCOME', () => {
+    const tools: ToolCallExecution[] = [
+      {
+        toolName: 'create_transaction',
+        args: { amountEur: 1500, type: 'INCOME', description: 'Nómina Septiembre' },
+        result: {
+          transactionId: 'tx-789',
+          type: 'INCOME',
+          amountEur: 1500,
+          amountCents: 150000,
+          description: 'Nómina Septiembre',
+          accountName: 'Cuenta Nómina',
+          categoryName: 'Salario',
+          newAccountBalanceEur: 3500,
+          transactionDate: '2026-09-22T21:00:00.000Z',
+        },
+      },
+    ];
+
+    render(<MultiModalWidgets toolExecutions={tools} />);
+
+    expect(screen.getByText('Ingreso Contabilizado')).toBeDefined();
+    expect(screen.getByText('Nómina Septiembre')).toBeDefined();
+    expect(screen.getByText('+1500,00 €')).toBeDefined();
+    expect(screen.getByText(/🏦 Cuenta Nómina/)).toBeDefined();
+    expect(screen.getByText(/🏷️ Salario/)).toBeDefined();
+    expect(screen.getByText(/3500,00 €/)).toBeDefined();
+  });
 });
+

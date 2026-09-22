@@ -169,3 +169,114 @@
   align-items: center;
   gap: 6px;
 }
+
+/* Budget Confirmation Card */
+.budgetConfirmCard {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.budgetConfirmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.budgetCategoryBadge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.budgetPeriodText {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  font-weight: 500;
+}
+
+.budgetConfirmAmount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin: 6px 0;
+}
+
+.budgetAlertNote {
+  font-size: 0.72rem;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-top: 6px;
+}
+
+/* Transaction Confirmation Card */
+.transactionConfirmCard {
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.transactionConfirmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.transactionDescription {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.incomeBadge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.expenseBadge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.transactionMetaRow {
+  display: flex;
+  gap: 12px;
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  margin-bottom: 8px;
+}
+
+.balanceUpdatedRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #d4d4d8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.balanceUpdatedRow strong {
+  color: #38bdf8;
+  font-weight: 600;
+}
+

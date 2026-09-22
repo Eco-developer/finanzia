@@ -48,6 +48,7 @@ const BUILTIN_RULES: BuiltinKeywordRule[] = [
   },
   {
     keywords: [
+      "gasolina",
       "gasolinera",
       "repsol",
       "cepsa",
@@ -138,7 +139,7 @@ const BUILTIN_RULES: BuiltinKeywordRule[] = [
       "ingreso",
       "pension",
     ],
-    categoryName: "Nómina e Ingresos",
+    categoryName: "Nómina y Salario",
     categoryType: "FIXED",
   },
 ];
@@ -198,10 +199,13 @@ export class TransactionLearningService {
     }
 
     // Capa 2: Diccionario determinista incorporado
-    const descLower = description.toLowerCase();
+    const descNorm = description
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
     for (const rule of BUILTIN_RULES) {
       for (const kw of rule.keywords) {
-        if (descLower.includes(kw)) {
+        if (descNorm.includes(kw)) {
           return {
             suggestedCategoryId:
               "builtin-" + rule.categoryName.toLowerCase().replace(/\s+/g, "-"),

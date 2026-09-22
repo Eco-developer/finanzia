@@ -26,6 +26,16 @@ export function MultiModalWidgets({ toolExecutions }: MultiModalWidgetsProps) {
     (t) => t.toolName === 'calculate_savings_plan' && t.result?.monthlyQuotaCents,
   );
 
+  // 4. Verificar si se ha creado/actualizado un presupuesto
+  const budgetCreateTool = toolExecutions.find(
+    (t) => t.toolName === 'create_budget' && t.result?.budgetId,
+  );
+
+  // 5. Verificar si se ha registrado un gasto o ingreso
+  const transactionCreateTool = toolExecutions.find(
+    (t) => t.toolName === 'create_transaction' && t.result?.transactionId,
+  );
+
   return (
     <div className={styles.widgetWrapper}>
       {/* Widget 1: Desglose Visual de Categorías */}
@@ -128,6 +138,85 @@ export function MultiModalWidgets({ toolExecutions }: MultiModalWidgetsProps) {
                     </span>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Widget 4: Tarjeta de Presupuesto Asignado */}
+      {budgetCreateTool && (
+        <div className={styles.widgetContainer}>
+          <div className={styles.widgetTitle}>
+            <span>🎯</span>
+            <span>Presupuesto Asignado</span>
+          </div>
+          <div className={styles.budgetConfirmCard}>
+            <div className={styles.budgetConfirmHeader}>
+              <span className={styles.budgetCategoryBadge}>
+                🏷️ {budgetCreateTool.result.categoryName}
+              </span>
+              <span className={styles.budgetPeriodText}>
+                {budgetCreateTool.result.periodMonth}/{budgetCreateTool.result.periodYear}
+              </span>
+            </div>
+            <div className={styles.budgetConfirmAmount}>
+              {(budgetCreateTool.result.amountLimitEur ||
+                budgetCreateTool.result.amountLimitCents / 100
+              )
+                .toFixed(2)
+                .replace('.', ',')}{' '}
+              € / mes
+            </div>
+            <div className={styles.budgetAlertNote}>
+              🔔 Alerta temprana activada al superar el {budgetCreateTool.result.alertThresholdPct}% del límite
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Widget 5: Tarjeta de Transacción Registrada (Gasto o Ingreso) */}
+      {transactionCreateTool && (
+        <div className={styles.widgetContainer}>
+          <div className={styles.widgetTitle}>
+            <span>{transactionCreateTool.result.type === 'INCOME' ? '💰' : '💸'}</span>
+            <span>
+              {transactionCreateTool.result.type === 'INCOME'
+                ? 'Ingreso Contabilizado'
+                : 'Gasto Contabilizado'}
+            </span>
+          </div>
+          <div className={styles.transactionConfirmCard}>
+            <div className={styles.transactionConfirmHeader}>
+              <span className={styles.transactionDescription}>
+                {transactionCreateTool.result.description}
+              </span>
+              <span
+                className={
+                  transactionCreateTool.result.type === 'INCOME'
+                    ? styles.incomeBadge
+                    : styles.expenseBadge
+                }
+              >
+                {transactionCreateTool.result.type === 'INCOME' ? '+' : '-'}
+                {(transactionCreateTool.result.amountEur ||
+                  Math.abs(transactionCreateTool.result.amountCents / 100)
+                )
+                  .toFixed(2)
+                  .replace('.', ',')}{' '}
+                €
+              </span>
+            </div>
+            <div className={styles.transactionMetaRow}>
+              <span>🏦 {transactionCreateTool.result.accountName}</span>
+              <span>🏷️ {transactionCreateTool.result.categoryName || 'Sin categoría'}</span>
+            </div>
+            {transactionCreateTool.result.newAccountBalanceEur !== undefined && (
+              <div className={styles.balanceUpdatedRow}>
+                <span>Nuevo saldo disponible:</span>
+                <strong>
+                  {transactionCreateTool.result.newAccountBalanceEur.toFixed(2).replace('.', ',')} €
+                </strong>
               </div>
             )}
           </div>
