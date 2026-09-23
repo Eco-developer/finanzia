@@ -87,27 +87,16 @@ export function Sidebar({
             <span>Dashboard</span>
           </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/accounts"
             className={`${styles.navItem} ${
               activeSection === 'accounts' ? styles.navItemActive : ''
             }`}
-            onClick={() => handleNavClick('accounts')}
+            onClick={() => handleNavClick('accounts', '/accounts')}
           >
             <span className={styles.navIcon}>💳</span>
             <span>Cuentas y Tarjetas</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.navItem} ${
-              activeSection === 'transactions' ? styles.navItemActive : ''
-            }`}
-            onClick={() => handleNavClick('transactions')}
-          >
-            <span className={styles.navIcon}>↕️</span>
-            <span>Transacciones</span>
-          </button>
+          </Link>
 
           <Link
             href="/budgets"

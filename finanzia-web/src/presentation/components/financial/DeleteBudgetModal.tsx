@@ -35,10 +35,10 @@ export function DeleteBudgetModal({
     }
   };
 
-  let statusBadgeVariant: 'success' | 'warning' | 'danger' = 'success';
+  let statusBadgeVariant: 'success' | 'warning' | 'expense' = 'success';
   let statusText = 'En regla';
   if (budget.status === 'EXCEEDED' || budget.percentageUsed >= 90) {
-    statusBadgeVariant = 'danger';
+    statusBadgeVariant = 'expense';
     statusText = budget.percentageUsed > 100 ? 'Superado' : 'Alerta crítica';
   } else if (budget.status === 'WARNING' || budget.percentageUsed >= 70) {
     statusBadgeVariant = 'warning';

@@ -97,7 +97,7 @@ export function DeleteGoalModal({
             <span className={styles.fieldLabel}>Progreso</span>
             <div>
               <Badge
-                variant={goal.isCompleted ? 'success' : 'primary'}
+                variant={goal.isCompleted ? 'success' : 'transfer'}
                 size="sm"
               >
                 {goal.isCompleted ? '✓ Cumplida' : `${goal.progressPercentage.toFixed(1)}%`}
