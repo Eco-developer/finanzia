@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ToolCallExecution } from '@/infrastructure/api/advisor.api';
-import { recommendationsApi } from '@/infrastructure/api/recommendations.api';
+import type { ToolCallExecution } from '@/infrastructure/api/advisor.api';
+import { useRecommendations } from '@/presentation/hooks/useRecommendations';
 import styles from './MultiModalWidgets.module.css';
 
 interface MultiModalWidgetsProps {
@@ -238,6 +238,7 @@ export function MultiModalWidgets({ toolExecutions }: MultiModalWidgetsProps) {
 }
 
 function ProposalWidget({ execution }: { execution: ToolCallExecution }) {
+  const { applyRecommendation, rejectRecommendation } = useRecommendations();
   const result = execution.result || {};
   const args = execution.args || {};
   const recId = result.recommendationId || result.id;
@@ -256,7 +257,7 @@ function ProposalWidget({ execution }: { execution: ToolCallExecution }) {
     if (!recId) return;
     setIsLoading(true);
     try {
-      await recommendationsApi.apply(recId);
+      await applyRecommendation(recId);
       setStatus('ACCEPTED');
       setFeedback('✅ Propuesta aprobada y aplicada con éxito.');
     } catch (err: any) {
@@ -270,7 +271,7 @@ function ProposalWidget({ execution }: { execution: ToolCallExecution }) {
     if (!recId) return;
     setIsLoading(true);
     try {
-      await recommendationsApi.reject(recId);
+      await rejectRecommendation(recId);
       setStatus('REJECTED');
       setFeedback('❌ Propuesta descartada. No se modificó ningún dato.');
     } catch (err: any) {
