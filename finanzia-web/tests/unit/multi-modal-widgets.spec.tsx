@@ -171,5 +171,30 @@ describe('MultiModalWidgets Component (Charts, Goals & Plan Visualizers)', () =>
     expect(screen.getByText(/🏷️ Salario/)).toBeDefined();
     expect(screen.getByText(/3500,00 €/)).toBeDefined();
   });
+
+  it('debe renderizar la tarjeta de propuesta (Human-in-the-Loop) con botones de aprobar y rechazar', () => {
+    const tools: ToolCallExecution[] = [
+      {
+        toolName: 'propose_recommendation',
+        args: { actionType: 'DELETE_TRANSACTION', transactionId: 'tx-1' },
+        result: {
+          recommendationId: 'rec-test-1',
+          actionType: 'DELETE_TRANSACTION',
+          title: 'Eliminar movimiento: "Restaurante"',
+          details: 'Se propone eliminar la transacción de 35,00 €.',
+        },
+      },
+    ];
+
+    render(<MultiModalWidgets toolExecutions={tools} />);
+
+    expect(screen.getByText('Eliminar Movimiento')).toBeDefined();
+    expect(screen.getByText('Requiere Autorización')).toBeDefined();
+    expect(screen.getByText('Eliminar movimiento: "Restaurante"')).toBeDefined();
+    expect(screen.getByText('Se propone eliminar la transacción de 35,00 €.')).toBeDefined();
+    expect(screen.getByText('✓ Aprobar y Aplicar')).toBeDefined();
+    expect(screen.getByText('✕ Rechazar')).toBeDefined();
+  });
 });
+
 

@@ -1,7 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ToolCallExecution } from '@/infrastructure/api/advisor.api';
+import { recommendationsApi } from '@/infrastructure/api/recommendations.api';
 import styles from './MultiModalWidgets.module.css';
 
 interface MultiModalWidgetsProps {
@@ -34,6 +35,13 @@ export function MultiModalWidgets({ toolExecutions }: MultiModalWidgetsProps) {
   // 5. Verificar si se ha registrado un gasto o ingreso
   const transactionCreateTool = toolExecutions.find(
     (t) => t.toolName === 'create_transaction' && t.result?.transactionId,
+  );
+
+  // 6. Verificar si hay propuesta formal que requiera aprobación humana (Human-in-the-Loop)
+  const proposeTool = toolExecutions.find(
+    (t) =>
+      t.toolName === 'propose_recommendation' &&
+      (t.result?.recommendationId || t.result?.id),
   );
 
   return (
@@ -220,6 +228,148 @@ export function MultiModalWidgets({ toolExecutions }: MultiModalWidgetsProps) {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Widget 6: Tarjeta de Propuesta / Aprobación Humana (Human-in-the-Loop) */}
+      {proposeTool && <ProposalWidget execution={proposeTool} />}
+    </div>
+  );
+}
+
+function ProposalWidget({ execution }: { execution: ToolCallExecution }) {
+  const result = execution.result || {};
+  const args = execution.args || {};
+  const recId = result.recommendationId || result.id;
+  const actionType =
+    result.actionType || args.actionType || result.proposedAction?.actionType;
+  const title = result.title || args.title;
+  const details = result.details || args.details;
+
+  const [status, setStatus] = useState<'PROPOSED' | 'ACCEPTED' | 'REJECTED'>(
+    'PROPOSED',
+  );
+  const [isLoading, setIsLoading] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const handleApply = async () => {
+    if (!recId) return;
+    setIsLoading(true);
+    try {
+      await recommendationsApi.apply(recId);
+      setStatus('ACCEPTED');
+      setFeedback('✅ Propuesta aprobada y aplicada con éxito.');
+    } catch (err: any) {
+      setFeedback(`❌ Error al aplicar: ${err?.message || 'Error desconocido'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!recId) return;
+    setIsLoading(true);
+    try {
+      await recommendationsApi.reject(recId);
+      setStatus('REJECTED');
+      setFeedback('❌ Propuesta descartada. No se modificó ningún dato.');
+    } catch (err: any) {
+      setFeedback(`❌ Error al descartar: ${err?.message || 'Error desconocido'}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  let actionBadge = 'Supervisión Humana';
+  let actionIcon = '⚖️';
+  let badgeColor = '#818cf8';
+
+  if (actionType === 'DELETE_TRANSACTION') {
+    actionBadge = 'Eliminar Movimiento';
+    actionIcon = '🗑️';
+    badgeColor = '#f87171';
+  } else if (actionType === 'UPDATE_TRANSACTION') {
+    actionBadge = 'Editar Movimiento';
+    actionIcon = '✏️';
+    badgeColor = '#38bdf8';
+  } else if (actionType === 'DELETE_BUDGET') {
+    actionBadge = 'Eliminar Presupuesto';
+    actionIcon = '🗑️';
+    badgeColor = '#f87171';
+  } else if (
+    actionType === 'UPDATE_BUDGET_LIMIT' ||
+    actionType === 'UPDATE_BUDGET'
+  ) {
+    actionBadge = 'Ajustar Presupuesto';
+    actionIcon = '📊';
+    badgeColor = '#fbbf24';
+  } else if (
+    actionType === 'DELETE_SAVINGS_GOAL' ||
+    actionType === 'DELETE_GOAL'
+  ) {
+    actionBadge = 'Eliminar Meta';
+    actionIcon = '🗑️';
+    badgeColor = '#f87171';
+  } else if (
+    actionType === 'UPDATE_SAVINGS_GOAL' ||
+    actionType === 'UPDATE_GOAL'
+  ) {
+    actionBadge = 'Editar Meta';
+    actionIcon = '🎯';
+    badgeColor = '#a855f7';
+  }
+
+  return (
+    <div
+      className={styles.proposalCard}
+      data-testid={`proposal-card-${recId || 'unknown'}`}
+    >
+      <div className={styles.proposalHeader}>
+        <span
+          className={styles.proposalTypeBadge}
+          style={{ color: badgeColor, borderColor: badgeColor }}
+        >
+          <span>{actionIcon}</span>
+          <span>{actionBadge}</span>
+        </span>
+        <span className={styles.proposalHumanLoopTag}>
+          Requiere Autorización
+        </span>
+      </div>
+
+      <div className={styles.proposalTitle}>{title || 'Propuesta de la IA'}</div>
+      {details && <div className={styles.proposalDetails}>{details}</div>}
+
+      {feedback && (
+        <div
+          className={
+            status === 'ACCEPTED'
+              ? styles.proposalSuccessMsg
+              : styles.proposalRejectedMsg
+          }
+        >
+          {feedback}
+        </div>
+      )}
+
+      {status === 'PROPOSED' && (
+        <div className={styles.proposalActions}>
+          <button
+            type="button"
+            className={styles.proposalRejectBtn}
+            onClick={handleReject}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Procesando...' : '✕ Rechazar'}
+          </button>
+          <button
+            type="button"
+            className={styles.proposalApplyBtn}
+            onClick={handleApply}
+            disabled={isLoading}
+          >
+            {isLoading ? 'Aplicando...' : '✓ Aprobar y Aplicar'}
+          </button>
         </div>
       )}
     </div>

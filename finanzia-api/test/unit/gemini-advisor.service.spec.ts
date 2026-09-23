@@ -3,12 +3,14 @@ import { ConfigService } from "@nestjs/config";
 import { GeminiAdvisorService } from "../../src/infrastructure/ai/gemini-advisor.service";
 import { AiToolsService } from "../../src/core/application/ai/ai-tools.service";
 import { FinancialProfileService } from "../../src/core/application/ai/financial-profile.service";
+import { RecommendationsService } from "../../src/core/application/recommendations/recommendations.service";
 
-describe("GeminiAdvisorService (Natural Language Budget Creation)", () => {
+describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-Loop Actions)", () => {
   let service: GeminiAdvisorService;
   let mockAiToolsService: jest.Mocked<any>;
   let mockFinancialProfileService: jest.Mocked<any>;
   let mockConfigService: jest.Mocked<any>;
+  let mockRecommendationsService: jest.Mocked<any>;
 
   beforeEach(async () => {
     mockAiToolsService = {
@@ -24,12 +26,21 @@ describe("GeminiAdvisorService (Natural Language Budget Creation)", () => {
       getProactiveInsights: jest.fn(),
       getHistoricalBaseline: jest.fn(),
       proposeRecommendation: jest.fn(),
+      findRecentTransactions: jest.fn(),
+      findBudgetForCategory: jest.fn(),
+      findSavingsGoalByName: jest.fn(),
     };
 
     mockFinancialProfileService = {
       buildSystemContext: jest
         .fn()
         .mockResolvedValue("Contexto de perfil de prueba"),
+    };
+
+    mockRecommendationsService = {
+      getPendingRecommendations: jest.fn(),
+      applyRecommendation: jest.fn(),
+      rejectRecommendation: jest.fn(),
     };
 
     mockConfigService = {
@@ -47,6 +58,10 @@ describe("GeminiAdvisorService (Natural Language Budget Creation)", () => {
         {
           provide: FinancialProfileService,
           useValue: mockFinancialProfileService,
+        },
+        {
+          provide: RecommendationsService,
+          useValue: mockRecommendationsService,
         },
       ],
     }).compile();
@@ -225,6 +240,253 @@ describe("GeminiAdvisorService (Natural Language Budget Creation)", () => {
       expect(mockAiToolsService.createBudget).not.toHaveBeenCalled();
       expect(result.content).toContain("gasolina");
       expect(result.content).toContain("límite deseado");
+    });
+  });
+
+  describe("Supervisión Humana (Human-in-the-Loop) - Edición y Eliminación", () => {
+    it("debe proponer la eliminación de un movimiento sin borrarlo directamente", async () => {
+      mockAiToolsService.findRecentTransactions.mockResolvedValue([
+        {
+          id: "tx-rest-1",
+          description: "Restaurante La Tagliatella",
+          amountCents: -3500,
+          accountName: "Cuenta Nómina",
+          type: "EXPENSE",
+        },
+      ]);
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-del-tx",
+        status: "PROPOSED",
+        type: "EXPENSE_ALERT",
+        title: 'Eliminar movimiento: "Restaurante La Tagliatella"',
+      });
+
+      const message = "elimina el movimiento de restaurante";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "EXPENSE_ALERT",
+        expect.stringContaining("Restaurante La Tagliatella"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "DELETE_TRANSACTION",
+          transactionId: "tx-rest-1",
+        }),
+      );
+      expect(result.content).toContain("Propuesta de Eliminación");
+      expect(result.toolExecutions[0].toolName).toBe("propose_recommendation");
+    });
+
+    it("debe proponer la edición de un movimiento con el nuevo importe", async () => {
+      mockAiToolsService.findRecentTransactions.mockResolvedValue([
+        {
+          id: "tx-cine-1",
+          description: "Entrada Cine Cinesa",
+          amountCents: -1200,
+          accountName: "Cuenta Nómina",
+          type: "EXPENSE",
+        },
+      ]);
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-edit-tx",
+        status: "PROPOSED",
+        type: "EXPENSE_ALERT",
+        title: 'Editar movimiento: "Entrada Cine Cinesa"',
+      });
+
+      const message = "cambia el movimiento de cine a 15€";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "EXPENSE_ALERT",
+        expect.stringContaining("Entrada Cine Cinesa"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "UPDATE_TRANSACTION",
+          transactionId: "tx-cine-1",
+          amountCents: -1500,
+        }),
+      );
+      expect(result.content).toContain("Propuesta de Modificación");
+    });
+
+    it("debe proponer la eliminación de un presupuesto sin borrarlo directamente", async () => {
+      mockAiToolsService.findBudgetForCategory.mockResolvedValue({
+        budgetId: "bgt-ocio-1",
+        categoryId: "cat-ocio",
+        categoryName: "Ocio y Cultura",
+        amountLimitCents: 15000,
+        periodMonth: 9,
+        periodYear: 2026,
+      });
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-del-bgt",
+        status: "PROPOSED",
+        type: "BUDGET_ADJUSTMENT",
+        title: "Eliminar presupuesto: Ocio y Cultura",
+      });
+
+      const message = "elimina el presupuesto de ocio";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "BUDGET_ADJUSTMENT",
+        expect.stringContaining("Ocio y Cultura"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "DELETE_BUDGET",
+          budgetId: "bgt-ocio-1",
+        }),
+      );
+      expect(result.content).toContain(
+        "Propuesta de Eliminación de Presupuesto",
+      );
+    });
+
+    it("debe proponer la edición de un presupuesto con el nuevo límite mensual", async () => {
+      mockAiToolsService.findBudgetForCategory.mockResolvedValue({
+        budgetId: "bgt-super-1",
+        categoryId: "cat-super",
+        categoryName: "Supermercado",
+        amountLimitCents: 20000,
+        alertThresholdPct: 90,
+        periodMonth: 9,
+        periodYear: 2026,
+      });
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-edit-bgt",
+        status: "PROPOSED",
+        type: "BUDGET_ADJUSTMENT",
+        title: "Ajustar presupuesto: Supermercado",
+      });
+
+      const message = "modifica el presupuesto de supermercado a 250€";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "BUDGET_ADJUSTMENT",
+        expect.stringContaining("Supermercado"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "UPDATE_BUDGET_LIMIT",
+          budgetId: "bgt-super-1",
+          newLimitCents: 25000,
+        }),
+      );
+      expect(result.content).toContain("Propuesta de Ajuste Presupuestario");
+    });
+
+    it("debe proponer la eliminación de una meta de ahorro sin destruirla directamente", async () => {
+      mockAiToolsService.findSavingsGoalByName.mockResolvedValue({
+        goalId: "goal-vac-1",
+        name: "Vacaciones Japón",
+        targetAmountCents: 300000,
+        currentAmountCents: 100000,
+      });
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-del-goal",
+        status: "PROPOSED",
+        type: "SAVINGS_BOOST",
+        title: 'Eliminar meta de ahorro: "Vacaciones Japón"',
+      });
+
+      const message = "elimina la meta de vacaciones japon";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "SAVINGS_BOOST",
+        expect.stringContaining("Vacaciones Japón"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "DELETE_SAVINGS_GOAL",
+          goalId: "goal-vac-1",
+        }),
+      );
+      expect(result.content).toContain(
+        "Propuesta de Eliminación de Meta de Ahorro",
+      );
+    });
+
+    it("debe proponer la edición del objetivo de una meta de ahorro", async () => {
+      mockAiToolsService.findSavingsGoalByName.mockResolvedValue({
+        goalId: "goal-emerg-1",
+        name: "Fondo de Emergencia",
+        targetAmountCents: 300000,
+        currentAmountCents: 150000,
+      });
+      mockAiToolsService.proposeRecommendation.mockResolvedValue({
+        recommendationId: "rec-edit-goal",
+        status: "PROPOSED",
+        type: "SAVINGS_BOOST",
+        title: 'Editar meta de ahorro: "Fondo de Emergencia"',
+      });
+
+      const message = "cambia la meta fondo de emergencia a 4000 euros";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.proposeRecommendation).toHaveBeenCalledWith(
+        "user-1",
+        "SAVINGS_BOOST",
+        expect.stringContaining("Fondo de Emergencia"),
+        expect.any(String),
+        expect.objectContaining({
+          actionType: "UPDATE_SAVINGS_GOAL",
+          goalId: "goal-emerg-1",
+          targetAmountCents: 400000,
+        }),
+      );
+      expect(result.content).toContain(
+        "Propuesta de Modificación de Meta de Ahorro",
+      );
+    });
+
+    it("debe aplicar la recomendación pendiente cuando el usuario responde 'apruebo'", async () => {
+      mockRecommendationsService.getPendingRecommendations.mockResolvedValue([
+        {
+          id: "rec-pending-1",
+          title: 'Eliminar movimiento: "Restaurante"',
+          status: "PROPOSED",
+        },
+      ]);
+      mockRecommendationsService.applyRecommendation.mockResolvedValue({
+        applied: true,
+      });
+
+      const message = "sí, apruebo la propuesta";
+      const result = await service.executeChat("user-1", message);
+
+      expect(
+        mockRecommendationsService.applyRecommendation,
+      ).toHaveBeenCalledWith("user-1", "rec-pending-1");
+      expect(result.content).toContain(
+        "Propuesta Aprobada y Ejecutada con Éxito",
+      );
+    });
+
+    it("debe descartar la recomendación pendiente cuando el usuario responde 'rechazo'", async () => {
+      mockRecommendationsService.getPendingRecommendations.mockResolvedValue([
+        {
+          id: "rec-pending-1",
+          title: 'Eliminar movimiento: "Restaurante"',
+          status: "PROPOSED",
+        },
+      ]);
+      mockRecommendationsService.rejectRecommendation.mockResolvedValue({
+        rejected: true,
+      });
+
+      const message = "rechazo la propuesta, no la apliques";
+      const result = await service.executeChat("user-1", message);
+
+      expect(
+        mockRecommendationsService.rejectRecommendation,
+      ).toHaveBeenCalledWith("user-1", "rec-pending-1");
+      expect(result.content).toContain("Propuesta Descartada");
     });
   });
 });

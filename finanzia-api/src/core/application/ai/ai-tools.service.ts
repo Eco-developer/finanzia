@@ -755,4 +755,124 @@ export class AiToolsService {
       newAccountBalanceEur: result.newAccountBalanceCents / 100,
     };
   }
+
+  /**
+   * Helper para localizar movimientos recientes por búsqueda difusa o importe
+   */
+  async findRecentTransactions(
+    userId: string,
+    criteria?: {
+      searchQuery?: string;
+      amountEur?: number;
+      limit?: number;
+    },
+  ): Promise<any[]> {
+    const limit = criteria?.limit || 20;
+    const result = await this.transactionsService.getTransactions(userId, {
+      limit,
+      page: 1,
+    });
+    let items = result.items || [];
+
+    if (criteria?.searchQuery) {
+      const q = criteria.searchQuery
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+      items = items.filter((tx) => {
+        const desc = tx.description
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        return desc.includes(q) || q.includes(desc);
+      });
+    }
+
+    if (criteria?.amountEur !== undefined) {
+      const targetCents = Math.round(Math.abs(criteria.amountEur) * 100);
+      items = items.filter(
+        (tx) => Math.abs(Number(tx.amountCents)) === targetCents,
+      );
+    }
+
+    return items;
+  }
+
+  /**
+   * Helper para localizar un presupuesto por categoría y mes/año
+   */
+  async findBudgetForCategory(
+    userId: string,
+    categoryNameOrId: string,
+    month: number,
+    year: number,
+  ): Promise<any | null> {
+    const pacingRes = await this.budgetsService.getBudgetPacing(
+      userId,
+      month,
+      year,
+    );
+    if (!pacingRes || !pacingRes.data) return null;
+
+    const searchTarget = categoryNameOrId
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    return (
+      pacingRes.data.find(
+        (b: any) =>
+          b.categoryId === categoryNameOrId || b.budgetId === categoryNameOrId,
+      ) ||
+      pacingRes.data.find((b: any) => {
+        const catNorm = b.categoryName
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return (
+          catNorm === searchTarget ||
+          catNorm.includes(searchTarget) ||
+          searchTarget.includes(catNorm)
+        );
+      }) ||
+      null
+    );
+  }
+
+  /**
+   * Helper para localizar una meta de ahorro por nombre
+   */
+  async findSavingsGoalByName(
+    userId: string,
+    goalNameOrId: string,
+  ): Promise<SavingsGoalItem | null> {
+    const goals = await this.analytics.getSavingsGoals(userId);
+    if (!goals || goals.length === 0) return null;
+
+    const searchTarget = goalNameOrId
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+
+    return (
+      goals.find((g) => g.goalId === goalNameOrId) ||
+      goals.find((g) => {
+        const gNorm = g.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return (
+          gNorm === searchTarget ||
+          gNorm.includes(searchTarget) ||
+          searchTarget.includes(gNorm)
+        );
+      }) ||
+      null
+    );
+  }
 }

@@ -101,6 +101,42 @@ export function RecommendationCard({
             </strong>
           </span>
         )}
+        {payload.actionType === 'DELETE_BUDGET' && (
+          <span className={styles.previewValue}>
+            Eliminar límite de{' '}
+            <strong>{payload.categoryName || 'categoría'}</strong>
+            {payload.amountLimitCents && ` (${(payload.amountLimitCents / 100).toFixed(2).replace('.', ',')} €/mes)`}
+          </span>
+        )}
+        {payload.actionType === 'UPDATE_TRANSACTION' && (
+          <span className={styles.previewValue}>
+            Modificar movimiento a{' '}
+            <strong>
+              {(Math.abs(payload.amountCents) / 100).toFixed(2).replace('.', ',')} €
+            </strong>
+            {payload.description && ` ("${payload.description}")`}
+          </span>
+        )}
+        {payload.actionType === 'DELETE_TRANSACTION' && (
+          <span className={styles.previewValue}>
+            Eliminar movimiento <strong>&quot;{payload.description || ''}&quot;</strong>
+            {payload.amountCents && ` (${(Math.abs(payload.amountCents) / 100).toFixed(2).replace('.', ',')} €)`}
+          </span>
+        )}
+        {payload.actionType === 'UPDATE_SAVINGS_GOAL' && (
+          <span className={styles.previewValue}>
+            Actualizar objetivo de <strong>&quot;{payload.name || 'meta'}&quot;</strong> a{' '}
+            <strong>
+              {(payload.targetAmountCents / 100).toFixed(2).replace('.', ',')} €
+            </strong>
+          </span>
+        )}
+        {payload.actionType === 'DELETE_SAVINGS_GOAL' && (
+          <span className={styles.previewValue}>
+            Eliminar meta <strong>&quot;{payload.name || ''}&quot;</strong>
+            {payload.targetAmountCents && ` (objetivo: ${(payload.targetAmountCents / 100).toFixed(2).replace('.', ',')} €)`}
+          </span>
+        )}
         {payload.actionType === 'SAVINGS_CONTRIBUTION' && payload.amountCents && (
           <span className={styles.previewValue}>
             Aportar extraordinario de{' '}

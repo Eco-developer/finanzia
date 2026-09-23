@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { GoogleGenAI, Type } from "@google/genai";
 import { AiToolsService } from "../../core/application/ai/ai-tools.service";
 import { FinancialProfileService } from "../../core/application/ai/financial-profile.service";
+import { RecommendationsService } from "../../core/application/recommendations/recommendations.service";
 import { ToolCallExecution } from "../../core/application/ai/dtos/chat.dto";
 import {
   IAiAdvisorPort,
@@ -21,7 +22,7 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 1. NUNCA inventes cifras, saldos, importes, transacciones ni fechas. Si necesitas conocer cualquier dato del usuario para responder, DEBES invocar la herramienta correspondiente antes de emitir tu respuesta.
 2. Si una herramienta devuelve 0 resultados o no hay transacciones para un periodo, infórmalo con total claridad. No asumas gastos no registrados.
 3. Todos los importes en las herramientas se expresan en CÉNTIMOS ENTEROS (ejemplo: 1250 céntimos = 12,50 €). Siempre debes formatear las cifras para el usuario en euros legibles con dos decimales (ejemplo: 12,50 €) utilizando coma como separador decimal.
-4. NUNCA apliques cambios en la base de datos por iniciativa propia cuando solo detectes oportunidades o sugerencias; en esos casos invoca 'propose_recommendation' o 'calculate_savings_plan' para aprobación humana (Human-in-the-Loop). SIN EMBARGO, cuando el usuario te pida EXPRESAMENTE registrar un gasto o ingreso (ej. 'añade un gasto de 45€...', 'apunta un ingreso de...', 'he gastado...') o crear/definir un presupuesto en cualquier formato (ej. 'crea un presupuesto para supermercado mes septiembre 2026, categoria: alimentacion, limite mensual: 200, 90%', 'crea un presupuesto para supermercado, 200/mes, 90%', 'presupuesto de 300€ para Ocio al 85%'), DEBES utilizar de inmediato las herramientas 'create_transaction' o 'create_budget' para registrar la operación directamente y confirmar los datos guardados, periodo y alerta configurada.
+4. SUPERVISIÓN HUMANA OBLIGATORIA (Human-in-the-Loop): NUNCA edites ni elimines transacciones/movimientos, presupuestos ni metas de ahorro de forma directa o unilateral. Ante peticiones de editar o eliminar cualquier movimiento, presupuesto o meta, DEBES invocar OBLIGATORIAMENTE 'propose_recommendation' con el tipo y actionPayload correspondiente para que el usuario pueda aprobar o rechazar la acción. La creación directa de nuevos gastos/ingresos ('create_transaction') y nuevos presupuestos ('create_budget') está permitida solo al crearlos inicialmente si el usuario lo pide expresamente.
 5. DIFERENCIACIÓN FINANCIERA ESTRICTA: Diferencia siempre entre gastos fijos esenciales (vivienda, suministros, salud, impuestos) y gastos variables o discrecionales (restaurantes, ocio, compras). Cuando propongas recortes, hazlo ÚNICAMENTE sobre gastos variables, jamás sobre obligaciones fijas.
 6. TONO Y EMPATÍA: Sé siempre empático, motivador, no juzgón y constructivo. Las finanzas pueden generar estrés; nunca digas "has gastado demasiado" o "tu control es malo", sino "veo una oportunidad de ahorro aquí" o "podemos ajustar este apartado".
 7. CUMPLIMIENTO REGULATORIO: NO eres un asesor financiero regulado bajo MiFID II ni CNMV. No recomiendes productos de inversión específicos ni prometas rentabilidades garantizadas. Incluye siempre una actitud prudente de educación financiera.`;
@@ -31,6 +32,8 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     private readonly aiToolsService: AiToolsService,
     @Inject(forwardRef(() => FinancialProfileService))
     private readonly financialProfileService: FinancialProfileService,
+    @Inject(forwardRef(() => RecommendationsService))
+    private readonly recommendationsService: RecommendationsService,
   ) {
     this.apiKey = this.configService.get<string>("GEMINI_API_KEY");
     if (this.apiKey && this.apiKey.trim().length > 0) {
@@ -526,6 +529,512 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       .map((h) => h.content)
       .join(" ")
       .toLowerCase();
+
+    // =========================================================================
+    // INTENCIÓN PRE-1: APROBACIÓN O RECHAZO CONVERSACIONAL (HUMAN-IN-THE-LOOP)
+    // =========================================================================
+    const isApprovalIntent =
+      /\b(?:si\s*,?\s*)?(?:apruebo|acepto|confirmo|adelante|aplica(?:lo)?|hazlo|de acuerdo|procede)\b/i.test(
+        textLower,
+      ) &&
+      !textLower.includes("no ") &&
+      !textLower.includes("rechazo") &&
+      !textLower.includes("cancela");
+
+    const isRejectionIntent =
+      /\b(?:no\s*,?\s*)?(?:rechazo|rechazar|cancela|cancelar|descarta|descartar|no lo hagas|dejalo|anula|anular)\b/i.test(
+        textLower,
+      ) &&
+      !textLower.includes("si ") &&
+      !textLower.includes("apruebo") &&
+      !textLower.includes("acepto");
+
+    if (isApprovalIntent || isRejectionIntent) {
+      const pendingRecs =
+        await this.recommendationsService.getPendingRecommendations(userId);
+      if (pendingRecs && pendingRecs.length > 0) {
+        const targetRec = pendingRecs[0];
+        if (isApprovalIntent) {
+          await this.recommendationsService.applyRecommendation(
+            userId,
+            targetRec.id,
+          );
+          return {
+            content: `✅ **Propuesta Aprobada y Ejecutada con Éxito:**\n\nHe aplicado la acción autorizada: **${targetRec.title}**.\n\nTus registros y saldos han sido actualizados en la plataforma según lo acordado.`,
+            toolExecutions: executedTools,
+          };
+        } else {
+          await this.recommendationsService.rejectRecommendation(
+            userId,
+            targetRec.id,
+          );
+          return {
+            content: `❌ **Propuesta Descartada:**\n\nHe rechazado la propuesta: **${targetRec.title}**.\n\nNo se ha realizado ninguna modificación en tus movimientos, presupuestos ni metas.`,
+            toolExecutions: executedTools,
+          };
+        }
+      }
+    }
+
+    // =========================================================================
+    // INTENCIÓN 0-HITL: EDITAR O ELIMINAR BAJO SUPERVISIÓN HUMANA
+    // (Movimientos, Presupuestos y Metas)
+    // =========================================================================
+    const isDeleteVerb =
+      /\b(?:elimina|eliminar|borra|borrar|quita|quitar|suprime|suprimir)\b/i.test(
+        textLower,
+      );
+    const isEditVerb =
+      /\b(?:edita|editar|modifica|modificar|cambia|cambiar|ajusta|ajustar|actualiza|actualizar|corrige|corregir)\b/i.test(
+        textLower,
+      );
+
+    // --- A) ELIMINAR O EDITAR PRESUPUESTOS ---
+    const isBudgetKeyword =
+      textLower.includes("presupuesto") ||
+      textLower.includes("tope mensual") ||
+      textLower.includes("limite mensual");
+
+    if (isBudgetKeyword && (isDeleteVerb || isEditVerb)) {
+      let periodMonth = currentMonth;
+      let periodYear = currentYear;
+      const MONTH_MAP: Record<string, number> = {
+        enero: 1,
+        febrero: 2,
+        marzo: 3,
+        abril: 4,
+        mayo: 5,
+        junio: 6,
+        julio: 7,
+        agosto: 8,
+        septiembre: 9,
+        setiembre: 9,
+        octubre: 10,
+        noviembre: 11,
+        diciembre: 12,
+      };
+      for (const [mName, mNum] of Object.entries(MONTH_MAP)) {
+        if (new RegExp(`\\b${mName}\\b`, "i").test(textLower)) {
+          periodMonth = mNum;
+          break;
+        }
+      }
+      const yearMatch = textLower.match(/\b(202\d|203\d)\b/);
+      if (yearMatch) periodYear = parseInt(yearMatch[1], 10);
+
+      let categoryQuery = textLower
+        .replace(
+          /\b(?:elimina|eliminar|borra|borrar|edita|editar|modifica|modificar|cambia|cambiar|ajusta|ajustar|actualiza|actualizar|presupuesto|mensual|mes|de|del|en|para|el|la|los|las|por|al|a)\b/gi,
+          " ",
+        )
+        .replace(/\b(202\d|203\d)\b/g, " ")
+        .replace(/[\d\.,]+\s*(?:€|euros?|eur)?/gi, " ")
+        .replace(/\d{1,3}\s*%/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (!categoryQuery && conversationContext) {
+        for (const catName of [
+          "alimentacion",
+          "supermercado",
+          "ocio",
+          "restaurantes",
+          "transporte",
+          "vivienda",
+          "salud",
+        ]) {
+          if (conversationContext.includes(catName)) {
+            categoryQuery = catName;
+            break;
+          }
+        }
+      }
+
+      const budget = await this.aiToolsService.findBudgetForCategory(
+        userId,
+        categoryQuery || "alimentacion",
+        periodMonth,
+        periodYear,
+      );
+
+      if (!budget) {
+        return {
+          content: `No he encontrado ningún presupuesto configurado para "${categoryQuery || "la categoría solicitada"}" en el periodo ${periodMonth}/${periodYear}. Puedes revisar tus presupuestos activos en la sección de Presupuestos.`,
+          toolExecutions: executedTools,
+        };
+      }
+
+      if (isDeleteVerb) {
+        const limitFormatted = (budget.amountLimitCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "BUDGET_ADJUSTMENT",
+          `Eliminar presupuesto: ${budget.categoryName}`,
+          `Se propone eliminar el límite presupuestario mensual de ${limitFormatted} € para la categoría "${budget.categoryName}" en ${periodMonth}/${periodYear}. Las transacciones registradas no se verán afectadas.`,
+          {
+            actionType: "DELETE_BUDGET",
+            budgetId: budget.budgetId,
+            categoryName: budget.categoryName,
+            amountLimitCents: budget.amountLimitCents,
+            periodMonth,
+            periodYear,
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: { actionType: "DELETE_BUDGET", budgetId: budget.budgetId },
+          result: {
+            ...propResult,
+            actionType: "DELETE_BUDGET",
+            budgetId: budget.budgetId,
+            categoryName: budget.categoryName,
+            amountLimitCents: budget.amountLimitCents,
+            periodMonth,
+            periodYear,
+          },
+        });
+
+        return {
+          content: `⚠️ **Propuesta de Eliminación de Presupuesto:**\n\nHe localizado el presupuesto de **${budget.categoryName}** (${limitFormatted} €/mes para ${periodMonth}/${periodYear}).\n\nPor seguridad y supervisión humana, esta acción requiere tu aprobación previa antes de aplicarse.\n\n¿Deseas **aprobar** o **rechazar** esta eliminación? Puedes usar los botones de la tarjeta o responderme en el chat.`,
+          toolExecutions: executedTools,
+        };
+      } else {
+        let newLimitEur = 0;
+        const amountMatch =
+          textLower.match(
+            /(?:a|por|en|limite\s*[:=]?)\s*([\d\.,]+)\s*(?:€|euros?|eur)?/i,
+          ) || textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+        if (amountMatch) {
+          const raw = amountMatch[1].replace(/\./g, "").replace(",", ".");
+          newLimitEur = parseFloat(raw);
+        }
+
+        if (!newLimitEur || newLimitEur <= 0) {
+          return {
+            content: `He localizado el presupuesto de **${budget.categoryName}** (actualmente ${(budget.amountLimitCents / 100).toFixed(2).replace(".", ",")} €/mes), pero no he identificado el nuevo límite deseado. Por favor, indícame la nueva cifra (por ejemplo: *"cambia el presupuesto de ${budget.categoryName} a 300€"*).`,
+            toolExecutions: executedTools,
+          };
+        }
+
+        const oldLimitFormatted = (budget.amountLimitCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const newLimitFormatted = newLimitEur.toFixed(2).replace(".", ",");
+        const newLimitCents = Math.round(newLimitEur * 100);
+
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "BUDGET_ADJUSTMENT",
+          `Ajustar presupuesto: ${budget.categoryName}`,
+          `Se propone modificar el límite de "${budget.categoryName}" de ${oldLimitFormatted} € a ${newLimitFormatted} €/mes para ${periodMonth}/${periodYear}.`,
+          {
+            actionType: "UPDATE_BUDGET_LIMIT",
+            budgetId: budget.budgetId,
+            categoryName: budget.categoryName,
+            newLimitCents,
+            oldLimitCents: budget.amountLimitCents,
+            alertThresholdPct: budget.alertThresholdPct,
+            periodMonth,
+            periodYear,
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: {
+            actionType: "UPDATE_BUDGET_LIMIT",
+            budgetId: budget.budgetId,
+            newLimitCents,
+          },
+          result: {
+            ...propResult,
+            actionType: "UPDATE_BUDGET_LIMIT",
+            budgetId: budget.budgetId,
+            categoryName: budget.categoryName,
+            newLimitCents,
+            oldLimitCents: budget.amountLimitCents,
+            periodMonth,
+            periodYear,
+          },
+        });
+
+        return {
+          content: `📊 **Propuesta de Ajuste Presupuestario:**\n\nHe preparado la modificación para el presupuesto de **${budget.categoryName}**:\n- Límite actual: **${oldLimitFormatted} €/mes**\n- Nuevo límite propuesto: **${newLimitFormatted} €/mes**\n\n¿Deseas **aprobar** o **rechazar** este ajuste?`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
+
+    // --- B) ELIMINAR O EDITAR METAS DE AHORRO ---
+    const isGoalKeyword =
+      textLower.includes("meta") ||
+      textLower.includes("objetivo") ||
+      textLower.includes("meta de ahorro");
+
+    if (isGoalKeyword && (isDeleteVerb || isEditVerb)) {
+      const goalQuery = textLower
+        .replace(
+          /\b(?:elimina|eliminar|borra|borrar|edita|editar|modifica|modificar|cambia|cambiar|ajusta|ajustar|actualiza|actualizar|meta|objetivo|de|del|en|para|el|la|los|las|por|al|a|ahorro)\b/gi,
+          " ",
+        )
+        .replace(/[\d\.,]+\s*(?:€|euros?|eur)?/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const goal = await this.aiToolsService.findSavingsGoalByName(
+        userId,
+        goalQuery || "",
+      );
+
+      if (!goal) {
+        return {
+          content: `No he encontrado ninguna meta de ahorro que coincida con "${goalQuery || "tu búsqueda"}". Puedes revisar tus metas activas desde la sección de **Metas** o indicarme el nombre exacto.`,
+          toolExecutions: executedTools,
+        };
+      }
+
+      if (isDeleteVerb) {
+        const targetFormatted = (goal.targetAmountCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const curFormatted = (goal.currentAmountCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
+
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "SAVINGS_BOOST",
+          `Eliminar meta de ahorro: "${goal.name}"`,
+          `Se propone eliminar la meta "${goal.name}" (objetivo: ${targetFormatted} €, acumulado: ${curFormatted} €). Los saldos bancarios no se verán afectados.`,
+          {
+            actionType: "DELETE_SAVINGS_GOAL",
+            goalId: goal.goalId,
+            name: goal.name,
+            targetAmountCents: goal.targetAmountCents,
+            currentAmountCents: goal.currentAmountCents,
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: { actionType: "DELETE_SAVINGS_GOAL", goalId: goal.goalId },
+          result: {
+            ...propResult,
+            actionType: "DELETE_SAVINGS_GOAL",
+            goalId: goal.goalId,
+            name: goal.name,
+            targetAmountCents: goal.targetAmountCents,
+            currentAmountCents: goal.currentAmountCents,
+          },
+        });
+
+        return {
+          content: `⚠️ **Propuesta de Eliminación de Meta de Ahorro:**\n\nHe localizado la meta **"${goal.name}"** (Objetivo: **${targetFormatted} €**, Acumulado: **${curFormatted} €**).\n\nEliminar la meta detendrá el seguimiento sin modificar tus fondos bancarios.\n\n¿Deseas **aprobar** o **rechazar** esta eliminación?`,
+          toolExecutions: executedTools,
+        };
+      } else {
+        let newTargetEur = 0;
+        const amountMatch =
+          textLower.match(
+            /(?:a|por|en|objetivo\s*[:=]?)\s*([\d\.,]+)\s*(?:€|euros?|eur)?/i,
+          ) || textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+        if (amountMatch) {
+          const raw = amountMatch[1].replace(/\./g, "").replace(",", ".");
+          newTargetEur = parseFloat(raw);
+        }
+
+        if (!newTargetEur || newTargetEur <= 0) {
+          return {
+            content: `He localizado la meta **"${goal.name}"** (objetivo actual: ${(goal.targetAmountCents / 100).toFixed(2).replace(".", ",")} €), pero no he identificado el nuevo importe objetivo. Por favor, indícame la cifra (ejemplo: *"cambia la meta ${goal.name} a 5000€"*).`,
+            toolExecutions: executedTools,
+          };
+        }
+
+        const oldTargetFormatted = (goal.targetAmountCents / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const newTargetFormatted = newTargetEur.toFixed(2).replace(".", ",");
+        const newTargetCents = Math.round(newTargetEur * 100);
+
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "SAVINGS_BOOST",
+          `Editar meta de ahorro: "${goal.name}"`,
+          `Se propone actualizar el objetivo financiero de la meta "${goal.name}" de ${oldTargetFormatted} € a ${newTargetFormatted} €.`,
+          {
+            actionType: "UPDATE_SAVINGS_GOAL",
+            goalId: goal.goalId,
+            name: goal.name,
+            targetAmountCents: newTargetCents,
+            oldTargetAmountCents: goal.targetAmountCents,
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: {
+            actionType: "UPDATE_SAVINGS_GOAL",
+            goalId: goal.goalId,
+            targetAmountCents: newTargetCents,
+          },
+          result: {
+            ...propResult,
+            actionType: "UPDATE_SAVINGS_GOAL",
+            goalId: goal.goalId,
+            name: goal.name,
+            targetAmountCents: newTargetCents,
+            oldTargetAmountCents: goal.targetAmountCents,
+          },
+        });
+
+        return {
+          content: `🎯 **Propuesta de Modificación de Meta de Ahorro:**\n\nHe preparado la actualización para la meta **"${goal.name}"**:\n- Objetivo actual: **${oldTargetFormatted} €**\n- Nuevo objetivo propuesto: **${newTargetFormatted} €**\n\n¿Deseas **aprobar** o **rechazar** esta modificación?`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
+
+    // --- C) ELIMINAR O EDITAR MOVIMIENTOS ---
+    const isTxKeyword =
+      textLower.includes("movimiento") ||
+      textLower.includes("transaccion") ||
+      textLower.includes("gasto") ||
+      textLower.includes("ingreso");
+
+    if (isTxKeyword && (isDeleteVerb || isEditVerb)) {
+      let searchAmountEur: number | undefined;
+      const numMatch = textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+      if (numMatch) {
+        const parsed = parseFloat(
+          numMatch[1].replace(/\./g, "").replace(",", "."),
+        );
+        if (!isNaN(parsed) && parsed > 0) searchAmountEur = parsed;
+      }
+
+      const txQuery = textLower
+        .replace(
+          /\b(?:elimina|eliminar|borra|borrar|edita|editar|modifica|modificar|cambia|cambiar|ajusta|ajustar|actualiza|actualizar|movimiento|transaccion|gasto|ingreso|de|del|en|para|el|la|los|las|por|al|a)\b/gi,
+          " ",
+        )
+        .replace(/[\d\.,]+\s*(?:€|euros?|eur)?/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      const matchedTxs = await this.aiToolsService.findRecentTransactions(
+        userId,
+        {
+          searchQuery: txQuery || undefined,
+          amountEur: searchAmountEur,
+          limit: 10,
+        },
+      );
+
+      if (!matchedTxs || matchedTxs.length === 0) {
+        return {
+          content: `No he encontrado ningún movimiento reciente que coincida con "${txQuery || (searchAmountEur ? searchAmountEur + "€" : "tu solicitud")}". Por favor, indícame con mayor detalle el concepto o importe de la transacción.`,
+          toolExecutions: executedTools,
+        };
+      }
+
+      const tx = matchedTxs[0];
+      const amountFormatted = (Math.abs(Number(tx.amountCents)) / 100)
+        .toFixed(2)
+        .replace(".", ",");
+
+      if (isDeleteVerb) {
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "EXPENSE_ALERT",
+          `Eliminar movimiento: "${tx.description}"`,
+          `Se propone eliminar el movimiento "${tx.description}" de ${amountFormatted} €. El saldo de tu cuenta se revertirá automáticamente tras tu aprobación.`,
+          {
+            actionType: "DELETE_TRANSACTION",
+            transactionId: tx.id,
+            description: tx.description,
+            amountCents: Number(tx.amountCents),
+            accountName: tx.accountName,
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: { actionType: "DELETE_TRANSACTION", transactionId: tx.id },
+          result: {
+            ...propResult,
+            actionType: "DELETE_TRANSACTION",
+            transactionId: tx.id,
+            description: tx.description,
+            amountCents: Number(tx.amountCents),
+          },
+        });
+
+        return {
+          content: `⚠️ **Propuesta de Eliminación de Movimiento:**\n\nHe localizado el movimiento **"${tx.description}"** por importe de **${amountFormatted} €**.\n\nPor seguridad y supervisión humana, esta acción requiere tu confirmación previa antes de eliminar el movimiento y revertir el saldo.\n\n¿Deseas **aprobar** o **rechazar** esta eliminación?`,
+          toolExecutions: executedTools,
+        };
+      } else {
+        let newAmountEur = 0;
+        const newAmtMatch =
+          textLower.match(
+            /(?:a|por|importe\s*[:=]?)\s*([\d\.,]+)\s*(?:€|euros?|eur)?/i,
+          ) || textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+        if (newAmtMatch) {
+          const raw = newAmtMatch[1].replace(/\./g, "").replace(",", ".");
+          newAmountEur = parseFloat(raw);
+        }
+
+        if (!newAmountEur || newAmountEur <= 0) {
+          return {
+            content: `He localizado el movimiento **"${tx.description}"** (${amountFormatted} €), pero no he identificado el nuevo importe. Por favor, especifícalo (ejemplo: *"cambia el movimiento de ${tx.description} a 25€"*).`,
+            toolExecutions: executedTools,
+          };
+        }
+
+        const newAmountFormatted = newAmountEur.toFixed(2).replace(".", ",");
+        const isExpense = Number(tx.amountCents) < 0 || tx.type === "EXPENSE";
+        const newAmountCents =
+          (isExpense ? -1 : 1) * Math.round(newAmountEur * 100);
+
+        const propResult = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "EXPENSE_ALERT",
+          `Editar movimiento: "${tx.description}"`,
+          `Se propone modificar el movimiento "${tx.description}" de ${amountFormatted} € a ${newAmountFormatted} €. El saldo de tu cuenta se recalculará tras tu aprobación.`,
+          {
+            actionType: "UPDATE_TRANSACTION",
+            transactionId: tx.id,
+            description: tx.description,
+            amountCents: newAmountCents,
+            oldAmountCents: Number(tx.amountCents),
+          },
+        );
+
+        executedTools.push({
+          toolName: "propose_recommendation",
+          args: {
+            actionType: "UPDATE_TRANSACTION",
+            transactionId: tx.id,
+            amountCents: newAmountCents,
+          },
+          result: {
+            ...propResult,
+            actionType: "UPDATE_TRANSACTION",
+            transactionId: tx.id,
+            description: tx.description,
+            amountCents: newAmountCents,
+            oldAmountCents: Number(tx.amountCents),
+          },
+        });
+
+        return {
+          content: `✏️ **Propuesta de Modificación de Movimiento:**\n\nHe preparado la modificación para el movimiento **"${tx.description}"**:\n- Importe actual: **${amountFormatted} €**\n- Nuevo importe propuesto: **${newAmountFormatted} €**\n\n¿Deseas **aprobar** o **rechazar** esta modificación?`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
 
     // =========================================================================
     // INTENCIÓN 0A: CREAR O ACTUALIZAR PRESUPUESTO DESDE TEXTO NATURAL
