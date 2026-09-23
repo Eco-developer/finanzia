@@ -334,6 +334,7 @@ export class AiToolsService {
       month?: number;
       year?: number;
       alertThresholdPct?: number;
+      fallbackCategoryNameOrId?: string;
     },
   ): Promise<CreateBudgetToolResult> {
     this.logger.log(
@@ -347,7 +348,12 @@ export class AiToolsService {
         : now.getMonth() + 1;
     const periodYear =
       params.year && params.year >= 2000 ? params.year : now.getFullYear();
-    const alertThresholdPct = params.alertThresholdPct || 80;
+    const alertThresholdPct =
+      params.alertThresholdPct &&
+      params.alertThresholdPct >= 1 &&
+      params.alertThresholdPct <= 100
+        ? params.alertThresholdPct
+        : 80;
     const amountLimitCents = Math.round(params.amountLimitEur * 100);
 
     if (amountLimitCents <= 0) {
@@ -359,20 +365,115 @@ export class AiToolsService {
     // Resolver la categoría (por ID o por nombre difuso, priorizando categorías de gasto EXPENSE)
     const allCategories = await this.categoryRepository.findAllForUser(userId);
     const expenseCategories = allCategories.filter((c) => c.type === "EXPENSE");
-    const categories = expenseCategories.length > 0 ? expenseCategories : allCategories;
+    const categories =
+      expenseCategories.length > 0 ? expenseCategories : allCategories;
 
-    const searchTarget = (params.categoryNameOrId || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .trim();
+    const CATEGORY_SYNONYMS: Record<string, string[]> = {
+      alimentacion: [
+        "comida",
+        "super",
+        "supermercado",
+        "comestibles",
+        "alimentos",
+        "despensa",
+        "compra semanal",
+      ],
+      supermercado: [
+        "super",
+        "mercadona",
+        "carrefour",
+        "lidl",
+        "dia",
+        "alcampo",
+        "alimentacion",
+        "comida",
+      ],
+      combustible: [
+        "gasolina",
+        "diesel",
+        "gasoil",
+        "repsol",
+        "cepsa",
+        "bp",
+        "combustibles",
+      ],
+      transporte: [
+        "metro",
+        "autobus",
+        "bus",
+        "tren",
+        "renfe",
+        "taxi",
+        "uber",
+        "cabify",
+        "billete",
+        "gasolina",
+      ],
+      "restaurantes y bares": [
+        "restaurante",
+        "restaurantes",
+        "bar",
+        "bares",
+        "cenas",
+        "comidas",
+        "comer fuera",
+        "cafeteria",
+      ],
+      "ocio y estilo de vida": [
+        "ocio",
+        "cultura",
+        "cine",
+        "salidas",
+        "conciertos",
+        "teatro",
+        "fiesta",
+        "diversion",
+      ],
+      vivienda: ["casa", "piso", "alquiler", "hipoteca", "comunidad"],
+      "suministros (luz, agua, gas)": [
+        "suministros",
+        "luz",
+        "agua",
+        "gas",
+        "electricidad",
+        "internet",
+        "fibra",
+        "telefono",
+      ],
+      "salud y bienestar": [
+        "salud",
+        "farmacia",
+        "medico",
+        "dentista",
+        "optica",
+        "medicamentos",
+      ],
+      "hobbies y deportes": [
+        "gym",
+        "gimnasio",
+        "deporte",
+        "fitness",
+        "padel",
+        "futbol",
+        "hobbies",
+      ],
+    };
 
-    let matchedCategory = categories.find(
-      (c) => c.id === params.categoryNameOrId,
-    );
-    if (!matchedCategory) {
-      // Coincidencia exacta de nombre
-      matchedCategory = categories.find((c) => {
+    const resolveCategory = (targetStr: string) => {
+      const searchTarget = (targetStr || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+      if (!searchTarget) return undefined;
+
+      // 1. Coincidencia por ID directo
+      let matched = categories.find((c) => c.id === targetStr.trim());
+      if (matched) return matched;
+
+      // 2. Coincidencia exacta de nombre
+      matched = categories.find((c) => {
         const catNorm = c.name
           .toLowerCase()
           .normalize("NFD")
@@ -380,11 +481,11 @@ export class AiToolsService {
           .trim();
         return catNorm === searchTarget;
       });
-    }
-    if (!matchedCategory) {
-      // Coincidencia por palabra completa o prefijo (ej: "ocio" -> "Ocio y Estilo de Vida")
+      if (matched) return matched;
+
+      // 3. Coincidencia por palabra completa o prefijo (ej: "ocio" -> "Ocio y Estilo de Vida")
       const words = searchTarget.split(/\s+/).filter((w) => w.length >= 3);
-      matchedCategory = categories.find((c) => {
+      matched = categories.find((c) => {
         const catNorm = c.name
           .toLowerCase()
           .normalize("NFD")
@@ -392,14 +493,15 @@ export class AiToolsService {
           .trim();
         const catWords = catNorm.split(/\s+/);
         return words.some((w) =>
-          catWords.some((cw) => cw === w || cw.startsWith(w) || w.startsWith(cw)),
+          catWords.some(
+            (cw) => cw === w || cw.startsWith(w) || w.startsWith(cw),
+          ),
         );
       });
-    }
+      if (matched) return matched;
 
-    if (!matchedCategory) {
-      // Fallback a coincidencia parcial por inclusión completa
-      matchedCategory = categories.find((c) => {
+      // 4. Coincidencia parcial por inclusión
+      matched = categories.find((c) => {
         const catNorm = c.name
           .toLowerCase()
           .normalize("NFD")
@@ -407,6 +509,41 @@ export class AiToolsService {
           .trim();
         return catNorm.includes(searchTarget) || searchTarget.includes(catNorm);
       });
+      if (matched) return matched;
+
+      // 5. Coincidencia por sinónimos comunes
+      for (const [keyCat, synonyms] of Object.entries(CATEGORY_SYNONYMS)) {
+        if (
+          searchTarget === keyCat ||
+          synonyms.includes(searchTarget) ||
+          synonyms.some(
+            (s) => searchTarget.includes(s) || s.includes(searchTarget),
+          )
+        ) {
+          const catByKey = categories.find((c) => {
+            const catNorm = c.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "")
+              .trim();
+            return (
+              catNorm === keyCat ||
+              catNorm.includes(keyCat) ||
+              synonyms.some((s) => catNorm.includes(s))
+            );
+          });
+          if (catByKey) return catByKey;
+        }
+      }
+
+      return undefined;
+    };
+
+    let matchedCategory = resolveCategory(params.categoryNameOrId);
+
+    // Si no coincide y se proporcionó una categoría/concepto alternativo (ej. "supermercado" con "alimentacion")
+    if (!matchedCategory && params.fallbackCategoryNameOrId) {
+      matchedCategory = resolveCategory(params.fallbackCategoryNameOrId);
     }
 
     if (!matchedCategory) {
@@ -539,7 +676,10 @@ export class AiToolsService {
         userId,
         params.description,
       );
-      if (autoCat && (autoCat.suggestedCategoryId || autoCat.suggestedCategoryName)) {
+      if (
+        autoCat &&
+        (autoCat.suggestedCategoryId || autoCat.suggestedCategoryName)
+      ) {
         targetCategory =
           categories.find((c) => c.id === autoCat.suggestedCategoryId) ||
           categories.find((c) => {
@@ -563,7 +703,9 @@ export class AiToolsService {
             const sugWords = sugNorm.split(/\s+/).filter((w) => w.length >= 3);
             const nameWords = nameNorm.split(/\s+/);
             return sugWords.some((w) =>
-              nameWords.some((nw) => nw === w || nw.startsWith(w) || w.startsWith(nw)),
+              nameWords.some(
+                (nw) => nw === w || nw.startsWith(w) || w.startsWith(nw),
+              ),
             );
           }) ||
           null;

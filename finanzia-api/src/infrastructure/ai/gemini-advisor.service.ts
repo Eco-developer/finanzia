@@ -21,7 +21,7 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 1. NUNCA inventes cifras, saldos, importes, transacciones ni fechas. Si necesitas conocer cualquier dato del usuario para responder, DEBES invocar la herramienta correspondiente antes de emitir tu respuesta.
 2. Si una herramienta devuelve 0 resultados o no hay transacciones para un periodo, infórmalo con total claridad. No asumas gastos no registrados.
 3. Todos los importes en las herramientas se expresan en CÉNTIMOS ENTEROS (ejemplo: 1250 céntimos = 12,50 €). Siempre debes formatear las cifras para el usuario en euros legibles con dos decimales (ejemplo: 12,50 €) utilizando coma como separador decimal.
-4. NUNCA apliques cambios en la base de datos por iniciativa propia cuando solo detectes oportunidades o sugerencias; en esos casos invoca 'propose_recommendation' o 'calculate_savings_plan' para aprobación humana (Human-in-the-Loop). SIN EMBARGO, cuando el usuario te pida EXPRESAMENTE registrar un gasto o ingreso (ej. 'añade un gasto de 45€...', 'apunta un ingreso de...', 'he gastado...') o crear un presupuesto (ej. 'crea un presupuesto de 300€ para Ocio...'), DEBES utilizar de inmediato las herramientas 'create_transaction' o 'create_budget' para registrar la operación directamente y confirmar los datos guardados y el saldo resultante.
+4. NUNCA apliques cambios en la base de datos por iniciativa propia cuando solo detectes oportunidades o sugerencias; en esos casos invoca 'propose_recommendation' o 'calculate_savings_plan' para aprobación humana (Human-in-the-Loop). SIN EMBARGO, cuando el usuario te pida EXPRESAMENTE registrar un gasto o ingreso (ej. 'añade un gasto de 45€...', 'apunta un ingreso de...', 'he gastado...') o crear/definir un presupuesto en cualquier formato (ej. 'crea un presupuesto para supermercado mes septiembre 2026, categoria: alimentacion, limite mensual: 200, 90%', 'crea un presupuesto para supermercado, 200/mes, 90%', 'presupuesto de 300€ para Ocio al 85%'), DEBES utilizar de inmediato las herramientas 'create_transaction' o 'create_budget' para registrar la operación directamente y confirmar los datos guardados, periodo y alerta configurada.
 5. DIFERENCIACIÓN FINANCIERA ESTRICTA: Diferencia siempre entre gastos fijos esenciales (vivienda, suministros, salud, impuestos) y gastos variables o discrecionales (restaurantes, ocio, compras). Cuando propongas recortes, hazlo ÚNICAMENTE sobre gastos variables, jamás sobre obligaciones fijas.
 6. TONO Y EMPATÍA: Sé siempre empático, motivador, no juzgón y constructivo. Las finanzas pueden generar estrés; nunca digas "has gastado demasiado" o "tu control es malo", sino "veo una oportunidad de ahorro aquí" o "podemos ajustar este apartado".
 7. CUMPLIMIENTO REGULATORIO: NO eres un asesor financiero regulado bajo MiFID II ni CNMV. No recomiendes productos de inversión específicos ni prometas rentabilidades garantizadas. Incluye siempre una actitud prudente de educación financiera.`;
@@ -245,24 +245,24 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
           {
             name: "create_budget",
             description:
-              "Crea o actualiza un presupuesto mensual asignando un límite de gasto en euros para una categoría concreta.",
+              "Crea o actualiza un presupuesto mensual asignando un límite de gasto en euros para una categoría concreta a partir de cualquier formato o lenguaje natural del usuario.",
             parameters: {
               type: Type.OBJECT,
               properties: {
                 categoryName: {
                   type: Type.STRING,
                   description:
-                    "Nombre o descripción de la categoría (ej. 'Ocio', 'Restaurantes y Bares', 'Alimentación', 'Transporte')",
+                    "Nombre o descripción de la categoría (ej. 'Alimentación', 'Supermercado', 'Ocio y Estilo de Vida', 'Restaurantes y Bares', 'Transporte'). Si el usuario indica explícitamente 'categoria: alimentacion', pasa 'Alimentación'.",
                 },
                 amountLimitEur: {
                   type: Type.NUMBER,
                   description:
-                    "Límite máximo de gasto mensual en euros (ej. 300, 150.50)",
+                    "Límite máximo de gasto mensual en euros (ej. 200, 300, 150.50). Si se indica '200/mes' o 'limite mensual: 200', es 200.",
                 },
                 month: {
                   type: Type.INTEGER,
                   description:
-                    "Mes opcional (1 a 12). Si se omite, se usa el mes actual.",
+                    "Mes opcional (1 a 12). Por ejemplo si se dice 'septiembre', pasa 9. Si se omite, se usa el mes actual.",
                 },
                 year: {
                   type: Type.INTEGER,
@@ -272,7 +272,7 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
                 alertThresholdPct: {
                   type: Type.INTEGER,
                   description:
-                    "Porcentaje de alerta temprana (por defecto 80)",
+                    "Porcentaje de alerta temprana de 1 a 100 (ej. 90 para '90%'). Por defecto 80.",
                 },
               },
               required: ["categoryName", "amountLimitEur"],
@@ -418,14 +418,26 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
           args.actionPayload,
         );
       } else if (toolName === "create_budget") {
+        const catTarget = String(
+          args.categoryName || args.category || args.categoryNameOrId || "",
+        );
+        const amountVal = Number(
+          args.amountLimitEur ??
+            args.amountLimit ??
+            args.amount ??
+            args.limit ??
+            0,
+        );
         result = await this.aiToolsService.createBudget(userId, {
-          categoryNameOrId: String(args.categoryName),
-          amountLimitEur: Number(args.amountLimitEur),
+          categoryNameOrId: catTarget,
+          amountLimitEur: amountVal,
           month: args.month ? Number(args.month) : undefined,
           year: args.year ? Number(args.year) : undefined,
           alertThresholdPct: args.alertThresholdPct
             ? Number(args.alertThresholdPct)
-            : undefined,
+            : args.threshold
+              ? Number(args.threshold)
+              : undefined,
         });
       } else if (toolName === "create_transaction") {
         result = await this.aiToolsService.createTransaction(userId, {
@@ -517,120 +529,344 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
     // =========================================================================
     // INTENCIÓN 0A: CREAR O ACTUALIZAR PRESUPUESTO DESDE TEXTO NATURAL
-    // Ej: "crea un presupuesto de 300 euros para Ocio", "pon límite de 200€ al mes en Supermercado"
+    // Cubre todas las formas y expresiones libres:
+    // - "crea un presupuesto para supermercado mes septiembre 2026, categoria: alimentacion, limite mensual: 200, 90%."
+    // - "crea un presupuesto para supermercado, categoria: alimentacion, limite mensual: 200, 90%."
+    // - "crea un presupuesto para supermercado, 200/mes, 90%"
+    // - "pon un presupuesto de 300€ para Ocio al 85%"
+    // - "limite mensual de 150 en restaurantes"
     // =========================================================================
+    const hasBudgetKeyword =
+      textLower.includes("presupuesto") ||
+      textLower.includes("limite mensual") ||
+      textLower.includes("limite de gasto") ||
+      textLower.includes("tope mensual") ||
+      /\b(?:presupuest|limite|tope)\b/i.test(textLower);
+
+    const hasActionKeyword =
+      textLower.includes("crea") ||
+      textLower.includes("crear") ||
+      textLower.includes("pon") ||
+      textLower.includes("poner") ||
+      textLower.includes("asigna") ||
+      textLower.includes("asignar") ||
+      textLower.includes("defin") ||
+      textLower.includes("nuevo") ||
+      textLower.includes("nueva") ||
+      textLower.includes("establec") ||
+      textLower.includes("haz") ||
+      textLower.includes("hacer") ||
+      textLower.includes("configur") ||
+      textLower.includes("anad") ||
+      textLower.includes("agreg") ||
+      textLower.includes("quiero") ||
+      /^presupuesto\s+(?:para|de|en)\b/i.test(textLower) ||
+      /^nuevo\s+presupuesto\b/i.test(textLower);
+
     const isBudgetCreationIntent =
-      (textLower.includes("presupuesto") || textLower.includes("limite")) &&
-      (textLower.includes("crea") ||
-        textLower.includes("pon") ||
-        textLower.includes("asigna") ||
-        textLower.includes("defin") ||
-        textLower.includes("nuevo") ||
-        textLower.includes("establec"));
+      hasBudgetKeyword &&
+      hasActionKeyword &&
+      !textLower.includes("como va mi presupuesto") &&
+      !textLower.includes("estado de mi presupuesto") &&
+      !textLower.includes("ritmo de mi presupuesto") &&
+      !textLower.includes("cuanto me queda en el presupuesto") &&
+      !textLower.includes("como van mis presupuestos");
 
     if (isBudgetCreationIntent) {
-      const amountMatch =
-        textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i) ||
-        textLower.match(/(?:de|en|por)\s+([\d\.,]+)/i);
-
-      if (amountMatch) {
-        const rawAmount = amountMatch[1].replace(/\./g, "").replace(",", ".");
-        const amountLimitEur = parseFloat(rawAmount);
-
-        if (amountLimitEur && amountLimitEur > 0) {
-          // Extraer categoría: buscar primero si alguna conocida está en el texto
-          let categoryCandidate = "";
-          const commonCats = [
-            "restaurantes y bares",
-            "restaurantes",
-            "alimentacion",
-            "supermercado",
-            "ocio y estilo de vida",
-            "ocio y cultura",
-            "ocio",
-            "transporte",
-            "combustible",
-            "gasolina",
-            "viajes",
-            "salud",
-            "hogar",
-            "vivienda",
-            "ropa",
-            "compras",
-            "suministros",
-            "educacion",
-          ];
-          for (const c of commonCats) {
-            if (textLower.includes(c)) {
-              categoryCandidate = c;
-              break;
-            }
-          }
-
-          // Si no coincide con ninguna conocida, buscar tras conectores
-          if (!categoryCandidate) {
-            const catMatch =
-              textLower.match(
-                /(?:para|en|categoria|de la categoria)\s+([a-z0-9\s]+?)(?:\s+(?:este mes|al mes|mensual|para el mes|con alerta|en este mes)|\.|$)/i,
-              ) ||
-              textLower.match(
-                /(?:presupuesto|limite)\s+(?:para|de)\s+([a-z0-9\s]+?)(?:de|en|\d|\.|$)/i,
-              );
-
-            if (catMatch && catMatch[1]) {
-              categoryCandidate = catMatch[1]
-                .replace(/[\d\.,]+/, "")
-                .replace(/(?:€|euros?|eur)/i, "")
-                .replace(/\s+(?:en|de|para|este|mes)$/i, "")
-                .trim();
-            }
-          }
-
-          if (categoryCandidate) {
-            try {
-              const budgetResult = await this.aiToolsService.createBudget(
-                userId,
-                {
-                  categoryNameOrId: categoryCandidate,
-                  amountLimitEur,
-                  month: currentMonth,
-                  year: currentYear,
-                },
-              );
-
-              executedTools.push({
-                toolName: "create_budget",
-                args: {
-                  categoryName: categoryCandidate,
-                  amountLimitEur,
-                  month: currentMonth,
-                  year: currentYear,
-                },
-                result: budgetResult,
-              });
-
-              const limitEurStr = budgetResult.amountLimitEur
-                .toFixed(2)
-                .replace(".", ",");
-              let reply = `✅ **Presupuesto creado con éxito:**\n\n`;
-              reply += `- 🏷️ **Categoría:** ${budgetResult.categoryName}\n`;
-              reply += `- 💶 **Límite mensual:** ${limitEurStr} €\n`;
-              reply += `- 📅 **Periodo:** ${budgetResult.periodMonth}/${budgetResult.periodYear}\n`;
-              reply += `- 🔔 **Alerta de ritmo:** Al superar el ${budgetResult.alertThresholdPct}% del límite.\n\n`;
-              reply += `Ya puedes consultar su evolución en la sección de **Presupuestos**.`;
-
-              return {
-                content: reply,
-                toolExecutions: executedTools,
-              };
-            } catch (err: any) {
-              return {
-                content: `⚠️ No he podido crear el presupuesto: ${err.message || err}`,
-                toolExecutions: executedTools,
-              };
-            }
+      // 1. Extraer porcentaje de alerta temprana (ej. "90%", "al 90%", "alerta: 90", "aviso: 90%")
+      let alertThresholdPct = 80;
+      const pctMatch = textLower.match(/(\d{1,3})\s*%/);
+      if (pctMatch) {
+        const parsedPct = parseInt(pctMatch[1], 10);
+        if (parsedPct >= 1 && parsedPct <= 100) {
+          alertThresholdPct = parsedPct;
+        }
+      } else {
+        const alertMatch = textLower.match(
+          /(?:alerta|aviso|notificacion)(?:\s+temprana)?\s*[:=]?\s*(?:al\s*)?(\d{1,3})\b/i,
+        );
+        if (alertMatch) {
+          const parsedAlert = parseInt(alertMatch[1], 10);
+          if (parsedAlert >= 1 && parsedAlert <= 100) {
+            alertThresholdPct = parsedAlert;
           }
         }
+      }
+
+      // 2. Extraer Mes y Año
+      let periodMonth = currentMonth;
+      let periodYear = currentYear;
+
+      const MONTH_MAP: Record<string, number> = {
+        enero: 1,
+        febrero: 2,
+        marzo: 3,
+        abril: 4,
+        mayo: 5,
+        junio: 6,
+        julio: 7,
+        agosto: 8,
+        septiembre: 9,
+        setiembre: 9,
+        octubre: 10,
+        noviembre: 11,
+        diciembre: 12,
+      };
+
+      const yearMatch = textLower.match(/\b(202\d|203\d)\b/);
+      if (yearMatch) {
+        periodYear = parseInt(yearMatch[1], 10);
+      }
+
+      let foundMonth = false;
+      for (const [mName, mNum] of Object.entries(MONTH_MAP)) {
+        const mRegex = new RegExp(`\\b${mName}\\b`, "i");
+        if (mRegex.test(textLower)) {
+          periodMonth = mNum;
+          foundMonth = true;
+          break;
+        }
+      }
+
+      if (!foundMonth) {
+        const numMonthSlash = textLower.match(
+          /\b(0?[1-9]|1[0-2])\/(202\d|203\d)\b/,
+        );
+        if (numMonthSlash) {
+          periodMonth = parseInt(numMonthSlash[1], 10);
+          periodYear = parseInt(numMonthSlash[2], 10);
+          foundMonth = true;
+        }
+      }
+      if (!foundMonth) {
+        const explicitNumMonth = textLower.match(
+          /\bmes\s*[:=]?\s*(0?[1-9]|1[0-2])\b/i,
+        );
+        if (explicitNumMonth) {
+          periodMonth = parseInt(explicitNumMonth[1], 10);
+          foundMonth = true;
+        }
+      }
+
+      // 3. Extraer importe límite en euros (amountLimitEur)
+      let amountLimitEur: number | null = null;
+
+      // Patrón 3.1: Etiquetado explícito ("limite mensual: 200", "limite: 200", "monto: 200", "tope: 200")
+      const labeledAmountMatch = textLower.match(
+        /(?:limite(?:\s+mensual)?|tope(?:\s+mensual)?|monto(?:\s+mensual)?|importe(?:\s+mensual)?|cantidad)\s*[:=]?\s*([\d\.,]+)/i,
+      );
+      if (labeledAmountMatch) {
+        const raw = labeledAmountMatch[1].replace(/\./g, "").replace(",", ".");
+        const parsed = parseFloat(raw);
+        if (
+          !isNaN(parsed) &&
+          parsed > 0 &&
+          parsed !== periodYear &&
+          parsed !== alertThresholdPct
+        ) {
+          amountLimitEur = parsed;
+        }
+      }
+
+      // Patrón 3.2: Formato recurrente "/mes", "al mes", "por mes" (ej. "200/mes", "200 / mes", "200 al mes")
+      if (!amountLimitEur) {
+        const perMonthMatch = textLower.match(
+          /([\d\.,]+)\s*(?:\/|\s*al\s*|\s*por\s*|\s*cada\s*)\s*mes\b/i,
+        );
+        if (perMonthMatch) {
+          const raw = perMonthMatch[1].replace(/\./g, "").replace(",", ".");
+          const parsed = parseFloat(raw);
+          if (
+            !isNaN(parsed) &&
+            parsed > 0 &&
+            parsed !== periodYear &&
+            parsed !== alertThresholdPct
+          ) {
+            amountLimitEur = parsed;
+          }
+        }
+      }
+
+      // Patrón 3.3: Con símbolo de divisa (ej. "200€", "200 €", "200 euros", "200 eur")
+      if (!amountLimitEur) {
+        const currencyMatch = textLower.match(
+          /([\d\.,]+)\s*(?:€|euros?|eur)\b/i,
+        );
+        if (currencyMatch) {
+          const raw = currencyMatch[1].replace(/\./g, "").replace(",", ".");
+          const parsed = parseFloat(raw);
+          if (!isNaN(parsed) && parsed > 0) {
+            amountLimitEur = parsed;
+          }
+        }
+      }
+
+      // Patrón 3.4: Preposición "de 200", "por 200"
+      if (!amountLimitEur) {
+        const prepMatch = textLower.match(
+          /(?:presupuesto|limite|tope)\s+(?:de|por)\s+([\d\.,]+)(?!\s*%)/i,
+        );
+        if (prepMatch) {
+          const raw = prepMatch[1].replace(/\./g, "").replace(",", ".");
+          const parsed = parseFloat(raw);
+          if (
+            !isNaN(parsed) &&
+            parsed > 0 &&
+            parsed !== periodYear &&
+            parsed !== alertThresholdPct
+          ) {
+            amountLimitEur = parsed;
+          }
+        }
+      }
+
+      // Patrón 3.5: Cifra numérica residual
+      if (!amountLimitEur) {
+        const allNumbers = [...textLower.matchAll(/\b([\d\.,]+)\b/g)];
+        for (const m of allNumbers) {
+          const raw = m[1].replace(/\./g, "").replace(",", ".");
+          const parsed = parseFloat(raw);
+          if (
+            !isNaN(parsed) &&
+            parsed > 0 &&
+            parsed !== periodYear &&
+            parsed !== alertThresholdPct &&
+            !(foundMonth && parsed === periodMonth && parsed <= 12)
+          ) {
+            amountLimitEur = parsed;
+            break;
+          }
+        }
+      }
+
+      // 4. Extraer Categoría y Concepto
+      let explicitCategory = "";
+      let conceptCategory = "";
+
+      // 4.1. Etiqueta explícita "categoria: alimentacion", "categoria=ocio"
+      const explicitCatMatch = textLower.match(
+        /categor(?:i|í)a\s*[:=]\s*([a-z0-9\s/&]+?)(?:,|$|\s+(?:limite|monto|tope|alerta|mes|año|ano|\d))/i,
+      );
+      if (explicitCatMatch && explicitCatMatch[1]) {
+        explicitCategory = explicitCatMatch[1].trim();
+      }
+
+      // 4.2. Concepto tras "para", "en", "de" (ej. "para supermercado", "en ocio", "para compras")
+      const conceptMatch = textLower.match(
+        /(?:presupuesto|limite|tope)\s+(?:para|en|de)\s+([a-z0-9\s/&]+?)(?:,|$|\s+(?:mes|categor|limite|monto|tope|con|alerta|\d+\/mes|\d+\s*€|\d+\s*euros|\d+\s*eur))/i,
+      );
+      if (conceptMatch && conceptMatch[1]) {
+        const cand = conceptMatch[1]
+          .replace(/[\d\.,]+/, "")
+          .replace(/(?:€|euros?|eur)/i, "")
+          .replace(/\s+(?:en|de|para|este|mes)$/i, "")
+          .trim();
+        if (cand.length >= 2) {
+          conceptCategory = cand;
+        }
+      }
+
+      // 4.3. Lista de categorías comunes en el texto completo
+      let fallbackCommonCat = "";
+      const commonCategoriesList = [
+        "restaurantes y bares",
+        "restaurantes",
+        "alimentacion y supermercado",
+        "supermercado y alimentacion",
+        "alimentacion",
+        "supermercado",
+        "ocio y estilo de vida",
+        "ocio y cultura",
+        "ocio",
+        "transporte publico",
+        "transporte",
+        "combustible",
+        "gasolina",
+        "viajes y vacaciones",
+        "viajes",
+        "salud y bienestar",
+        "salud",
+        "farmacia",
+        "mantenimiento y hogar",
+        "hogar",
+        "vivienda",
+        "alquiler",
+        "hipoteca",
+        "ropa",
+        "compras",
+        "suministros",
+        "educacion",
+        "hobbies y deportes",
+        "hobbies",
+        "suscripciones",
+      ];
+      for (const c of commonCategoriesList) {
+        if (textLower.includes(c)) {
+          fallbackCommonCat = c;
+          break;
+        }
+      }
+
+      const primaryCategory =
+        explicitCategory || conceptCategory || fallbackCommonCat;
+      const secondaryCategory = explicitCategory
+        ? conceptCategory || fallbackCommonCat
+        : undefined;
+
+      if (primaryCategory && amountLimitEur && amountLimitEur > 0) {
+        try {
+          const budgetResult = await this.aiToolsService.createBudget(userId, {
+            categoryNameOrId: primaryCategory,
+            amountLimitEur,
+            month: periodMonth,
+            year: periodYear,
+            alertThresholdPct,
+            fallbackCategoryNameOrId: secondaryCategory,
+          });
+
+          executedTools.push({
+            toolName: "create_budget",
+            args: {
+              categoryName: budgetResult.categoryName,
+              amountLimitEur: budgetResult.amountLimitEur,
+              month: budgetResult.periodMonth,
+              year: budgetResult.periodYear,
+              alertThresholdPct: budgetResult.alertThresholdPct,
+            },
+            result: budgetResult,
+          });
+
+          const limitEurStr = budgetResult.amountLimitEur
+            .toFixed(2)
+            .replace(".", ",");
+          let reply = `✅ **Presupuesto creado con éxito:**\n\n`;
+          reply += `- 🏷️ **Categoría:** ${budgetResult.categoryName}\n`;
+          reply += `- 💶 **Límite mensual:** ${limitEurStr} €\n`;
+          reply += `- 📅 **Periodo:** ${budgetResult.periodMonth}/${budgetResult.periodYear}\n`;
+          reply += `- 🔔 **Alerta de ritmo:** Al superar el ${budgetResult.alertThresholdPct}% del límite.\n\n`;
+          reply += `Ya puedes consultar su evolución en la sección de **Presupuestos**.`;
+
+          return {
+            content: reply,
+            toolExecutions: executedTools,
+          };
+        } catch (err: any) {
+          return {
+            content: `⚠️ No he podido crear el presupuesto: ${err.message || err}`,
+            toolExecutions: executedTools,
+          };
+        }
+      } else if (!amountLimitEur && primaryCategory) {
+        return {
+          content: `He detectado que deseas crear un presupuesto para **${primaryCategory}**, pero no he podido identificar el importe mensual. Por favor, indícame el límite deseado (por ejemplo: *200€ al mes* o *límite mensual: 200*).`,
+          toolExecutions: executedTools,
+        };
+      } else if (amountLimitEur && !primaryCategory) {
+        const eurStr = amountLimitEur.toFixed(2).replace(".", ",");
+        return {
+          content: `He detectado que deseas crear un presupuesto de **${eurStr} €**, pero necesito saber a qué categoría asignarlo (por ejemplo: *Alimentación*, *Supermercado*, *Ocio*, *Transporte*).`,
+          toolExecutions: executedTools,
+        };
       }
     }
 
@@ -669,8 +905,12 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
             description = afterAmountMatch[1].trim();
           } else {
             const descMatch =
-              message.match(/(?:compre|he gastado|pague|gasto de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:en\s*)?([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i) ||
-              message.match(/(?:en|concepto|por|para)\s+([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i);
+              message.match(
+                /(?:compre|he gastado|pague|gasto de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:en\s*)?([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i,
+              ) ||
+              message.match(
+                /(?:en|concepto|por|para)\s+([^,\.]+?)(?:pagado|con|hoy|ayer|\.|$)/i,
+              );
             if (descMatch && descMatch[1]) {
               const candidate = descMatch[1]
                 .replace(/[\d\.,]+/, "")
@@ -684,7 +924,10 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
           // Extraer posible cuenta si se menciona
           let accountName: string | undefined = undefined;
-          if (textLower.includes("cuenta corriente") || textLower.includes("corriente")) {
+          if (
+            textLower.includes("cuenta corriente") ||
+            textLower.includes("corriente")
+          ) {
             accountName = "Cuenta Corriente";
           } else if (textLower.includes("ahorro")) {
             accountName = "Cuenta de Ahorro";
@@ -778,8 +1021,12 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
             description = afterAmountMatch[1].trim();
           } else {
             const descMatch =
-              message.match(/(?:he cobrado|recibi|ingreso de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:de\s*)?([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i) ||
-              message.match(/(?:de|concepto|por|en|motivo)\s+([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i);
+              message.match(
+                /(?:he cobrado|recibi|ingreso de)\s+[\d\.,]+\s*(?:€|euros?|eur)?\s*(?:de\s*)?([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i,
+              ) ||
+              message.match(
+                /(?:de|concepto|por|en|motivo)\s+([^,\.]+?)(?:en|a|hoy|ayer|\.|$)/i,
+              );
             if (descMatch && descMatch[1]) {
               const candidate = descMatch[1]
                 .replace(/[\d\.,]+/, "")
@@ -793,7 +1040,10 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
           // Extraer posible cuenta si se menciona
           let accountName: string | undefined = undefined;
-          if (textLower.includes("cuenta corriente") || textLower.includes("corriente")) {
+          if (
+            textLower.includes("cuenta corriente") ||
+            textLower.includes("corriente")
+          ) {
             accountName = "Cuenta Corriente";
           } else if (textLower.includes("ahorro")) {
             accountName = "Cuenta de Ahorro";
