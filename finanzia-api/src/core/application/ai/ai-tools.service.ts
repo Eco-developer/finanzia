@@ -1,4 +1,4 @@
-import { Injectable, Logger, Inject, forwardRef } from "@nestjs/common";
+import { Injectable, Logger, Inject, forwardRef, Optional } from "@nestjs/common";
 import {
   IFinancialAnalyticsPort,
   FINANCIAL_ANALYTICS_PORT,
@@ -16,6 +16,58 @@ import {
   CATEGORY_REPOSITORY,
 } from "../../domain/repositories/category.repository.interface";
 import { TransactionType } from "../../domain/types/financial.types";
+import { DebtsService } from "../debts/debts.service";
+import {
+  DebtPayoffStrategy,
+  DebtStatus,
+  InterestRateType,
+} from "../../domain/types/debt.types";
+
+export interface CreateDebtToolInput {
+  concept: string;
+  amountEur: number;
+  interestRatePercent: number;
+  interestRateType?: "ANNUAL" | "MONTHLY";
+  creditor?: string;
+  minimumMonthlyPaymentEur?: number;
+  dueDate?: string;
+  notes?: string;
+}
+
+export interface AmortizeDebtToolInput {
+  debtId?: string;
+  conceptKeyword?: string;
+  amountEur: number;
+  fromAccountName?: string;
+  notes?: string;
+}
+
+export interface SimulateDebtPayoffToolInput {
+  extraMonthlyBudgetEur: number;
+  strategy?: "AVALANCHE" | "SNOWBALL";
+}
+
+export interface DebtOptimizationAnalysisResult {
+  hasDebts: boolean;
+  message?: string;
+  totalDebtsCount?: number;
+  totalRemainingEur?: number;
+  totalMonthlyCommitmentEur?: number;
+  totalMonthlyInterestCostEur?: number;
+  suggestedReallocation?: {
+    sourceCategoryName: string;
+    currentMonthlySpendEur: number;
+    suggestedMonthlyCutEur: number;
+  };
+  simulation?: {
+    strategy: string;
+    extraMonthlyBudgetEur: number;
+    monthsSaved: number;
+    interestSavedEur: number;
+    totalMonthsToFreedom: number;
+    totalInterestPaidEur: number;
+  };
+}
 
 export interface CreateBudgetToolResult {
   budgetId: string;
@@ -181,6 +233,9 @@ export class AiToolsService {
     private readonly accountRepository: IAccountRepository,
     @Inject(CATEGORY_REPOSITORY)
     private readonly categoryRepository: ICategoryRepository,
+    @Optional()
+    @Inject(forwardRef(() => DebtsService))
+    private readonly debtsService?: DebtsService,
   ) {}
 
   /**
@@ -874,5 +929,285 @@ export class AiToolsService {
       }) ||
       null
     );
+  }
+
+  /**
+   * Herramienta 11: Alta de una nueva deuda o pasivo financiero
+   */
+  async createDebt(userId: string, input: CreateDebtToolInput) {
+    if (!this.debtsService) {
+      throw new Error("DebtsService no está disponible.");
+    }
+    this.logger.log(`[Tool] createDebt para usuario ${userId}: ${input.concept}`);
+    const amountCents = Math.round(Number(input.amountEur) * 100);
+    const rateBps = Math.round(Number(input.interestRatePercent) * 100);
+    const minPaymentCents = input.minimumMonthlyPaymentEur
+      ? Math.round(Number(input.minimumMonthlyPaymentEur) * 100)
+      : undefined;
+
+    const debt = await this.debtsService.createDebt(userId, {
+      concept: input.concept,
+      creditor: input.creditor,
+      initialAmountCents: amountCents,
+      remainingAmountCents: amountCents,
+      interestRateBasisPts: rateBps,
+      interestRateType:
+        input.interestRateType === "MONTHLY"
+          ? InterestRateType.MONTHLY
+          : InterestRateType.ANNUAL,
+      minimumMonthlyPaymentCents: minPaymentCents,
+      dueDate: input.dueDate,
+      notes: input.notes,
+    });
+
+    return {
+      debtId: debt.id,
+      concept: debt.concept,
+      creditor: debt.creditor,
+      initialAmountEur: Number(debt.initialAmountCents) / 100,
+      remainingAmountEur: Number(debt.remainingAmountCents) / 100,
+      interestRatePercent: debt.interestRateBasisPts / 100,
+      interestRateType: debt.interestRateType,
+      minimumMonthlyPaymentEur: debt.minimumMonthlyPaymentCents
+        ? Number(debt.minimumMonthlyPaymentCents) / 100
+        : null,
+      status: debt.status,
+    };
+  }
+
+  /**
+   * Herramienta 12: Consulta de deudas activas o historial liquidado
+   */
+  async getDebts(userId: string, includePaidOff: boolean = false) {
+    if (!this.debtsService) {
+      throw new Error("DebtsService no está disponible.");
+    }
+    this.logger.log(`[Tool] getDebts para usuario ${userId}, includePaidOff=${includePaidOff}`);
+    const active = await this.debtsService.getActiveDebts(userId);
+    let paidOff: any[] = [];
+    if (includePaidOff) {
+      paidOff = await this.debtsService.getDebtHistory(userId);
+    }
+    return {
+      activeDebts: active.debts.map((d) => ({
+        id: d.id,
+        concept: d.concept,
+        creditor: d.creditor,
+        initialAmountEur: Number(d.initialAmountCents) / 100,
+        remainingAmountEur: Number(d.remainingAmountCents) / 100,
+        interestRatePercent: d.interestRateBasisPts / 100,
+        interestRateType: d.interestRateType,
+        minimumMonthlyPaymentEur: d.minimumMonthlyPaymentCents
+          ? Number(d.minimumMonthlyPaymentCents) / 100
+          : null,
+        monthlyInterestCostEur: d.estimatedMonthlyInterestCents
+          ? Number(d.estimatedMonthlyInterestCents) / 100
+          : null,
+        status: d.status,
+      })),
+      summary: {
+        totalRemainingEur: Number(active.summary.totalRemainingCents) / 100,
+        totalInitialEur: Number(active.summary.totalInitialCents) / 100,
+        activeDebtsCount: active.summary.activeDebtsCount,
+        totalMonthlyCommitmentEur: Number(active.summary.totalMonthlyCommitmentCents) / 100,
+        totalMonthlyInterestCostEur: Number(active.summary.totalMonthlyInterestCents) / 100,
+        averageInterestRatePercent: active.summary.weightedAverageRateBasisPts / 100,
+      },
+      paidOffDebts: paidOff.map((d) => ({
+        id: d.id,
+        concept: d.concept,
+        creditor: d.creditor,
+        initialAmountEur: Number(d.initialAmountCents) / 100,
+        paidOffAt: d.paidOffAt,
+        isImmutable: d.isImmutable,
+      })),
+    };
+  }
+
+  /**
+   * Helper para localizar una deuda por ID o palabra clave en concepto/acreedor
+   */
+  async findDebtByKeyword(userId: string, keyword: string) {
+    if (!this.debtsService) return null;
+    const active = await this.debtsService.getActiveDebts(userId);
+    if (!active.debts || active.debts.length === 0) return null;
+    const norm = keyword
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .trim();
+    return (
+      active.debts.find((d) => d.id === keyword) ||
+      active.debts.find((d) => {
+        const cNorm = d.concept
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        const crNorm = (d.creditor || "")
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return cNorm.includes(norm) || norm.includes(cNorm) || crNorm.includes(norm);
+      }) ||
+      null
+    );
+  }
+
+  /**
+   * Herramienta 13: Amortización de deuda con deducción opcional de cuenta
+   */
+  async amortizeDebt(userId: string, input: AmortizeDebtToolInput) {
+    if (!this.debtsService) {
+      throw new Error("DebtsService no está disponible.");
+    }
+    this.logger.log(`[Tool] amortizeDebt para usuario ${userId}, importe ${input.amountEur} €`);
+
+    let targetDebtId = input.debtId;
+    let targetDebt: any = null;
+
+    if (targetDebtId) {
+      targetDebt = await this.debtsService.getDebtById(userId, targetDebtId);
+    } else if (input.conceptKeyword) {
+      targetDebt = await this.findDebtByKeyword(userId, input.conceptKeyword);
+      if (targetDebt) {
+        targetDebtId = targetDebt.id;
+      }
+    }
+
+    if (!targetDebt || !targetDebtId) {
+      throw new Error(
+        `No se encontró ninguna deuda activa que coincida con "${input.conceptKeyword || input.debtId}".`,
+      );
+    }
+
+    let accountId: string | undefined = undefined;
+    let accountName: string | undefined = undefined;
+    if (input.fromAccountName) {
+      const accounts = await this.accountRepository.findAllByUserId(userId);
+      const accNorm = input.fromAccountName
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+      const matched = accounts.find((a) => {
+        const aNorm = a.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .trim();
+        return aNorm.includes(accNorm) || accNorm.includes(aNorm);
+      });
+      if (matched) {
+        accountId = matched.id;
+        accountName = matched.name;
+      }
+    }
+
+    const amountCents = Math.round(Number(input.amountEur) * 100);
+    const result = await this.debtsService.amortizeDebt(userId, targetDebtId, {
+      amountCents,
+      accountId,
+      notes: input.notes,
+    });
+
+    return {
+      debtId: result.debt.id,
+      concept: result.debt.concept,
+      amountAmortizedEur: amountCents / 100,
+      principalAmortizedEur: Number(result.amortization.principalCents) / 100,
+      interestCoveredEur: Number(result.amortization.interestCents) / 100,
+      remainingAmountEur: Number(result.debt.remainingAmountCents) / 100,
+      isFullyPaid: result.isFullyPaid,
+      paidOffAt: result.debt.paidOffAt,
+      isImmutable: result.debt.isImmutable,
+      accountDeducted: accountName || null,
+      message: result.isFullyPaid
+        ? `¡Enhorabuena! Has amortizado el 100% de "${result.debt.concept}". La deuda ha quedado archivada de forma inmutable.`
+        : `Amortización de ${amountCents / 100} € aplicada con éxito. Nuevo saldo restante: ${Number(result.debt.remainingAmountCents) / 100} €.`,
+    };
+  }
+
+  /**
+   * Herramienta 14: Simulación de plan acelerado (Avalancha vs Bola de Nieve)
+   */
+  async simulateDebtPayoff(userId: string, input: SimulateDebtPayoffToolInput) {
+    if (!this.debtsService) {
+      throw new Error("DebtsService no está disponible.");
+    }
+    this.logger.log(`[Tool] simulateDebtPayoff para usuario ${userId}, extra: ${input.extraMonthlyBudgetEur} €`);
+    const extraCents = Math.round(Number(input.extraMonthlyBudgetEur) * 100);
+    const strategy =
+      input.strategy === "SNOWBALL"
+        ? DebtPayoffStrategy.SNOWBALL
+        : DebtPayoffStrategy.AVALANCHE;
+
+    return await this.debtsService.simulatePayoff(userId, {
+      extraMonthlyCents: extraCents,
+      strategy,
+    });
+  }
+
+  /**
+   * Herramienta 15: Optimización proactiva de gastos no esenciales para amortización acelerada
+   */
+  async analyzeDebtOptimization(userId: string): Promise<DebtOptimizationAnalysisResult> {
+    if (!this.debtsService) {
+      throw new Error("DebtsService no está disponible.");
+    }
+    this.logger.log(`[Tool] analyzeDebtOptimization para usuario ${userId}`);
+
+    const active = await this.debtsService.getActiveDebts(userId);
+    if (!active.debts || active.debts.length === 0) {
+      return {
+        hasDebts: false,
+        message: "No tienes deudas activas pendientes en este momento. ¡Tu salud crediticia es óptima!",
+      };
+    }
+
+    const baseline = await this.analytics.getHistoricalBaseline(userId);
+
+    // Identificar categoría variable candidata a recorte
+    let sourceCategoryName = "Gastos Discrecionales / Ocio";
+    let currentMonthlySpendEur = 0;
+    let suggestedCutEur = 50;
+
+    if (baseline.topVariableCategories && baseline.topVariableCategories.length > 0) {
+      const topCat = baseline.topVariableCategories[0];
+      sourceCategoryName = topCat.categoryName;
+      currentMonthlySpendEur = topCat.monthlyAverageCents / 100;
+      // Proponer recorte del 20%, acotado entre 25 € y 200 €
+      const cutRaw = Math.round(currentMonthlySpendEur * 0.2);
+      suggestedCutEur = Math.max(25, Math.min(cutRaw, 200));
+    }
+
+    // Ejecutar simulación con Avalancha (máximo ahorro de intereses)
+    const extraCents = Math.round(suggestedCutEur * 100);
+    const sim = await this.debtsService.simulatePayoff(userId, {
+      extraMonthlyCents: extraCents,
+      strategy: DebtPayoffStrategy.AVALANCHE,
+    });
+
+    return {
+      hasDebts: true,
+      totalDebtsCount: active.summary.activeDebtsCount,
+      totalRemainingEur: Number(active.summary.totalRemainingCents) / 100,
+      totalMonthlyCommitmentEur: Number(active.summary.totalMonthlyCommitmentCents) / 100,
+      totalMonthlyInterestCostEur: Number(active.summary.totalMonthlyInterestCents) / 100,
+      suggestedReallocation: {
+        sourceCategoryName,
+        currentMonthlySpendEur,
+        suggestedMonthlyCutEur: suggestedCutEur,
+      },
+      simulation: {
+        strategy: "AVALANCHE",
+        extraMonthlyBudgetEur: suggestedCutEur,
+        monthsSaved: sim.monthsSaved,
+        interestSavedEur: Number(sim.interestSavedCents) / 100,
+        totalMonthsToFreedom: sim.totalMonths,
+        totalInterestPaidEur: Number(sim.totalInterestPaidCents) / 100,
+      },
+    };
   }
 }

@@ -120,6 +120,17 @@ export function Sidebar({
             <span>Metas de Ahorro</span>
           </Link>
 
+          <Link
+            href="/debts"
+            className={`${styles.navItem} ${
+              activeSection === 'debts' ? styles.navItemActive : ''
+            }`}
+            onClick={() => handleNavClick('debts', '/debts')}
+          >
+            <span className={styles.navIcon}>💳</span>
+            <span>Deudas y Pasivos</span>
+          </Link>
+
           <Link href="/imports" className={styles.navItem}>
             <span className={styles.navIcon}>📄</span>
             <span>Importar CSV</span>

@@ -29,6 +29,11 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
       findRecentTransactions: jest.fn(),
       findBudgetForCategory: jest.fn(),
       findSavingsGoalByName: jest.fn(),
+      createDebt: jest.fn(),
+      getDebts: jest.fn(),
+      amortizeDebt: jest.fn(),
+      simulateDebtPayoff: jest.fn(),
+      analyzeDebtOptimization: jest.fn(),
     };
 
     mockFinancialProfileService = {
@@ -487,6 +492,150 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         mockRecommendationsService.rejectRecommendation,
       ).toHaveBeenCalledWith("user-1", "rec-pending-1");
       expect(result.content).toContain("Propuesta Descartada");
+    });
+  });
+
+  describe("executeChat - Gestión y Asesoría de Deudas", () => {
+    it("debe responder a la consulta de deudas llamando a getDebts y listando los pasivos", async () => {
+      mockAiToolsService.getDebts.mockResolvedValue({
+        activeDebts: [
+          {
+            id: "d-1",
+            concept: "Préstamo Coche",
+            creditor: "Banco Santander",
+            initialAmountEur: 15000,
+            remainingAmountEur: 8500,
+            interestRatePercent: 5.5,
+            interestRateType: "ANNUAL",
+            minimumMonthlyPaymentEur: 280,
+            monthlyInterestCostEur: 38.96,
+            status: "ACTIVE",
+          },
+        ],
+        summary: {
+          totalRemainingEur: 8500,
+          totalInitialEur: 15000,
+          activeDebtsCount: 1,
+          totalMonthlyCommitmentEur: 280,
+          totalMonthlyInterestCostEur: 38.96,
+          averageInterestRatePercent: 5.5,
+        },
+        paidOffDebts: [],
+      });
+
+      const result = await service.executeChat("user-1", "¿Cuáles son mis deudas activas?");
+
+      expect(mockAiToolsService.getDebts).toHaveBeenCalledWith("user-1", false);
+      expect(result.content).toContain("Préstamo Coche");
+      expect(result.content).toContain("8500,00 €");
+      expect(result.content).toContain("5,50%");
+    });
+
+    it("debe dar de alta una deuda en lenguaje natural", async () => {
+      mockAiToolsService.createDebt.mockResolvedValue({
+        debtId: "d-new-1",
+        concept: "Préstamo Coche",
+        creditor: null,
+        initialAmountEur: 12000,
+        remainingAmountEur: 12000,
+        interestRatePercent: 6,
+        interestRateType: "ANNUAL",
+        minimumMonthlyPaymentEur: null,
+        status: "ACTIVE",
+      });
+
+      const message = "registra un prestamo de coche de 12000 € al 6% anual";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.createDebt).toHaveBeenCalledWith("user-1", {
+        concept: "Préstamo Coche",
+        amountEur: 12000,
+        interestRatePercent: 6,
+        interestRateType: "ANNUAL",
+      });
+      expect(result.content).toContain("✅ **Nueva Deuda Registrada con Éxito:**");
+      expect(result.content).toContain("12000,00 €");
+    });
+
+    it("debe amortizar una deuda e informar si queda 100% liquidada e inmutable", async () => {
+      mockAiToolsService.amortizeDebt.mockResolvedValue({
+        debtId: "d-coche",
+        concept: "Préstamo Coche",
+        amountAmortizedEur: 500,
+        principalAmortizedEur: 485,
+        interestCoveredEur: 15,
+        remainingAmountEur: 0,
+        isFullyPaid: true,
+        paidOffAt: "2026-09-25T00:00:00Z",
+        isImmutable: true,
+        accountDeducted: "Cuenta Nómina",
+        message: "Deuda liquidada",
+      });
+
+      const message = "amortiza 500 euros a mi prestamo coche desde cuenta nomina";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.amortizeDebt).toHaveBeenCalledWith("user-1", {
+        conceptKeyword: "coche",
+        amountEur: 500,
+        fromAccountName: "nomina",
+      });
+      expect(result.content).toContain("🏆 **¡ENHORABUENA! Deuda Liquidada al 100%:**");
+      expect(result.content).toContain("Inmutabilidad Activada");
+    });
+
+    it("debe simular plan acelerado comparativo de amortización", async () => {
+      mockAiToolsService.simulateDebtPayoff.mockResolvedValue({
+        strategy: "AVALANCHE",
+        totalMonths: 15,
+        totalInterestPaidCents: 20000n,
+        baselineMonths: 24,
+        baselineInterestPaidCents: 50000n,
+        monthsSaved: 9,
+        interestSavedCents: 30000n,
+        payoffOrder: [],
+      });
+
+      const message = "simula pagar 150 euros al mes a mis deudas con avalancha";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.simulateDebtPayoff).toHaveBeenCalledWith("user-1", {
+        extraMonthlyBudgetEur: 150,
+        strategy: "AVALANCHE",
+      });
+      expect(result.content).toContain("Simulación de Amortización Acelerada");
+      expect(result.content).toContain("9 meses antes");
+      expect(result.content).toContain("300,00 €");
+    });
+
+    it("debe proponer optimización de gastos para acelerar pago de deudas", async () => {
+      mockAiToolsService.analyzeDebtOptimization.mockResolvedValue({
+        hasDebts: true,
+        totalDebtsCount: 2,
+        totalRemainingEur: 5000,
+        suggestedReallocation: {
+          sourceCategoryName: "Restaurantes",
+          currentMonthlySpendEur: 250,
+          suggestedMonthlyCutEur: 50,
+        },
+        simulation: {
+          strategy: "AVALANCHE",
+          extraMonthlyBudgetEur: 50,
+          monthsSaved: 6,
+          interestSavedEur: 180,
+          totalMonthsToFreedom: 16,
+          totalInterestPaidEur: 210,
+        },
+      });
+
+      const message = "como puedo pagar mis deudas antes optimizando mis gastos";
+      const result = await service.executeChat("user-1", message);
+
+      expect(mockAiToolsService.analyzeDebtOptimization).toHaveBeenCalledWith("user-1");
+      expect(result.content).toContain("Plan de Optimización Financiera de Pasivos");
+      expect(result.content).toContain("Restaurantes");
+      expect(result.content).toContain("50,00 €/mes");
+      expect(result.content).toContain("6 meses antes");
     });
   });
 });

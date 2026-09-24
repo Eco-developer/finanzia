@@ -10,6 +10,8 @@ import { BudgetsService } from "../../src/core/application/budgets/budgets.servi
 import { TransactionsService } from "../../src/core/application/transactions/transactions.service";
 import { ACCOUNT_REPOSITORY } from "../../src/core/domain/repositories/account.repository.interface";
 import { CATEGORY_REPOSITORY } from "../../src/core/domain/repositories/category.repository.interface";
+import { DebtsService } from "../../src/core/application/debts/debts.service";
+import { DebtStatus, DebtPayoffStrategy, InterestRateType } from "../../src/core/domain/types/debt.types";
 import { PrismaFinancialAnalyticsAdapter } from "../../src/infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaService } from "../../src/infrastructure/database/prisma.service";
 
@@ -22,6 +24,14 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
   let mockTransactionsService: { createTransaction: jest.Mock };
   let mockAccountRepository: { findAllByUserId: jest.Mock };
   let mockCategoryRepository: { findAllForUser: jest.Mock };
+  let mockDebtsService: {
+    createDebt: jest.Mock;
+    getActiveDebts: jest.Mock;
+    getDebtHistory: jest.Mock;
+    getDebtById: jest.Mock;
+    amortizeDebt: jest.Mock;
+    simulatePayoff: jest.Mock;
+  };
 
   beforeEach(async () => {
     mockAnalytics = {
@@ -62,6 +72,15 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       findAllForUser: jest.fn(),
     };
 
+    mockDebtsService = {
+      createDebt: jest.fn(),
+      getActiveDebts: jest.fn(),
+      getDebtHistory: jest.fn(),
+      getDebtById: jest.fn(),
+      amortizeDebt: jest.fn(),
+      simulatePayoff: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiToolsService,
@@ -92,6 +111,10 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
         {
           provide: CATEGORY_REPOSITORY,
           useValue: mockCategoryRepository,
+        },
+        {
+          provide: DebtsService,
+          useValue: mockDebtsService,
         },
       ],
     }).compile();
@@ -395,6 +418,189 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
         "Mercadona",
       );
       expect(result.categoryName).toBe("Alimentación");
+    });
+  });
+
+  describe("Debt Management Tools", () => {
+    it("debe crear una deuda convirtiendo euros a céntimos y tasa a bps", async () => {
+      mockDebtsService.createDebt.mockResolvedValue({
+        id: "debt-1",
+        concept: "Préstamo Coche",
+        creditor: "Santander",
+        initialAmountCents: "1200000",
+        remainingAmountCents: "1200000",
+        interestRateBasisPts: 600,
+        interestRateType: InterestRateType.ANNUAL,
+        minimumMonthlyPaymentCents: "25000",
+        status: DebtStatus.ACTIVE,
+      });
+
+      const result = await service.createDebt("user-1", {
+        concept: "Préstamo Coche",
+        amountEur: 12000,
+        interestRatePercent: 6,
+        creditor: "Santander",
+        minimumMonthlyPaymentEur: 250,
+      });
+
+      expect(result.debtId).toBe("debt-1");
+      expect(result.initialAmountEur).toBe(12000);
+      expect(result.remainingAmountEur).toBe(12000);
+      expect(result.interestRatePercent).toBe(6);
+      expect(result.minimumMonthlyPaymentEur).toBe(250);
+      expect(mockDebtsService.createDebt).toHaveBeenCalledWith("user-1", {
+        concept: "Préstamo Coche",
+        creditor: "Santander",
+        initialAmountCents: 1200000,
+        remainingAmountCents: 1200000,
+        interestRateBasisPts: 600,
+        interestRateType: InterestRateType.ANNUAL,
+        minimumMonthlyPaymentCents: 25000,
+      });
+    });
+
+    it("debe consultar deudas activas formateando importes en euros", async () => {
+      mockDebtsService.getActiveDebts.mockResolvedValue({
+        debts: [
+          {
+            id: "d-1",
+            concept: "Tarjeta BBVA",
+            creditor: "BBVA",
+            initialAmountCents: "300000",
+            remainingAmountCents: "150000",
+            interestRateBasisPts: 1800,
+            interestRateType: InterestRateType.ANNUAL,
+            minimumMonthlyPaymentCents: "10000",
+            estimatedMonthlyInterestCents: "2250",
+            status: DebtStatus.ACTIVE,
+          },
+        ],
+        summary: {
+          totalRemainingCents: "150000",
+          totalInitialCents: "300000",
+          activeDebtsCount: 1,
+          totalMonthlyCommitmentCents: "10000",
+          totalMonthlyInterestCents: "2250",
+          weightedAverageRateBasisPts: 1800,
+        },
+      });
+
+      const result = await service.getDebts("user-1");
+      expect(result.activeDebts).toHaveLength(1);
+      expect(result.activeDebts[0].remainingAmountEur).toBe(1500);
+      expect(result.summary.totalRemainingEur).toBe(1500);
+      expect(result.summary.totalMonthlyInterestCostEur).toBe(22.5);
+    });
+
+    it("debe amortizar deuda deduciendo saldo de cuenta opcional", async () => {
+      mockDebtsService.getActiveDebts.mockResolvedValue({
+        debts: [{ id: "d-coche", concept: "Préstamo Coche" }],
+        summary: {},
+      });
+      mockAccountRepository.findAllByUserId.mockResolvedValue([
+        { id: "acc-nom", name: "Cuenta Nómina" },
+      ]);
+      mockDebtsService.amortizeDebt.mockResolvedValue({
+        debt: {
+          id: "d-coche",
+          concept: "Préstamo Coche",
+          remainingAmountCents: "0",
+          paidOffAt: new Date().toISOString(),
+          isImmutable: true,
+        },
+        amortization: {
+          principalCents: "24500",
+          interestCents: "500",
+        },
+        isFullyPaid: true,
+      });
+
+      const result = await service.amortizeDebt("user-1", {
+        conceptKeyword: "coche",
+        amountEur: 250,
+        fromAccountName: "Nómina",
+      });
+
+      expect(result.isFullyPaid).toBe(true);
+      expect(result.remainingAmountEur).toBe(0);
+      expect(result.principalAmortizedEur).toBe(245);
+      expect(result.interestCoveredEur).toBe(5);
+      expect(result.accountDeducted).toBe("Cuenta Nómina");
+      expect(result.message).toContain("¡Enhorabuena!");
+    });
+
+    it("debe simular plan acelerado comparativo", async () => {
+      mockDebtsService.simulatePayoff.mockResolvedValue({
+        strategy: DebtPayoffStrategy.AVALANCHE,
+        totalMonths: 18,
+        totalInterestPaidCents: 45000n,
+        baselineMonths: 28,
+        baselineInterestPaidCents: 110000n,
+        monthsSaved: 10,
+        interestSavedCents: 65000n,
+        payoffOrder: [],
+      });
+
+      const result = await service.simulateDebtPayoff("user-1", {
+        extraMonthlyBudgetEur: 100,
+        strategy: "AVALANCHE",
+      });
+
+      expect(result.monthsSaved).toBe(10);
+      expect(result.interestSavedCents).toBe(65000n);
+      expect(mockDebtsService.simulatePayoff).toHaveBeenCalledWith("user-1", {
+        extraMonthlyCents: 10000,
+        strategy: DebtPayoffStrategy.AVALANCHE,
+      });
+    });
+
+    it("debe analizar optimización recortando partidas variables para amortizar", async () => {
+      mockDebtsService.getActiveDebts.mockResolvedValue({
+        debts: [{ id: "d-1", concept: "Tarjeta", remainingAmountCents: "200000" }],
+        summary: {
+          activeDebtsCount: 1,
+          totalRemainingCents: "200000",
+          totalMonthlyCommitmentCents: "10000",
+          totalMonthlyInterestCents: "3000",
+        },
+      });
+
+      mockAnalytics.getHistoricalBaseline.mockResolvedValue({
+        monthsAnalyzed: 3,
+        averageMonthlyIncomeCents: 250000,
+        averageMonthlyFixedExpensesCents: 100000,
+        averageMonthlyVariableExpensesCents: 80000,
+        averageMonthlyTotalExpensesCents: 180000,
+        averageMonthlyNetSavingsCents: 70000,
+        averageSavingsRatePercent: 28,
+        topVariableCategories: [
+          {
+            categoryId: "cat-rest",
+            categoryName: "Restaurantes y Bares",
+            monthlyAverageCents: 35000,
+            percentageOfVariable: 43.75,
+          },
+        ],
+      });
+
+      mockDebtsService.simulatePayoff.mockResolvedValue({
+        strategy: DebtPayoffStrategy.AVALANCHE,
+        totalMonths: 14,
+        totalInterestPaidCents: 15000n,
+        baselineMonths: 22,
+        baselineInterestPaidCents: 38000n,
+        monthsSaved: 8,
+        interestSavedCents: 23000n,
+        payoffOrder: [],
+      });
+
+      const opt = await service.analyzeDebtOptimization("user-1");
+
+      expect(opt.hasDebts).toBe(true);
+      expect(opt.suggestedReallocation?.sourceCategoryName).toBe("Restaurantes y Bares");
+      expect(opt.suggestedReallocation?.suggestedMonthlyCutEur).toBe(70); // 20% de 350€
+      expect(opt.simulation?.monthsSaved).toBe(8);
+      expect(opt.simulation?.interestSavedEur).toBe(230);
     });
   });
 });

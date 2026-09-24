@@ -111,6 +111,15 @@ El producto se concibe como una solución privada, modular y local-first, estruc
 - **HU-21**: Como usuario, quiero recibir notificaciones visuales in-app cuando se detecte un nuevo gasto con tarjeta.
 - **HU-22**: Como usuario, quiero consultar el estado de mi consentimiento (máx. 180 días) y desvincular mi banco en cualquier momento con revocación y borrado inmediato.
 
+### Épica 7: Gestión, Cálculo y Amortización de Deudas con Asesoría IA
+> *Especificación detallada de historias, criterios de aceptación y arquitectura en [`docs/epic-debt-management.md`](./epic-debt-management.md) y [`docs/debt-management-implementation-plan.md`](./debt-management-implementation-plan.md).*
+- **HU-23**: Como usuario, quiero dar de alta y consultar mis deudas (concepto, importe, tasa mensual/anual y plazo) tanto desde la interfaz `/debts` como conversando con FinanZIA Advisor.
+- **HU-24**: Como usuario, quiero que la aplicación calcule automáticamente los intereses devengados por período y la cuota estimada sin discrepancias numéricas.
+- **HU-25**: Como usuario, quiero amortizar capital de una deuda tanto desde la web como por chat con la IA, vinculando opcionalmente el pago a una de mis cuentas bancarias.
+- **HU-26**: Como usuario, quiero que al amortizar el 100% de una deuda, esta se marque como pagada y quede archivada en un historial inmutable bloqueado contra modificaciones.
+- **HU-27**: Como usuario, quiero que FinanZIA Advisor analice mis gastos prescindibles para proponerme planes de ahorro destinados a amortizar deuda anticipadamente.
+- **HU-28**: Como usuario, quiero simular escenarios de liquidación comparando las estrategias Avalancha (mayor interés primero) y Bola de Nieve (menor saldo primero).
+
 ---
 
 ## 5. Requisitos No Funcionales (NFR)

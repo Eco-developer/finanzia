@@ -25,7 +25,14 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 4. SUPERVISIÓN HUMANA OBLIGATORIA (Human-in-the-Loop): NUNCA edites ni elimines transacciones/movimientos, presupuestos ni metas de ahorro de forma directa o unilateral. Ante peticiones de editar o eliminar cualquier movimiento, presupuesto o meta, DEBES invocar OBLIGATORIAMENTE 'propose_recommendation' con el tipo y actionPayload correspondiente para que el usuario pueda aprobar o rechazar la acción. La creación directa de nuevos gastos/ingresos ('create_transaction') y nuevos presupuestos ('create_budget') está permitida solo al crearlos inicialmente si el usuario lo pide expresamente.
 5. DIFERENCIACIÓN FINANCIERA ESTRICTA: Diferencia siempre entre gastos fijos esenciales (vivienda, suministros, salud, impuestos) y gastos variables o discrecionales (restaurantes, ocio, compras). Cuando propongas recortes, hazlo ÚNICAMENTE sobre gastos variables, jamás sobre obligaciones fijas.
 6. TONO Y EMPATÍA: Sé siempre empático, motivador, no juzgón y constructivo. Las finanzas pueden generar estrés; nunca digas "has gastado demasiado" o "tu control es malo", sino "veo una oportunidad de ahorro aquí" o "podemos ajustar este apartado".
-7. CUMPLIMIENTO REGULATORIO: NO eres un asesor financiero regulado bajo MiFID II ni CNMV. No recomiendes productos de inversión específicos ni prometas rentabilidades garantizadas. Incluye siempre una actitud prudente de educación financiera.`;
+7. CUMPLIMIENTO REGULATORIO: NO eres un asesor financiero regulado bajo MiFID II ni CNMV. No recomiendes productos de inversión específicos ni prometas rentabilidades garantizadas. Incluye siempre una actitud prudente de educación financiera.
+8. GESTIÓN Y AMORTIZACIÓN DE DEUDAS (Cero Flotantes e Inmutabilidad):
+- Para consultar pasivos o préstamos, invoca 'get_debts'.
+- Para registrar un nuevo préstamo o deuda, invoca 'create_debt'.
+- Para amortizar capital (parcial o total), invoca 'amortize_debt'. Si el usuario indica pagar desde una cuenta bancaria (ej. "desde Cuenta Nómina"), especifica 'fromAccountName'.
+- Si la deuda se liquida al 100%, felicita calurosamente al usuario informándole de que la deuda queda sellada y archivada de forma inmutable en su historial.
+- Para proyecciones y comparación de métodos (Avalancha vs Bola de nieve), invoca 'simulate_debt_payoff'.
+- Para analizar recortes en gastos prescindibles orientados a amortizar antes, invoca 'analyze_debt_optimization'.`;
 
   constructor(
     private readonly configService: ConfigService,
@@ -321,6 +328,134 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
               required: ["type", "amountEur", "description"],
             },
           },
+          {
+            name: "create_debt",
+            description:
+              "Registra una nueva deuda o pasivo financiero del usuario (préstamo, tarjeta de crédito, hipoteca, etc.).",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                concept: {
+                  type: Type.STRING,
+                  description:
+                    "Concepto o nombre de la deuda (ej. 'Préstamo Coche', 'Tarjeta Revolving BBVA')",
+                },
+                amountEur: {
+                  type: Type.NUMBER,
+                  description:
+                    "Importe original o saldo pendiente en euros (ej. 4500)",
+                },
+                interestRatePercent: {
+                  type: Type.NUMBER,
+                  description:
+                    "Tasa de interés en porcentaje (ej. 6.5 para 6.50%)",
+                },
+                interestRateType: {
+                  type: Type.STRING,
+                  description:
+                    "Tipo de tasa: 'ANNUAL' (anual, por defecto) o 'MONTHLY' (mensual)",
+                },
+                creditor: {
+                  type: Type.STRING,
+                  description:
+                    "Entidad o acreedor (ej. 'Banco Santander', 'Cofidis')",
+                },
+                minimumMonthlyPaymentEur: {
+                  type: Type.NUMBER,
+                  description:
+                    "Cuota mensual mínima o pactada en euros (ej. 150)",
+                },
+                dueDate: {
+                  type: Type.STRING,
+                  description: "Fecha de vencimiento final YYYY-MM-DD si aplica",
+                },
+                notes: {
+                  type: Type.STRING,
+                  description: "Notas u observaciones adicionales",
+                },
+              },
+              required: ["concept", "amountEur", "interestRatePercent"],
+            },
+          },
+          {
+            name: "get_debts",
+            description:
+              "Consulta todas las deudas activas del usuario, sus saldos vivos, tasas de interés, cuotas mensuales e impacto en intereses, o el historial inmutable de deudas liquidadas al 100%.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                includePaidOff: {
+                  type: Type.BOOLEAN,
+                  description:
+                    "Si es true, incluye el historial inmutable de deudas ya pagadas al 100%. Por defecto false.",
+                },
+              },
+            },
+          },
+          {
+            name: "amortize_debt",
+            description:
+              "Aplica un abono o amortización a una deuda activa. Desglosa automáticamente capital e intereses, y si llega al 100% de liquidación, la deuda queda sellada de forma inmutable.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                debtId: {
+                  type: Type.STRING,
+                  description:
+                    "UUID de la deuda (opcional si se provee conceptKeyword)",
+                },
+                conceptKeyword: {
+                  type: Type.STRING,
+                  description:
+                    "Nombre o palabra clave de la deuda (ej. 'coche', 'tarjeta', 'hipoteca')",
+                },
+                amountEur: {
+                  type: Type.NUMBER,
+                  description: "Importe a amortizar en euros (ej. 250)",
+                },
+                fromAccountName: {
+                  type: Type.STRING,
+                  description:
+                    "Nombre de la cuenta bancaria de origen de los fondos (ej. 'Cuenta Nómina')",
+                },
+                notes: {
+                  type: Type.STRING,
+                  description: "Notas de la amortización",
+                },
+              },
+              required: ["amountEur"],
+            },
+          },
+          {
+            name: "simulate_debt_payoff",
+            description:
+              "Simula un plan de aceleración de pagos mediante estrategia AVALANCHA (mayor interés primero) o BOLA DE NIEVE (menor saldo primero), calculando meses ahorrados y ahorro en intereses.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {
+                extraMonthlyBudgetEur: {
+                  type: Type.NUMBER,
+                  description:
+                    "Ahorro mensual extra destinado a acelerar el pago de deudas (ej. 100 para 100 €/mes)",
+                },
+                strategy: {
+                  type: Type.STRING,
+                  description:
+                    "Estrategia: 'AVALANCHE' (por defecto, máximo ahorro) o 'SNOWBALL' (victorias psicológicas rápidas)",
+                },
+              },
+              required: ["extraMonthlyBudgetEur"],
+            },
+          },
+          {
+            name: "analyze_debt_optimization",
+            description:
+              "Examina gastos no esenciales en los últimos meses y recomienda un recorte realista en una categoría prescindible (ej. Restaurantes, Ocio) para amortizar anticipadamente las deudas más caras.",
+            parameters: {
+              type: Type.OBJECT,
+              properties: {},
+            },
+          },
         ],
       },
     ];
@@ -456,6 +591,39 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
             : undefined,
           date: args.date ? String(args.date) : undefined,
         });
+      } else if (toolName === "create_debt") {
+        result = await this.aiToolsService.createDebt(userId, {
+          concept: String(args.concept),
+          amountEur: Number(args.amountEur),
+          interestRatePercent: Number(args.interestRatePercent),
+          interestRateType: args.interestRateType,
+          creditor: args.creditor,
+          minimumMonthlyPaymentEur: args.minimumMonthlyPaymentEur
+            ? Number(args.minimumMonthlyPaymentEur)
+            : undefined,
+          dueDate: args.dueDate,
+          notes: args.notes,
+        });
+      } else if (toolName === "get_debts") {
+        result = await this.aiToolsService.getDebts(
+          userId,
+          Boolean(args.includePaidOff),
+        );
+      } else if (toolName === "amortize_debt") {
+        result = await this.aiToolsService.amortizeDebt(userId, {
+          debtId: args.debtId,
+          conceptKeyword: args.conceptKeyword,
+          amountEur: Number(args.amountEur),
+          fromAccountName: args.fromAccountName,
+          notes: args.notes,
+        });
+      } else if (toolName === "simulate_debt_payoff") {
+        result = await this.aiToolsService.simulateDebtPayoff(userId, {
+          extraMonthlyBudgetEur: Number(args.extraMonthlyBudgetEur),
+          strategy: args.strategy,
+        });
+      } else if (toolName === "analyze_debt_optimization") {
+        result = await this.aiToolsService.analyzeDebtOptimization(userId);
       }
 
       executedTools.push({
@@ -1977,7 +2145,281 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       };
     }
 
-    // Intención 8: Resumen general financiero / ahorro
+    // =========================================================================
+    // INTENCIÓN 8: GESTIÓN Y ASESORÍA DE DEUDAS (PASIVOS Y AMORTIZACIÓN)
+    // =========================================================================
+    const isDebtAmortizeIntent =
+      /\b(?:amortiza|amortizar|abona|abonar|paga|pagar)\b/i.test(textLower) &&
+      /\b(?:deuda|prestamo|credito|tarjeta|coche|hipoteca|capital)\b/i.test(textLower);
+
+    const isDebtCreateIntent =
+      /\b(?:crea|crear|registra|registrar|anad(?:e|ir)|agreg(?:a|ar)|tengo|nuevo|nueva|dar de alta)\b/i.test(textLower) &&
+      /\b(?:deuda|prestamo|hipoteca|credito|tarjeta revolving)\b/i.test(textLower) &&
+      !isDebtAmortizeIntent;
+
+    const isDebtSimulateIntent =
+      (/\b(?:simula|simular|comparar|comparativa|avalancha|bola de nieve)\b/i.test(textLower) &&
+        /\b(?:deuda|deudas|prestamo|amortizacion|acelerar)\b/i.test(textLower)) ||
+      textLower.includes("avalancha") ||
+      textLower.includes("bola de nieve");
+
+    const isDebtOptimizeIntent =
+      /\b(?:como\s+(?:puedo\s+)?(?:salir|pagar|reducir)|optimiza(?:r)?|acelerar|plan\s+de\s+amortizacion)\b/i.test(textLower) &&
+      /\b(?:deudas?|prestamos?)\b/i.test(textLower);
+
+    const isDebtConsultIntent =
+      /\b(?:deudas|prestamos|pasivos|cuanto debo|que debo|mis deudas|mis prestamos|estado de mis deudas)\b/i.test(textLower) &&
+      !isDebtCreateIntent &&
+      !isDebtAmortizeIntent &&
+      !isDebtSimulateIntent &&
+      !isDebtOptimizeIntent;
+
+    // A) Amortización de Deuda
+    if (isDebtAmortizeIntent) {
+      let amountEur = 0;
+      const amountMatch =
+        textLower.match(/(?:amortiza|abona|paga|pagar)?\s*([\d\.,]+)\s*(?:€|euros?|eur)\b/i) ||
+        textLower.match(/\b([\d\.,]+)\s*(?:€|euros?|eur)\b/i);
+      if (amountMatch) {
+        const raw = amountMatch[1].replace(/\./g, "").replace(",", ".");
+        amountEur = parseFloat(raw);
+      }
+
+      if (amountEur <= 0) {
+        return {
+          content:
+            "Para amortizar una deuda, por favor indícame el importe y el concepto. Por ejemplo: *'Amortiza 250 € a mi préstamo de coche desde la Cuenta Nómina'*.",
+          toolExecutions: executedTools,
+        };
+      }
+
+      let conceptKeyword = "";
+      if (textLower.includes("coche") || textLower.includes("auto") || textLower.includes("vehiculo")) {
+        conceptKeyword = "coche";
+      } else if (textLower.includes("tarjeta")) {
+        conceptKeyword = "tarjeta";
+      } else if (textLower.includes("hipoteca")) {
+        conceptKeyword = "hipoteca";
+      } else if (textLower.includes("personal")) {
+        conceptKeyword = "personal";
+      } else {
+        const debtWordMatch = textLower.match(/(?:al|a la|a mi|del?)\s+(?:prestamo|deuda|credito)?\s*([a-záéíóúñ]+)/i);
+        if (debtWordMatch && debtWordMatch[1]) {
+          conceptKeyword = debtWordMatch[1];
+        }
+      }
+
+      let fromAccountName: string | undefined = undefined;
+      const accMatch = textLower.match(/(?:desde|de la|con la|de mi)\s+cuenta\s+([a-záéíóúñ\s]+?)(?:$|\.|\,)/i);
+      if (accMatch && accMatch[1]) {
+        fromAccountName = accMatch[1].trim();
+      }
+
+      try {
+        const amortResult = await this.aiToolsService.amortizeDebt(userId, {
+          conceptKeyword: conceptKeyword || undefined,
+          amountEur,
+          fromAccountName,
+        });
+
+        executedTools.push({
+          toolName: "amortize_debt",
+          args: { amountEur, conceptKeyword, fromAccountName },
+          result: amortResult,
+        });
+
+        let msg = "";
+        if (amortResult.isFullyPaid) {
+          msg = `🏆 **¡ENHORABUENA! Deuda Liquidada al 100%:**\n\nHas amortizado la totalidad de tu deuda **"${amortResult.concept}"** con un abono final de **${amortResult.amountAmortizedEur.toFixed(2).replace(".", ",")} €**.\n\n🔒 **Inmutabilidad Activada:** El saldo es 0,00 €. La deuda ha pasado a estado \`PAID_OFF\` y ha quedado archivada de forma inmutable en tu historial financiero protegido. ¡Has eliminado un pasivo y sus intereses para siempre!`;
+        } else {
+          msg = `✅ **Amortización Aplicada con Éxito:**\n\n- **Deuda:** ${amortResult.concept}\n- **Importe Abonado:** ${amortResult.amountAmortizedEur.toFixed(2).replace(".", ",")} €\n  * Destinado a Reducción de Capital: **${amortResult.principalAmortizedEur.toFixed(2).replace(".", ",")} €**\n  * Destinado a Intereses Devengados: **${amortResult.interestCoveredEur.toFixed(2).replace(".", ",")} €**\n- **Nuevo Saldo Pendiente:** **${amortResult.remainingAmountEur.toFixed(2).replace(".", ",")} €**\n`;
+          if (amortResult.accountDeducted) {
+            msg += `- **Cuenta de Cargo:** ${amortResult.accountDeducted}\n`;
+          }
+        }
+
+        return {
+          content: msg,
+          toolExecutions: executedTools,
+        };
+      } catch (err: any) {
+        return {
+          content: `⚠️ No pude completar la amortización: ${err.message || err}`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
+
+    // B) Alta de Deuda
+    if (isDebtCreateIntent) {
+      let amountEur = 0;
+      const amountMatch = textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+      if (amountMatch) {
+        const raw = amountMatch[1].replace(/\./g, "").replace(",", ".");
+        amountEur = parseFloat(raw);
+      }
+
+      let interestRatePercent = 6.0;
+      const rateMatch = textLower.match(/([\d\.,]+)\s*%/);
+      if (rateMatch) {
+        interestRatePercent = parseFloat(rateMatch[1].replace(",", "."));
+      }
+
+      const isMonthlyRate = textLower.includes("mensual") || textLower.includes("tin mensual");
+
+      let concept = "Préstamo Personal";
+      if (textLower.includes("coche") || textLower.includes("auto")) {
+        concept = "Préstamo Coche";
+      } else if (textLower.includes("tarjeta")) {
+        concept = "Tarjeta de Crédito";
+      } else if (textLower.includes("hipoteca")) {
+        concept = "Hipoteca";
+      }
+
+      if (amountEur <= 0) {
+        return {
+          content:
+            "Para registrar una nueva deuda o pasivo, indícame al menos el importe y el concepto. Por ejemplo: *'Registra un préstamo de coche de 12.000 € al 6% anual'*.",
+          toolExecutions: executedTools,
+        };
+      }
+
+      try {
+        const debtResult = await this.aiToolsService.createDebt(userId, {
+          concept,
+          amountEur,
+          interestRatePercent,
+          interestRateType: isMonthlyRate ? "MONTHLY" : "ANNUAL",
+        });
+
+        executedTools.push({
+          toolName: "create_debt",
+          args: { concept, amountEur, interestRatePercent },
+          result: debtResult,
+        });
+
+        return {
+          content: `✅ **Nueva Deuda Registrada con Éxito:**\n\n- **Concepto:** ${debtResult.concept}\n- **Importe Inicial:** ${debtResult.initialAmountEur.toFixed(2).replace(".", ",")} €\n- **Tasa de Interés:** ${debtResult.interestRatePercent.toFixed(2).replace(".", ",")}% (${debtResult.interestRateType})\n- **Saldo Pendiente:** ${debtResult.remainingAmountEur.toFixed(2).replace(".", ",")} €\n\nPuedes consultar tus deudas en cualquier momento o solicitarme una simulación acelerada de amortización.`,
+          toolExecutions: executedTools,
+        };
+      } catch (err: any) {
+        return {
+          content: `⚠️ No pude dar de alta la deuda: ${err.message || err}`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
+
+    // C) Simulación y Optimización de Deudas
+    if (isDebtSimulateIntent || isDebtOptimizeIntent) {
+      let extraMonthlyBudgetEur = 0;
+      const extraMatch = textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
+      if (extraMatch) {
+        extraMonthlyBudgetEur = parseFloat(extraMatch[1].replace(/\./g, "").replace(",", "."));
+      }
+
+      const isSnowball = textLower.includes("bola de nieve") || textLower.includes("snowball");
+
+      if (extraMonthlyBudgetEur > 0) {
+        const sim = await this.aiToolsService.simulateDebtPayoff(userId, {
+          extraMonthlyBudgetEur,
+          strategy: isSnowball ? "SNOWBALL" : "AVALANCHE",
+        });
+
+        executedTools.push({
+          toolName: "simulate_debt_payoff",
+          args: { extraMonthlyBudgetEur, strategy: isSnowball ? "SNOWBALL" : "AVALANCHE" },
+          result: sim,
+        });
+
+        const stratName = isSnowball ? "Bola de Nieve (Snowball)" : "Avalancha Financiera (Avalanche)";
+        const intSavedEur = (Number(sim.interestSavedCents) / 100).toFixed(2).replace(".", ",");
+        const totalIntEur = (Number(sim.totalInterestPaidCents) / 100).toFixed(2).replace(".", ",");
+        const baselineIntEur = (Number(sim.baselineInterestPaidCents) / 100).toFixed(2).replace(".", ",");
+
+        return {
+          content: `📈 **Simulación de Amortización Acelerada — ${stratName}:**\n\nSi destinas **${extraMonthlyBudgetEur.toFixed(2).replace(".", ",")} €/mes** adicionales a tus deudas:\n\n- ⏱️ **Ahorro de Tiempo:** Estarás 100% libre de deudas **${sim.monthsSaved} meses antes** (en ${sim.totalMonths} meses vs ${sim.baselineMonths} meses pactados).\n- 💰 **Ahorro en Intereses:** Te ahorrarás **${intSavedEur} €** en intereses devengados.\n- 💳 **Coste Total en Intereses:** Pagas ${totalIntEur} € en lugar de ${baselineIntEur} €.\n\n💡 *${isSnowball ? "La estrategia Bola de Nieve te permite liquidar primero las deudas más pequeñas para lograr victorias psicológicas tempranas." : "La estrategia Avalancha maximiza el ahorro matemático liquidando primero las deudas con mayor tipo de interés."}*`,
+          toolExecutions: executedTools,
+        };
+      } else {
+        const opt = await this.aiToolsService.analyzeDebtOptimization(userId);
+        executedTools.push({
+          toolName: "analyze_debt_optimization",
+          args: {},
+          result: opt,
+        });
+
+        if (!opt.hasDebts) {
+          return {
+            content: `🎉 **¡Salud Financiera Ejemplar!**\n\n${opt.message}`,
+            toolExecutions: executedTools,
+          };
+        }
+
+        const cutEur = opt.suggestedReallocation!.suggestedMonthlyCutEur.toFixed(2).replace(".", ",");
+        const catName = opt.suggestedReallocation!.sourceCategoryName;
+        const currentSpend = opt.suggestedReallocation!.currentMonthlySpendEur.toFixed(2).replace(".", ",");
+        const intSaved = opt.simulation!.interestSavedEur.toFixed(2).replace(".", ",");
+
+        return {
+          content: `💡 **Plan de Optimización Financiera de Pasivos:**\n\nExaminando tu historial reciente de gastos, detecto una oportunidad para liquidar tus deudas más rápido:\n\n- 🎯 **Partida Prescindible Identificada:** Gastas una media de **${currentSpend} €/mes** en **${catName}**.\n- ✂️ **Ajuste Recomendado:** Si reduces un pequeño porcentaje y reasignas **${cutEur} €/mes** a la amortización acelerada de tus deudas:\n  * ⏱️ Te liberarás de tus deudas **${opt.simulation!.monthsSaved} meses antes** (en solo ${opt.simulation!.totalMonthsToFreedom} meses).\n  * 💰 Ahorrarás **${intSaved} €** directamente en intereses no pagados a entidades bancarias.\n  * 🛡️ Estrategia: **Avalancha** (amortizando primero los tipos de interés más elevados).\n\n¿Quieres que preparemos un ajuste en tu presupuesto de **${catName}** para activar este plan de ahorro?`,
+          toolExecutions: executedTools,
+        };
+      }
+    }
+
+    // D) Consulta de Deudas Activas / Historial
+    if (isDebtConsultIntent) {
+      const includePaidOff = textLower.includes("historial") || textLower.includes("pagad") || textLower.includes("liquidad");
+      const debtsData = await this.aiToolsService.getDebts(userId, includePaidOff);
+
+      executedTools.push({
+        toolName: "get_debts",
+        args: { includePaidOff },
+        result: debtsData,
+      });
+
+      if (debtsData.activeDebts.length === 0) {
+        if (debtsData.paidOffDebts.length > 0) {
+          return {
+            content: `🎉 **¡No tienes deudas activas!**\n\nTus finanzas están completamente libres de pasivos vivos. En tu historial inmutable tienes registradas **${debtsData.paidOffDebts.length}** deuda(s) totalmente liquidadas al 100%.`,
+            toolExecutions: executedTools,
+          };
+        }
+        return {
+          content: `🎉 **¡Salud Financiera Óptima!**\n\nNo tienes ninguna deuda o pasivo activo registrado en este momento. Todos tus activos están limpios de compromisos crediticios.`,
+          toolExecutions: executedTools,
+        };
+      }
+
+      let reply = `📋 **Tus Deudas y Pasivos Financieros Activos:**\n\n`;
+      for (const d of debtsData.activeDebts) {
+        const remainingEur = d.remainingAmountEur.toFixed(2).replace(".", ",");
+        const initialEur = d.initialAmountEur.toFixed(2).replace(".", ",");
+        const rateFormatted = d.interestRatePercent.toFixed(2).replace(".", ",");
+        const quotaFormatted = d.minimumMonthlyPaymentEur ? `${d.minimumMonthlyPaymentEur.toFixed(2).replace(".", ",")} €` : "Flexible";
+        const interestCostFormatted = d.monthlyInterestCostEur ? `${d.monthlyInterestCostEur.toFixed(2).replace(".", ",")} €/mes` : "0,00 €/mes";
+
+        reply += `- **${d.concept}**${d.creditor ? " (" + d.creditor + ")" : ""}:\n`;
+        reply += `  * Saldo vivo: **${remainingEur} €** (Inicial: ${initialEur} €)\n`;
+        reply += `  * Tipo de interés: **${rateFormatted}%** (${d.interestRateType})\n`;
+        reply += `  * Cuota mensual: ${quotaFormatted} | Coste mensual en intereses: ~**${interestCostFormatted}**\n\n`;
+      }
+
+      reply += `📊 **Resumen Consolidado:**\n`;
+      reply += `- 🔴 **Pasivo Total Pendiente:** ${debtsData.summary.totalRemainingEur.toFixed(2).replace(".", ",")} €\n`;
+      reply += `- 📅 **Compromiso Mensual de Cuotas:** ${debtsData.summary.totalMonthlyCommitmentEur.toFixed(2).replace(".", ",")} €\n`;
+      reply += `- 💸 **Coste Mensual en Intereses:** ${debtsData.summary.totalMonthlyInterestCostEur.toFixed(2).replace(".", ",")} €\n`;
+      reply += `- ⚖️ **Tipo de Interés Medio Ponderado:** ${debtsData.summary.averageInterestRatePercent.toFixed(2).replace(".", ",")}% TAE\n\n`;
+      reply += `💡 Puedes decirme *"Amortiza X € a mi préstamo Y"* o *"¿Cómo optimizar mis deudas?"* para acelerar su liquidación.`;
+
+      return {
+        content: reply,
+        toolExecutions: executedTools,
+      };
+    }
+
+    // Intención 8.5: Resumen general financiero / ahorro
     if (
       textLower.includes("resumen") ||
       textLower.includes("ahorro") ||

@@ -33,6 +33,7 @@ export const RecommendationType = {
   EXPENSE_ALERT: "EXPENSE_ALERT",
   HABIT_NUDGE: "HABIT_NUDGE",
   GOAL_CREATION: "GOAL_CREATION",
+  DEBT_AMORTIZATION: "DEBT_AMORTIZATION",
 } as const;
 export type RecommendationType =
   (typeof RecommendationType)[keyof typeof RecommendationType];
