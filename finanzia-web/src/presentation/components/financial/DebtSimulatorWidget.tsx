@@ -2,13 +2,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import styles from './DebtSimulatorWidget.module.css';
-import { debtsApi, DebtPayoffPlanResult, DebtPayoffStrategy } from '@/infrastructure/api/debts.api';
+import {
+  useDebts,
+  type DebtPayoffPlanResult,
+  type DebtPayoffStrategy,
+} from '@/presentation/hooks/useDebts';
 
 interface DebtSimulatorWidgetProps {
   hasActiveDebts: boolean;
 }
 
 export const DebtSimulatorWidget: React.FC<DebtSimulatorWidgetProps> = ({ hasActiveDebts }) => {
+  const { simulatePayoff } = useDebts();
   const [extraMonthlyEuros, setExtraMonthlyEuros] = useState<number>(100);
   const [strategy, setStrategy] = useState<DebtPayoffStrategy>('AVALANCHE');
   const [planResult, setPlanResult] = useState<DebtPayoffPlanResult | null>(null);
@@ -21,7 +26,7 @@ export const DebtSimulatorWidget: React.FC<DebtSimulatorWidgetProps> = ({ hasAct
     setError(null);
     try {
       const extraMonthlyCents = Math.round(extraEuros * 100);
-      const result = await debtsApi.simulatePayoff({
+      const result = await simulatePayoff({
         extraMonthlyCents,
         strategy: strat,
       });
@@ -32,7 +37,7 @@ export const DebtSimulatorWidget: React.FC<DebtSimulatorWidgetProps> = ({ hasAct
     } finally {
       setIsLoading(false);
     }
-  }, [hasActiveDebts]);
+  }, [hasActiveDebts, simulatePayoff]);
 
   useEffect(() => {
     const timer = setTimeout(() => {

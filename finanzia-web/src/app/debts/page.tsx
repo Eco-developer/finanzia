@@ -14,7 +14,7 @@ import { DebtSimulatorWidget } from '@/presentation/components/financial/DebtSim
 import { DebtHistoryTable } from '@/presentation/components/financial/DebtHistoryTable';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
-import { debtsApi, DebtItem, DebtsSummary } from '@/infrastructure/api/debts.api';
+import { useDebts, type DebtItem, type DebtsSummary } from '@/presentation/hooks/useDebts';
 import {
   Plus,
   Sparkles,
@@ -32,6 +32,7 @@ type ActiveTab = 'ACTIVE' | 'SIMULATOR' | 'HISTORY';
 
 export default function DebtsPage() {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { getActiveDebts, getDebtHistory } = useDebts();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('ACTIVE');
   const [activeDebts, setActiveDebts] = useState<DebtItem[]>([]);
@@ -52,8 +53,8 @@ export default function DebtsPage() {
     setIsLoading(true);
     try {
       const [activeRes, historyRes] = await Promise.all([
-        debtsApi.getActiveDebts(),
-        debtsApi.getDebtHistory(),
+        getActiveDebts(),
+        getDebtHistory(),
       ]);
 
       setActiveDebts(activeRes.debts || []);
@@ -64,7 +65,7 @@ export default function DebtsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, getActiveDebts, getDebtHistory]);
 
   useEffect(() => {
     loadData();

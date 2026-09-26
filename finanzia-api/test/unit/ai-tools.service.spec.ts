@@ -11,7 +11,11 @@ import { TransactionsService } from "../../src/core/application/transactions/tra
 import { ACCOUNT_REPOSITORY } from "../../src/core/domain/repositories/account.repository.interface";
 import { CATEGORY_REPOSITORY } from "../../src/core/domain/repositories/category.repository.interface";
 import { DebtsService } from "../../src/core/application/debts/debts.service";
-import { DebtStatus, DebtPayoffStrategy, InterestRateType } from "../../src/core/domain/types/debt.types";
+import {
+  DebtStatus,
+  DebtPayoffStrategy,
+  InterestRateType,
+} from "../../src/core/domain/types/debt.types";
 import { PrismaFinancialAnalyticsAdapter } from "../../src/infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaService } from "../../src/infrastructure/database/prisma.service";
 
@@ -556,7 +560,9 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
 
     it("debe analizar optimización recortando partidas variables para amortizar", async () => {
       mockDebtsService.getActiveDebts.mockResolvedValue({
-        debts: [{ id: "d-1", concept: "Tarjeta", remainingAmountCents: "200000" }],
+        debts: [
+          { id: "d-1", concept: "Tarjeta", remainingAmountCents: "200000" },
+        ],
         summary: {
           activeDebtsCount: 1,
           totalRemainingCents: "200000",
@@ -597,7 +603,9 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       const opt = await service.analyzeDebtOptimization("user-1");
 
       expect(opt.hasDebts).toBe(true);
-      expect(opt.suggestedReallocation?.sourceCategoryName).toBe("Restaurantes y Bares");
+      expect(opt.suggestedReallocation?.sourceCategoryName).toBe(
+        "Restaurantes y Bares",
+      );
       expect(opt.suggestedReallocation?.suggestedMonthlyCutEur).toBe(70); // 20% de 350€
       expect(opt.simulation?.monthsSaved).toBe(8);
       expect(opt.simulation?.interestSavedEur).toBe(230);

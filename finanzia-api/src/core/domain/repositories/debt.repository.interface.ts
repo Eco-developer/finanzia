@@ -8,7 +8,16 @@ export interface IDebtRepository {
   create(
     data: Omit<
       DebtEntity,
-      "id" | "createdAt" | "updatedAt" | "amortizations" | "progressPercentage" | "paidAmountCents" | "isFullyPaid" | "annualRateBasisPts" | "monthlyRateBasisPts" | "assertCanBeModified"
+      | "id"
+      | "createdAt"
+      | "updatedAt"
+      | "amortizations"
+      | "progressPercentage"
+      | "paidAmountCents"
+      | "isFullyPaid"
+      | "annualRateBasisPts"
+      | "monthlyRateBasisPts"
+      | "assertCanBeModified"
     >,
   ): Promise<DebtEntity>;
 

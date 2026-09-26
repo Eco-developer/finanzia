@@ -186,7 +186,10 @@ export class DebtInterestCalculatorService {
       maxSimulatedMonths,
     );
 
-    const monthsSaved = Math.max(0, baseline.totalMonths - accelerated.totalMonths);
+    const monthsSaved = Math.max(
+      0,
+      baseline.totalMonths - accelerated.totalMonths,
+    );
     const interestDiff =
       baseline.totalInterestPaidCents - accelerated.totalInterestPaidCents;
     const interestSavedCents = interestDiff > 0n ? interestDiff : 0n;
@@ -262,7 +265,8 @@ export class DebtInterestCalculatorService {
         }
 
         const principal = payment > interest ? payment - interest : 0n;
-        d.remainingCents = d.remainingCents > principal ? d.remainingCents - principal : 0n;
+        d.remainingCents =
+          d.remainingCents > principal ? d.remainingCents - principal : 0n;
 
         if (d.remainingCents <= 0n) {
           d.isPaid = true;
@@ -294,7 +298,10 @@ export class DebtInterestCalculatorService {
         });
 
         const target = unpaid[0];
-        const canPay = extraAvailable > target.remainingCents ? target.remainingCents : extraAvailable;
+        const canPay =
+          extraAvailable > target.remainingCents
+            ? target.remainingCents
+            : extraAvailable;
 
         target.remainingCents -= canPay;
         extraAvailable -= canPay;

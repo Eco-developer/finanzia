@@ -5,8 +5,8 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Button } from '@/presentation/components/ui/Button';
 import { MoneyDisplay } from './MoneyDisplay';
-import { debtsApi, DebtItem } from '@/infrastructure/api/debts.api';
-import { accountsApi, AccountItem } from '@/infrastructure/api/accounts.api';
+import { useDebts, type DebtItem } from '@/presentation/hooks/useDebts';
+import { useAccounts, type AccountItem } from '@/presentation/hooks/useAccounts';
 import {
   Sparkles,
   Lock,
@@ -29,6 +29,8 @@ export function AmortizeDebtModal({
   onSuccess,
   debt,
 }: AmortizeDebtModalProps) {
+  const { amortizeDebt } = useDebts();
+  const { getAccounts } = useAccounts();
   const [amountInput, setAmountInput] = useState('');
   const [selectedAccountId, setSelectedAccountId] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
@@ -46,8 +48,7 @@ export function AmortizeDebtModal({
       setError(null);
 
       // Cargar cuentas para permitir debitar
-      accountsApi
-        .getAccounts()
+      getAccounts()
         .then((accs) => {
           setAccounts(accs.filter((a) => !a.isArchived));
           if (accs.length > 0) {
@@ -58,7 +59,7 @@ export function AmortizeDebtModal({
           console.error('Error al cargar cuentas bancarias:', err);
         });
     }
-  }, [isOpen, debt]);
+  }, [isOpen, debt, getAccounts]);
 
   if (!debt) return null;
 
@@ -99,7 +100,7 @@ export function AmortizeDebtModal({
 
     setIsLoading(true);
     try {
-      await debtsApi.amortizeDebt(debt.id, {
+      await amortizeDebt(debt.id, {
         amountCents,
         accountId: selectedAccountId || undefined,
         paymentDate: paymentDate || undefined,

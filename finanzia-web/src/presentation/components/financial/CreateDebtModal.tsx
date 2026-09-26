@@ -5,12 +5,12 @@ import { Modal } from '@/presentation/components/ui/Modal';
 import { Input } from '@/presentation/components/ui/Input';
 import { Button } from '@/presentation/components/ui/Button';
 import {
-  debtsApi,
-  DebtItem,
-  CreateDebtDto,
-  UpdateDebtDto,
-  InterestRateType,
-} from '@/infrastructure/api/debts.api';
+  useDebts,
+  type DebtItem,
+  type CreateDebtDto,
+  type UpdateDebtDto,
+  type InterestRateType,
+} from '@/presentation/hooks/useDebts';
 import styles from './CreateDebtModal.module.css';
 
 interface CreateDebtModalProps {
@@ -26,6 +26,7 @@ export function CreateDebtModal({
   onSuccess,
   editingDebt,
 }: CreateDebtModalProps) {
+  const { createDebt, updateDebt } = useDebts();
   const [concept, setConcept] = useState('');
   const [creditor, setCreditor] = useState('');
   const [amountInput, setAmountInput] = useState('');
@@ -112,7 +113,7 @@ export function CreateDebtModal({
           dueDate: dueDate || undefined,
           notes: notes.trim() || undefined,
         };
-        await debtsApi.updateDebt(editingDebt.id, updateDto);
+        await updateDebt(editingDebt.id, updateDto);
       } else {
         const createDto: CreateDebtDto = {
           concept: concept.trim(),
@@ -125,7 +126,7 @@ export function CreateDebtModal({
           dueDate: dueDate || undefined,
           notes: notes.trim() || undefined,
         };
-        await debtsApi.createDebt(createDto);
+        await createDebt(createDto);
       }
 
       onSuccess();

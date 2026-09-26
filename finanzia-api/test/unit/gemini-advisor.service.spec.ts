@@ -523,7 +523,10 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         paidOffDebts: [],
       });
 
-      const result = await service.executeChat("user-1", "¿Cuáles son mis deudas activas?");
+      const result = await service.executeChat(
+        "user-1",
+        "¿Cuáles son mis deudas activas?",
+      );
 
       expect(mockAiToolsService.getDebts).toHaveBeenCalledWith("user-1", false);
       expect(result.content).toContain("Préstamo Coche");
@@ -553,7 +556,9 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         interestRatePercent: 6,
         interestRateType: "ANNUAL",
       });
-      expect(result.content).toContain("✅ **Nueva Deuda Registrada con Éxito:**");
+      expect(result.content).toContain(
+        "✅ **Nueva Deuda Registrada con Éxito:**",
+      );
       expect(result.content).toContain("12000,00 €");
     });
 
@@ -572,7 +577,8 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         message: "Deuda liquidada",
       });
 
-      const message = "amortiza 500 euros a mi prestamo coche desde cuenta nomina";
+      const message =
+        "amortiza 500 euros a mi prestamo coche desde cuenta nomina";
       const result = await service.executeChat("user-1", message);
 
       expect(mockAiToolsService.amortizeDebt).toHaveBeenCalledWith("user-1", {
@@ -580,7 +586,9 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         amountEur: 500,
         fromAccountName: "nomina",
       });
-      expect(result.content).toContain("🏆 **¡ENHORABUENA! Deuda Liquidada al 100%:**");
+      expect(result.content).toContain(
+        "🏆 **¡ENHORABUENA! Deuda Liquidada al 100%:**",
+      );
       expect(result.content).toContain("Inmutabilidad Activada");
     });
 
@@ -596,13 +604,17 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         payoffOrder: [],
       });
 
-      const message = "simula pagar 150 euros al mes a mis deudas con avalancha";
+      const message =
+        "simula pagar 150 euros al mes a mis deudas con avalancha";
       const result = await service.executeChat("user-1", message);
 
-      expect(mockAiToolsService.simulateDebtPayoff).toHaveBeenCalledWith("user-1", {
-        extraMonthlyBudgetEur: 150,
-        strategy: "AVALANCHE",
-      });
+      expect(mockAiToolsService.simulateDebtPayoff).toHaveBeenCalledWith(
+        "user-1",
+        {
+          extraMonthlyBudgetEur: 150,
+          strategy: "AVALANCHE",
+        },
+      );
       expect(result.content).toContain("Simulación de Amortización Acelerada");
       expect(result.content).toContain("9 meses antes");
       expect(result.content).toContain("300,00 €");
@@ -628,11 +640,16 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
         },
       });
 
-      const message = "como puedo pagar mis deudas antes optimizando mis gastos";
+      const message =
+        "como puedo pagar mis deudas antes optimizando mis gastos";
       const result = await service.executeChat("user-1", message);
 
-      expect(mockAiToolsService.analyzeDebtOptimization).toHaveBeenCalledWith("user-1");
-      expect(result.content).toContain("Plan de Optimización Financiera de Pasivos");
+      expect(mockAiToolsService.analyzeDebtOptimization).toHaveBeenCalledWith(
+        "user-1",
+      );
+      expect(result.content).toContain(
+        "Plan de Optimización Financiera de Pasivos",
+      );
       expect(result.content).toContain("Restaurantes");
       expect(result.content).toContain("50,00 €/mes");
       expect(result.content).toContain("6 meses antes");

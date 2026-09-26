@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { DebtItem } from '@/infrastructure/api/debts.api';
+import type { DebtItem } from '@/presentation/hooks/useDebts';
 import { MoneyDisplay } from './MoneyDisplay';
 import { RadixProgress } from '../ui/RadixProgress';
 import {

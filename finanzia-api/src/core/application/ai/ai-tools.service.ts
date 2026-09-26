@@ -1,4 +1,10 @@
-import { Injectable, Logger, Inject, forwardRef, Optional } from "@nestjs/common";
+import {
+  Injectable,
+  Logger,
+  Inject,
+  forwardRef,
+  Optional,
+} from "@nestjs/common";
 import {
   IFinancialAnalyticsPort,
   FINANCIAL_ANALYTICS_PORT,
@@ -19,7 +25,6 @@ import { TransactionType } from "../../domain/types/financial.types";
 import { DebtsService } from "../debts/debts.service";
 import {
   DebtPayoffStrategy,
-  DebtStatus,
   InterestRateType,
 } from "../../domain/types/debt.types";
 
@@ -938,7 +943,9 @@ export class AiToolsService {
     if (!this.debtsService) {
       throw new Error("DebtsService no está disponible.");
     }
-    this.logger.log(`[Tool] createDebt para usuario ${userId}: ${input.concept}`);
+    this.logger.log(
+      `[Tool] createDebt para usuario ${userId}: ${input.concept}`,
+    );
     const amountCents = Math.round(Number(input.amountEur) * 100);
     const rateBps = Math.round(Number(input.interestRatePercent) * 100);
     const minPaymentCents = input.minimumMonthlyPaymentEur
@@ -982,7 +989,9 @@ export class AiToolsService {
     if (!this.debtsService) {
       throw new Error("DebtsService no está disponible.");
     }
-    this.logger.log(`[Tool] getDebts para usuario ${userId}, includePaidOff=${includePaidOff}`);
+    this.logger.log(
+      `[Tool] getDebts para usuario ${userId}, includePaidOff=${includePaidOff}`,
+    );
     const active = await this.debtsService.getActiveDebts(userId);
     let paidOff: any[] = [];
     if (includePaidOff) {
@@ -1009,9 +1018,12 @@ export class AiToolsService {
         totalRemainingEur: Number(active.summary.totalRemainingCents) / 100,
         totalInitialEur: Number(active.summary.totalInitialCents) / 100,
         activeDebtsCount: active.summary.activeDebtsCount,
-        totalMonthlyCommitmentEur: Number(active.summary.totalMonthlyCommitmentCents) / 100,
-        totalMonthlyInterestCostEur: Number(active.summary.totalMonthlyInterestCents) / 100,
-        averageInterestRatePercent: active.summary.weightedAverageRateBasisPts / 100,
+        totalMonthlyCommitmentEur:
+          Number(active.summary.totalMonthlyCommitmentCents) / 100,
+        totalMonthlyInterestCostEur:
+          Number(active.summary.totalMonthlyInterestCents) / 100,
+        averageInterestRatePercent:
+          active.summary.weightedAverageRateBasisPts / 100,
       },
       paidOffDebts: paidOff.map((d) => ({
         id: d.id,
@@ -1049,7 +1061,9 @@ export class AiToolsService {
           .normalize("NFD")
           .replace(/[\u0300-\u036f]/g, "")
           .trim();
-        return cNorm.includes(norm) || norm.includes(cNorm) || crNorm.includes(norm);
+        return (
+          cNorm.includes(norm) || norm.includes(cNorm) || crNorm.includes(norm)
+        );
       }) ||
       null
     );
@@ -1062,7 +1076,9 @@ export class AiToolsService {
     if (!this.debtsService) {
       throw new Error("DebtsService no está disponible.");
     }
-    this.logger.log(`[Tool] amortizeDebt para usuario ${userId}, importe ${input.amountEur} €`);
+    this.logger.log(
+      `[Tool] amortizeDebt para usuario ${userId}, importe ${input.amountEur} €`,
+    );
 
     let targetDebtId = input.debtId;
     let targetDebt: any = null;
@@ -1136,7 +1152,9 @@ export class AiToolsService {
     if (!this.debtsService) {
       throw new Error("DebtsService no está disponible.");
     }
-    this.logger.log(`[Tool] simulateDebtPayoff para usuario ${userId}, extra: ${input.extraMonthlyBudgetEur} €`);
+    this.logger.log(
+      `[Tool] simulateDebtPayoff para usuario ${userId}, extra: ${input.extraMonthlyBudgetEur} €`,
+    );
     const extraCents = Math.round(Number(input.extraMonthlyBudgetEur) * 100);
     const strategy =
       input.strategy === "SNOWBALL"
@@ -1152,7 +1170,9 @@ export class AiToolsService {
   /**
    * Herramienta 15: Optimización proactiva de gastos no esenciales para amortización acelerada
    */
-  async analyzeDebtOptimization(userId: string): Promise<DebtOptimizationAnalysisResult> {
+  async analyzeDebtOptimization(
+    userId: string,
+  ): Promise<DebtOptimizationAnalysisResult> {
     if (!this.debtsService) {
       throw new Error("DebtsService no está disponible.");
     }
@@ -1162,7 +1182,8 @@ export class AiToolsService {
     if (!active.debts || active.debts.length === 0) {
       return {
         hasDebts: false,
-        message: "No tienes deudas activas pendientes en este momento. ¡Tu salud crediticia es óptima!",
+        message:
+          "No tienes deudas activas pendientes en este momento. ¡Tu salud crediticia es óptima!",
       };
     }
 
@@ -1173,7 +1194,10 @@ export class AiToolsService {
     let currentMonthlySpendEur = 0;
     let suggestedCutEur = 50;
 
-    if (baseline.topVariableCategories && baseline.topVariableCategories.length > 0) {
+    if (
+      baseline.topVariableCategories &&
+      baseline.topVariableCategories.length > 0
+    ) {
       const topCat = baseline.topVariableCategories[0];
       sourceCategoryName = topCat.categoryName;
       currentMonthlySpendEur = topCat.monthlyAverageCents / 100;
@@ -1193,8 +1217,10 @@ export class AiToolsService {
       hasDebts: true,
       totalDebtsCount: active.summary.activeDebtsCount,
       totalRemainingEur: Number(active.summary.totalRemainingCents) / 100,
-      totalMonthlyCommitmentEur: Number(active.summary.totalMonthlyCommitmentCents) / 100,
-      totalMonthlyInterestCostEur: Number(active.summary.totalMonthlyInterestCents) / 100,
+      totalMonthlyCommitmentEur:
+        Number(active.summary.totalMonthlyCommitmentCents) / 100,
+      totalMonthlyInterestCostEur:
+        Number(active.summary.totalMonthlyInterestCents) / 100,
       suggestedReallocation: {
         sourceCategoryName,
         currentMonthlySpendEur,

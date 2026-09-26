@@ -3,7 +3,10 @@ import { PrismaService } from "../prisma.service";
 import { DebtEntity } from "../../../core/domain/entities/debt.entity";
 import { DebtAmortizationEntity } from "../../../core/domain/entities/debt-amortization.entity";
 import { IDebtRepository } from "../../../core/domain/repositories/debt.repository.interface";
-import { DebtStatus, InterestRateType } from "../../../core/domain/types/debt.types";
+import {
+  DebtStatus,
+  InterestRateType,
+} from "../../../core/domain/types/debt.types";
 import {
   Debt as PrismaDebt,
   DebtAmortization as PrismaDebtAmortization,
@@ -225,14 +228,20 @@ export class PrismaDebtRepository implements IDebtRepository {
         data: {
           debtId: params.debt.id,
           userId: params.debt.userId,
-          accountId: params.accountDebit?.accountId ?? params.amortization.accountId ?? null,
-          transactionId: createdTransactionId ?? params.amortization.transactionId ?? null,
+          accountId:
+            params.accountDebit?.accountId ??
+            params.amortization.accountId ??
+            null,
+          transactionId:
+            createdTransactionId ?? params.amortization.transactionId ?? null,
           amountCents: params.amortization.amountCents,
           principalCents: params.amortization.principalCents,
           interestCents: params.amortization.interestCents,
           remainingAfterCents: params.amortization.remainingAfterCents,
           paymentDate: params.amortization.paymentDate,
-          notes: params.amortization.notes ? params.amortization.notes.trim() : null,
+          notes: params.amortization.notes
+            ? params.amortization.notes.trim()
+            : null,
         },
       });
 
@@ -263,7 +272,9 @@ export class PrismaDebtRepository implements IDebtRepository {
       record.notes,
       record.createdAt,
       record.updatedAt,
-      record.amortizations ? record.amortizations.map((a) => this.toAmortizationDomain(a)) : [],
+      record.amortizations
+        ? record.amortizations.map((a) => this.toAmortizationDomain(a))
+        : [],
     );
   }
 

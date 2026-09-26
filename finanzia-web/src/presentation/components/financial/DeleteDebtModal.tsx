@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Modal } from '@/presentation/components/ui/Modal';
 import { Button } from '@/presentation/components/ui/Button';
 import { MoneyDisplay } from './MoneyDisplay';
-import { debtsApi, DebtItem } from '@/infrastructure/api/debts.api';
+import { useDebts, type DebtItem } from '@/presentation/hooks/useDebts';
 import { AlertTriangle, Trash2, Lock } from 'lucide-react';
 import styles from './DeleteDebtModal.module.css';
 
@@ -21,6 +21,7 @@ export function DeleteDebtModal({
   onSuccess,
   debt,
 }: DeleteDebtModalProps) {
+  const { deleteDebt } = useDebts();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +38,7 @@ export function DeleteDebtModal({
     setIsLoading(true);
     setError(null);
     try {
-      await debtsApi.deleteDebt(debt.id);
+      await deleteDebt(debt.id);
       onSuccess();
       onClose();
     } catch (err: any) {

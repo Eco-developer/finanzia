@@ -367,7 +367,8 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
                 },
                 dueDate: {
                   type: Type.STRING,
-                  description: "Fecha de vencimiento final YYYY-MM-DD si aplica",
+                  description:
+                    "Fecha de vencimiento final YYYY-MM-DD si aplica",
                 },
                 notes: {
                   type: Type.STRING,
@@ -2150,25 +2151,38 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     // =========================================================================
     const isDebtAmortizeIntent =
       /\b(?:amortiza|amortizar|abona|abonar|paga|pagar)\b/i.test(textLower) &&
-      /\b(?:deuda|prestamo|credito|tarjeta|coche|hipoteca|capital)\b/i.test(textLower);
+      /\b(?:deuda|prestamo|credito|tarjeta|coche|hipoteca|capital)\b/i.test(
+        textLower,
+      );
 
     const isDebtCreateIntent =
-      /\b(?:crea|crear|registra|registrar|anad(?:e|ir)|agreg(?:a|ar)|tengo|nuevo|nueva|dar de alta)\b/i.test(textLower) &&
-      /\b(?:deuda|prestamo|hipoteca|credito|tarjeta revolving)\b/i.test(textLower) &&
+      /\b(?:crea|crear|registra|registrar|anad(?:e|ir)|agreg(?:a|ar)|tengo|nuevo|nueva|dar de alta)\b/i.test(
+        textLower,
+      ) &&
+      /\b(?:deuda|prestamo|hipoteca|credito|tarjeta revolving)\b/i.test(
+        textLower,
+      ) &&
       !isDebtAmortizeIntent;
 
     const isDebtSimulateIntent =
-      (/\b(?:simula|simular|comparar|comparativa|avalancha|bola de nieve)\b/i.test(textLower) &&
-        /\b(?:deuda|deudas|prestamo|amortizacion|acelerar)\b/i.test(textLower)) ||
+      (/\b(?:simula|simular|comparar|comparativa|avalancha|bola de nieve)\b/i.test(
+        textLower,
+      ) &&
+        /\b(?:deuda|deudas|prestamo|amortizacion|acelerar)\b/i.test(
+          textLower,
+        )) ||
       textLower.includes("avalancha") ||
       textLower.includes("bola de nieve");
 
     const isDebtOptimizeIntent =
-      /\b(?:como\s+(?:puedo\s+)?(?:salir|pagar|reducir)|optimiza(?:r)?|acelerar|plan\s+de\s+amortizacion)\b/i.test(textLower) &&
-      /\b(?:deudas?|prestamos?)\b/i.test(textLower);
+      /\b(?:como\s+(?:puedo\s+)?(?:salir|pagar|reducir)|optimiza(?:r)?|acelerar|plan\s+de\s+amortizacion)\b/i.test(
+        textLower,
+      ) && /\b(?:deudas?|prestamos?)\b/i.test(textLower);
 
     const isDebtConsultIntent =
-      /\b(?:deudas|prestamos|pasivos|cuanto debo|que debo|mis deudas|mis prestamos|estado de mis deudas)\b/i.test(textLower) &&
+      /\b(?:deudas|prestamos|pasivos|cuanto debo|que debo|mis deudas|mis prestamos|estado de mis deudas)\b/i.test(
+        textLower,
+      ) &&
       !isDebtCreateIntent &&
       !isDebtAmortizeIntent &&
       !isDebtSimulateIntent &&
@@ -2178,8 +2192,9 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     if (isDebtAmortizeIntent) {
       let amountEur = 0;
       const amountMatch =
-        textLower.match(/(?:amortiza|abona|paga|pagar)?\s*([\d\.,]+)\s*(?:€|euros?|eur)\b/i) ||
-        textLower.match(/\b([\d\.,]+)\s*(?:€|euros?|eur)\b/i);
+        textLower.match(
+          /(?:amortiza|abona|paga|pagar)?\s*([\d\.,]+)\s*(?:€|euros?|eur)\b/i,
+        ) || textLower.match(/\b([\d\.,]+)\s*(?:€|euros?|eur)\b/i);
       if (amountMatch) {
         const raw = amountMatch[1].replace(/\./g, "").replace(",", ".");
         amountEur = parseFloat(raw);
@@ -2194,7 +2209,11 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       }
 
       let conceptKeyword = "";
-      if (textLower.includes("coche") || textLower.includes("auto") || textLower.includes("vehiculo")) {
+      if (
+        textLower.includes("coche") ||
+        textLower.includes("auto") ||
+        textLower.includes("vehiculo")
+      ) {
         conceptKeyword = "coche";
       } else if (textLower.includes("tarjeta")) {
         conceptKeyword = "tarjeta";
@@ -2203,14 +2222,18 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       } else if (textLower.includes("personal")) {
         conceptKeyword = "personal";
       } else {
-        const debtWordMatch = textLower.match(/(?:al|a la|a mi|del?)\s+(?:prestamo|deuda|credito)?\s*([a-záéíóúñ]+)/i);
+        const debtWordMatch = textLower.match(
+          /(?:al|a la|a mi|del?)\s+(?:prestamo|deuda|credito)?\s*([a-záéíóúñ]+)/i,
+        );
         if (debtWordMatch && debtWordMatch[1]) {
           conceptKeyword = debtWordMatch[1];
         }
       }
 
       let fromAccountName: string | undefined = undefined;
-      const accMatch = textLower.match(/(?:desde|de la|con la|de mi)\s+cuenta\s+([a-záéíóúñ\s]+?)(?:$|\.|\,)/i);
+      const accMatch = textLower.match(
+        /(?:desde|de la|con la|de mi)\s+cuenta\s+([a-záéíóúñ\s]+?)(?:$|\.|\,)/i,
+      );
       if (accMatch && accMatch[1]) {
         fromAccountName = accMatch[1].trim();
       }
@@ -2265,7 +2288,8 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
         interestRatePercent = parseFloat(rateMatch[1].replace(",", "."));
       }
 
-      const isMonthlyRate = textLower.includes("mensual") || textLower.includes("tin mensual");
+      const isMonthlyRate =
+        textLower.includes("mensual") || textLower.includes("tin mensual");
 
       let concept = "Préstamo Personal";
       if (textLower.includes("coche") || textLower.includes("auto")) {
@@ -2315,10 +2339,13 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       let extraMonthlyBudgetEur = 0;
       const extraMatch = textLower.match(/([\d\.,]+)\s*(?:€|euros?|eur)/i);
       if (extraMatch) {
-        extraMonthlyBudgetEur = parseFloat(extraMatch[1].replace(/\./g, "").replace(",", "."));
+        extraMonthlyBudgetEur = parseFloat(
+          extraMatch[1].replace(/\./g, "").replace(",", "."),
+        );
       }
 
-      const isSnowball = textLower.includes("bola de nieve") || textLower.includes("snowball");
+      const isSnowball =
+        textLower.includes("bola de nieve") || textLower.includes("snowball");
 
       if (extraMonthlyBudgetEur > 0) {
         const sim = await this.aiToolsService.simulateDebtPayoff(userId, {
@@ -2328,14 +2355,25 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
         executedTools.push({
           toolName: "simulate_debt_payoff",
-          args: { extraMonthlyBudgetEur, strategy: isSnowball ? "SNOWBALL" : "AVALANCHE" },
+          args: {
+            extraMonthlyBudgetEur,
+            strategy: isSnowball ? "SNOWBALL" : "AVALANCHE",
+          },
           result: sim,
         });
 
-        const stratName = isSnowball ? "Bola de Nieve (Snowball)" : "Avalancha Financiera (Avalanche)";
-        const intSavedEur = (Number(sim.interestSavedCents) / 100).toFixed(2).replace(".", ",");
-        const totalIntEur = (Number(sim.totalInterestPaidCents) / 100).toFixed(2).replace(".", ",");
-        const baselineIntEur = (Number(sim.baselineInterestPaidCents) / 100).toFixed(2).replace(".", ",");
+        const stratName = isSnowball
+          ? "Bola de Nieve (Snowball)"
+          : "Avalancha Financiera (Avalanche)";
+        const intSavedEur = (Number(sim.interestSavedCents) / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const totalIntEur = (Number(sim.totalInterestPaidCents) / 100)
+          .toFixed(2)
+          .replace(".", ",");
+        const baselineIntEur = (Number(sim.baselineInterestPaidCents) / 100)
+          .toFixed(2)
+          .replace(".", ",");
 
         return {
           content: `📈 **Simulación de Amortización Acelerada — ${stratName}:**\n\nSi destinas **${extraMonthlyBudgetEur.toFixed(2).replace(".", ",")} €/mes** adicionales a tus deudas:\n\n- ⏱️ **Ahorro de Tiempo:** Estarás 100% libre de deudas **${sim.monthsSaved} meses antes** (en ${sim.totalMonths} meses vs ${sim.baselineMonths} meses pactados).\n- 💰 **Ahorro en Intereses:** Te ahorrarás **${intSavedEur} €** en intereses devengados.\n- 💳 **Coste Total en Intereses:** Pagas ${totalIntEur} € en lugar de ${baselineIntEur} €.\n\n💡 *${isSnowball ? "La estrategia Bola de Nieve te permite liquidar primero las deudas más pequeñas para lograr victorias psicológicas tempranas." : "La estrategia Avalancha maximiza el ahorro matemático liquidando primero las deudas con mayor tipo de interés."}*`,
@@ -2356,10 +2394,16 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
           };
         }
 
-        const cutEur = opt.suggestedReallocation!.suggestedMonthlyCutEur.toFixed(2).replace(".", ",");
+        const cutEur = opt
+          .suggestedReallocation!.suggestedMonthlyCutEur.toFixed(2)
+          .replace(".", ",");
         const catName = opt.suggestedReallocation!.sourceCategoryName;
-        const currentSpend = opt.suggestedReallocation!.currentMonthlySpendEur.toFixed(2).replace(".", ",");
-        const intSaved = opt.simulation!.interestSavedEur.toFixed(2).replace(".", ",");
+        const currentSpend = opt
+          .suggestedReallocation!.currentMonthlySpendEur.toFixed(2)
+          .replace(".", ",");
+        const intSaved = opt
+          .simulation!.interestSavedEur.toFixed(2)
+          .replace(".", ",");
 
         return {
           content: `💡 **Plan de Optimización Financiera de Pasivos:**\n\nExaminando tu historial reciente de gastos, detecto una oportunidad para liquidar tus deudas más rápido:\n\n- 🎯 **Partida Prescindible Identificada:** Gastas una media de **${currentSpend} €/mes** en **${catName}**.\n- ✂️ **Ajuste Recomendado:** Si reduces un pequeño porcentaje y reasignas **${cutEur} €/mes** a la amortización acelerada de tus deudas:\n  * ⏱️ Te liberarás de tus deudas **${opt.simulation!.monthsSaved} meses antes** (en solo ${opt.simulation!.totalMonthsToFreedom} meses).\n  * 💰 Ahorrarás **${intSaved} €** directamente en intereses no pagados a entidades bancarias.\n  * 🛡️ Estrategia: **Avalancha** (amortizando primero los tipos de interés más elevados).\n\n¿Quieres que preparemos un ajuste en tu presupuesto de **${catName}** para activar este plan de ahorro?`,
@@ -2370,8 +2414,14 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 
     // D) Consulta de Deudas Activas / Historial
     if (isDebtConsultIntent) {
-      const includePaidOff = textLower.includes("historial") || textLower.includes("pagad") || textLower.includes("liquidad");
-      const debtsData = await this.aiToolsService.getDebts(userId, includePaidOff);
+      const includePaidOff =
+        textLower.includes("historial") ||
+        textLower.includes("pagad") ||
+        textLower.includes("liquidad");
+      const debtsData = await this.aiToolsService.getDebts(
+        userId,
+        includePaidOff,
+      );
 
       executedTools.push({
         toolName: "get_debts",
@@ -2396,9 +2446,15 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
       for (const d of debtsData.activeDebts) {
         const remainingEur = d.remainingAmountEur.toFixed(2).replace(".", ",");
         const initialEur = d.initialAmountEur.toFixed(2).replace(".", ",");
-        const rateFormatted = d.interestRatePercent.toFixed(2).replace(".", ",");
-        const quotaFormatted = d.minimumMonthlyPaymentEur ? `${d.minimumMonthlyPaymentEur.toFixed(2).replace(".", ",")} €` : "Flexible";
-        const interestCostFormatted = d.monthlyInterestCostEur ? `${d.monthlyInterestCostEur.toFixed(2).replace(".", ",")} €/mes` : "0,00 €/mes";
+        const rateFormatted = d.interestRatePercent
+          .toFixed(2)
+          .replace(".", ",");
+        const quotaFormatted = d.minimumMonthlyPaymentEur
+          ? `${d.minimumMonthlyPaymentEur.toFixed(2).replace(".", ",")} €`
+          : "Flexible";
+        const interestCostFormatted = d.monthlyInterestCostEur
+          ? `${d.monthlyInterestCostEur.toFixed(2).replace(".", ",")} €/mes`
+          : "0,00 €/mes";
 
         reply += `- **${d.concept}**${d.creditor ? " (" + d.creditor + ")" : ""}:\n`;
         reply += `  * Saldo vivo: **${remainingEur} €** (Inicial: ${initialEur} €)\n`;

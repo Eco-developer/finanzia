@@ -18,7 +18,7 @@ export type DebtStatus = (typeof DebtStatus)[keyof typeof DebtStatus];
 
 export const DebtPayoffStrategy = {
   AVALANCHE: "AVALANCHE", // Prioriza deudas con mayor tasa de interés (minimiza coste total)
-  SNOWBALL: "SNOWBALL",   // Prioriza deudas con menor saldo vivo (victorias psicológicas rápidas)
+  SNOWBALL: "SNOWBALL", // Prioriza deudas con menor saldo vivo (victorias psicológicas rápidas)
 } as const;
 export type DebtPayoffStrategy =
   (typeof DebtPayoffStrategy)[keyof typeof DebtPayoffStrategy];

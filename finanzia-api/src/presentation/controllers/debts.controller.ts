@@ -101,7 +101,8 @@ export class DebtsController {
   @Post("simulate")
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: "Simular plan de amortización acelerada (Avalancha vs Bola de Nieve)",
+    summary:
+      "Simular plan de amortización acelerada (Avalancha vs Bola de Nieve)",
   })
   @ApiResponse({
     status: 200,
@@ -141,7 +142,8 @@ export class DebtsController {
 
   @Patch(":id")
   @ApiOperation({
-    summary: "Actualizar datos de una deuda activa (Bloqueado si está al 100% pagada)",
+    summary:
+      "Actualizar datos de una deuda activa (Bloqueado si está al 100% pagada)",
   })
   @ApiParam({ name: "id", description: "UUID de la deuda" })
   @ApiResponse({
@@ -164,7 +166,8 @@ export class DebtsController {
   @Delete(":id")
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
-    summary: "Eliminar una deuda activa (Bloqueado si forma parte del historial inmutable)",
+    summary:
+      "Eliminar una deuda activa (Bloqueado si forma parte del historial inmutable)",
   })
   @ApiParam({ name: "id", description: "UUID de la deuda" })
   async deleteDebt(

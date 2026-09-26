@@ -1,6 +1,10 @@
 import { DebtInterestCalculatorService } from "../../src/core/domain/services/debt-interest-calculator.service";
 import { DebtEntity } from "../../src/core/domain/entities/debt.entity";
-import { DebtPayoffStrategy, DebtStatus, InterestRateType } from "../../src/core/domain/types/debt.types";
+import {
+  DebtPayoffStrategy,
+  DebtStatus,
+  InterestRateType,
+} from "../../src/core/domain/types/debt.types";
 
 describe("DebtInterestCalculatorService (Zero-Float Financial Math)", () => {
   let calculator: DebtInterestCalculatorService;
@@ -50,10 +54,18 @@ describe("DebtInterestCalculatorService (Zero-Float Financial Math)", () => {
 
     it("debe devolver 0 si el saldo es cero o la tasa es 0%", () => {
       expect(
-        calculator.calculateMonthlyInterestCents(0n, 500, InterestRateType.ANNUAL),
+        calculator.calculateMonthlyInterestCents(
+          0n,
+          500,
+          InterestRateType.ANNUAL,
+        ),
       ).toBe(0n);
       expect(
-        calculator.calculateMonthlyInterestCents(50000n, 0, InterestRateType.ANNUAL),
+        calculator.calculateMonthlyInterestCents(
+          50000n,
+          0,
+          InterestRateType.ANNUAL,
+        ),
       ).toBe(0n);
     });
   });

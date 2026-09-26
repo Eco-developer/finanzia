@@ -1,5 +1,5 @@
 import { Test, TestingModule } from "@nestjs/testing";
-import { NotFoundException, ForbiddenException, BadRequestException } from "@nestjs/common";
+import { ForbiddenException, BadRequestException } from "@nestjs/common";
 import { DebtsService } from "../../src/core/application/debts/debts.service";
 import { DebtInterestCalculatorService } from "../../src/core/domain/services/debt-interest-calculator.service";
 import {
@@ -8,7 +8,11 @@ import {
 } from "../../src/core/domain/repositories/debt.repository.interface";
 import { DebtEntity } from "../../src/core/domain/entities/debt.entity";
 import { DebtAmortizationEntity } from "../../src/core/domain/entities/debt-amortization.entity";
-import { DebtPayoffStrategy, DebtStatus, InterestRateType } from "../../src/core/domain/types/debt.types";
+import {
+  DebtPayoffStrategy,
+  DebtStatus,
+  InterestRateType,
+} from "../../src/core/domain/types/debt.types";
 
 describe("DebtsService (Application Core)", () => {
   let service: DebtsService;
@@ -133,7 +137,10 @@ describe("DebtsService (Application Core)", () => {
 
   describe("Regla de Inmutabilidad al 100% (update y delete)", () => {
     it("debe actualizar una deuda activa que no esté blindada", async () => {
-      const activeDebt = createMockDebt({ isImmutable: false, status: DebtStatus.ACTIVE });
+      const activeDebt = createMockDebt({
+        isImmutable: false,
+        status: DebtStatus.ACTIVE,
+      });
       debtRepo.findById.mockResolvedValue(activeDebt);
       debtRepo.update.mockResolvedValue(
         createMockDebt({ concept: "Concepto Modificado" }),
@@ -155,7 +162,9 @@ describe("DebtsService (Application Core)", () => {
       debtRepo.findById.mockResolvedValue(paidDebt);
 
       await expect(
-        service.updateDebt(mockUserId, "debt-1", { concept: "Cambio Prohibido" }),
+        service.updateDebt(mockUserId, "debt-1", {
+          concept: "Cambio Prohibido",
+        }),
       ).rejects.toThrow(ForbiddenException);
     });
 
@@ -167,9 +176,9 @@ describe("DebtsService (Application Core)", () => {
       });
       debtRepo.findById.mockResolvedValue(paidDebt);
 
-      await expect(
-        service.deleteDebt(mockUserId, "debt-1"),
-      ).rejects.toThrow(ForbiddenException);
+      await expect(service.deleteDebt(mockUserId, "debt-1")).rejects.toThrow(
+        ForbiddenException,
+      );
     });
   });
 

@@ -45,7 +45,9 @@ export class DebtEntity {
    * Indica si la deuda ha sido liquidada al 100%
    */
   get isFullyPaid(): boolean {
-    return this.status === DebtStatus.PAID_OFF || this.remainingAmountCents <= 0n;
+    return (
+      this.status === DebtStatus.PAID_OFF || this.remainingAmountCents <= 0n
+    );
   }
 
   /**

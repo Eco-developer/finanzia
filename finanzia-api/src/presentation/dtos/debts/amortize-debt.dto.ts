@@ -12,7 +12,8 @@ import { Type } from "class-transformer";
 export class AmortizeDebtDto {
   @ApiProperty({
     example: 50000,
-    description: "Importe total a amortizar en céntimos enteros (ej. 50000 = 500,00 €)",
+    description:
+      "Importe total a amortizar en céntimos enteros (ej. 50000 = 500,00 €)",
   })
   @Type(() => Number)
   @IsInt({ message: "El importe a amortizar debe ser un entero en céntimos" })
@@ -30,7 +31,8 @@ export class AmortizeDebtDto {
 
   @ApiPropertyOptional({
     example: "2026-09-25T10:00:00.000Z",
-    description: "Fecha efectiva del pago (ISO 8601). Por defecto la fecha actual.",
+    description:
+      "Fecha efectiva del pago (ISO 8601). Por defecto la fecha actual.",
   })
   @IsOptional()
   @IsDateString()

@@ -35,7 +35,8 @@ export class CreateDebtDto {
 
   @ApiProperty({
     example: 1000000,
-    description: "Importe original total en céntimos (ej. 1000000 = 10.000,00 €)",
+    description:
+      "Importe original total en céntimos (ej. 1000000 = 10.000,00 €)",
   })
   @Type(() => Number)
   @IsInt({ message: "El importe debe ser un entero en céntimos" })
@@ -76,7 +77,8 @@ export class CreateDebtDto {
 
   @ApiPropertyOptional({
     example: 22000,
-    description: "Cuota mensual pactada o mínima obligatoria en céntimos (ej. 22000 = 220,00 €)",
+    description:
+      "Cuota mensual pactada o mínima obligatoria en céntimos (ej. 22000 = 220,00 €)",
   })
   @IsOptional()
   @Type(() => Number)

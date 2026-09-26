@@ -39,7 +39,10 @@ export class DebtsService {
     private readonly calculator: DebtInterestCalculatorService,
   ) {}
 
-  async createDebt(userId: string, dto: CreateDebtDto): Promise<DebtResponseDto> {
+  async createDebt(
+    userId: string,
+    dto: CreateDebtDto,
+  ): Promise<DebtResponseDto> {
     const initialAmountCents = BigInt(dto.initialAmountCents);
     const remainingAmountCents =
       dto.remainingAmountCents !== undefined
@@ -85,7 +88,9 @@ export class DebtsService {
   async getActiveDebts(userId: string): Promise<ActiveDebtsResponseDto> {
     const allDebts = await this.debtRepo.findByUserId(userId);
     const activeDebts = allDebts.filter((d) => d.status === DebtStatus.ACTIVE);
-    const paidOffDebts = allDebts.filter((d) => d.status === DebtStatus.PAID_OFF);
+    const paidOffDebts = allDebts.filter(
+      (d) => d.status === DebtStatus.PAID_OFF,
+    );
 
     let totalRemainingCents = 0n;
     let totalInitialCents = 0n;
@@ -113,8 +118,7 @@ export class DebtsService {
       totalMonthlyCommitmentCents += minPayment;
 
       // Ponderación de tasa
-      weightedRateSum +=
-        BigInt(d.annualRateBasisPts) * d.remainingAmountCents;
+      weightedRateSum += BigInt(d.annualRateBasisPts) * d.remainingAmountCents;
     }
 
     const weightedAverageRateBasisPts =
@@ -248,7 +252,9 @@ export class DebtsService {
 
     const amountCents = BigInt(dto.amountCents);
     if (amountCents <= 0n) {
-      throw new BadRequestException("El importe a amortizar debe ser mayor que cero.");
+      throw new BadRequestException(
+        "El importe a amortizar debe ser mayor que cero.",
+      );
     }
 
     // Calcular el desglose entre intereses y capital
@@ -321,7 +327,10 @@ export class DebtsService {
     userId: string,
     dto: SimulatePayoffDto,
   ): Promise<DebtPayoffPlanResult> {
-    const allDebts = await this.debtRepo.findByUserId(userId, DebtStatus.ACTIVE);
+    const allDebts = await this.debtRepo.findByUserId(
+      userId,
+      DebtStatus.ACTIVE,
+    );
     const extraMonthlyCents = BigInt(dto.extraMonthlyCents);
     const strategy = dto.strategy ?? DebtPayoffStrategy.AVALANCHE;
 

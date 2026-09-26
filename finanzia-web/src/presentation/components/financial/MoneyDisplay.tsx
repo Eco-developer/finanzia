@@ -3,8 +3,8 @@ import { formatCentsToCurrency } from '@/core/domain/formatters/money.formatter'
 import styles from './MoneyDisplay.module.css';
 
 export interface MoneyDisplayProps {
-  cents?: number | bigint;
-  amountCents?: number | bigint;
+  cents?: number | bigint | string;
+  amountCents?: number | bigint | string;
   currency?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showSign?: boolean;
@@ -30,7 +30,7 @@ export const MoneyDisplay: React.FC<MoneyDisplayProps> = ({
   className = ''
 }) => {
   const value = cents !== undefined ? cents : (amountCents !== undefined ? amountCents : 0);
-  const numCents = typeof value === 'bigint' ? Number(value) : value;
+  const numCents = typeof value === 'bigint' ? Number(value) : (typeof value === 'string' ? Number(value) : value);
   const formatted = formatCentsToCurrency(numCents, { currency, showSign });
 
   let toneClass = styles.neutral;
