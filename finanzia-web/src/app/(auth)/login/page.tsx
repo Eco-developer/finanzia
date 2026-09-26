@@ -29,9 +29,17 @@ export default function LoginPage() {
 
     try {
       setIsLoading(true);
-      await login({ email, password });
+      const normalizedEmail = email.trim().toLowerCase();
+      await login({ email: normalizedEmail, password });
       router.push('/');
     } catch (err: any) {
+      if (err?.errorCode === 'EMAIL_NOT_VERIFIED') {
+        const normalizedEmail = email.trim().toLowerCase();
+        router.push(
+          `/verify-email?email=${encodeURIComponent(normalizedEmail)}&unverified=true`
+        );
+        return;
+      }
       setError(err.message || 'Error al iniciar sesión. Revisa tus credenciales.');
     } finally {
       setIsLoading(false);

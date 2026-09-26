@@ -22,6 +22,17 @@ services:
     networks:
       - finanzia-network
 
+  # Servidor SMTP Local Mailpit para verificación de correos (Zero Cloud Dependencies)
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: finanzia-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - finanzia-network
+
   # API Backend NestJS
   api:
     build:
@@ -32,6 +43,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
     command: sh -c "npx prisma db push && npm run start:dev"
     environment:
       PORT: 3001
@@ -39,6 +52,13 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-finanzia_user}:${POSTGRES_PASSWORD:-finanzia_password}@postgres:5432/${POSTGRES_DB:-finanzia_db}?schema=public
       JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_finanzia_super_secure_32_chars}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_FROM: ${SMTP_FROM:-FinanZIA <noreply@finanzia.local>}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - "3001:3001"
     volumes:

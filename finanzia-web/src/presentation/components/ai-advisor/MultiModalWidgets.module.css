@@ -1,0 +1,398 @@
+.widgetContainer {
+  margin: 12px 0 6px 0;
+  background: rgba(24, 24, 27, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.widgetTitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #e4e4e7;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Category Bars */
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.categoryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.categoryMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.76rem;
+}
+
+.categoryName {
+  color: #d4d4d8;
+  font-weight: 500;
+}
+
+.categoryAmount {
+  color: #f4f4f5;
+  font-weight: 600;
+}
+
+.categoryTrack {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.categoryBar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #6366f1, #a855f7);
+  transition: width 0.4s ease;
+}
+
+/* Goal Progress */
+.goalsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.goalCard {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.goalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.goalName {
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.goalBadge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.goalAmounts {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  margin-top: 4px;
+}
+
+.goalTrack {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.goalBar {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  transition: width 0.4s ease;
+}
+
+/* Plan Card */
+.planCard {
+  background: rgba(99, 102, 241, 0.08);
+  border: 1px solid rgba(99, 102, 241, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.planMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.planMetricBox {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 6px 8px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.planMetricLabel {
+  font-size: 0.68rem;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.planMetricValue {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #818cf8;
+}
+
+.planCutsTitle {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #fbbf24;
+  margin-bottom: 6px;
+}
+
+.planCutItem {
+  font-size: 0.72rem;
+  color: #d4d4d8;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Budget Confirmation Card */
+.budgetConfirmCard {
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.budgetConfirmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.budgetCategoryBadge {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.budgetPeriodText {
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  font-weight: 500;
+}
+
+.budgetConfirmAmount {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4f4f5;
+  margin: 6px 0;
+}
+
+.budgetAlertNote {
+  font-size: 0.72rem;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+  padding: 5px 8px;
+  margin-top: 6px;
+}
+
+/* Transaction Confirmation Card */
+.transactionConfirmCard {
+  background: rgba(24, 24, 27, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.transactionConfirmHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.transactionDescription {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #fafafa;
+}
+
+.incomeBadge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.expenseBadge {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.15);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.transactionMetaRow {
+  display: flex;
+  gap: 12px;
+  font-size: 0.72rem;
+  color: #a1a1aa;
+  margin-bottom: 8px;
+}
+
+.balanceUpdatedRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  color: #d4d4d8;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+.balanceUpdatedRow strong {
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+/* Proposal Card (Human-in-the-Loop) */
+.proposalCard {
+  background: rgba(24, 24, 27, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.proposalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.proposalTypeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid;
+}
+
+.proposalHumanLoopTag {
+  font-size: 0.68rem;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.proposalTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f4f4f5;
+  line-height: 1.35;
+}
+
+.proposalDetails {
+  font-size: 0.75rem;
+  color: #a1a1aa;
+  line-height: 1.45;
+}
+
+.proposalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.proposalApplyBtn {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 0.76rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposalApplyBtn:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.proposalRejectBtn {
+  background: transparent;
+  color: #a1a1aa;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.proposalRejectBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.proposalSuccessMsg {
+  font-size: 0.75rem;
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+.proposalRejectedMsg {
+  font-size: 0.75rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+

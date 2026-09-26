@@ -12,6 +12,15 @@ import {
 import { Type } from "class-transformer";
 
 export class CommitRowDto {
+  @ApiPropertyOptional({
+    description: "ID opcional de la cuenta receptora para este movimiento",
+    example: "a8e10d8a-8671-46bb-9bd9-3c721c56ef9a",
+    nullable: true,
+  })
+  @IsOptional()
+  @IsUUID("4")
+  accountId?: string;
+
   @ApiProperty({
     description:
       "Fecha de la transacción bancaria (formato ISO 8601 o YYYY-MM-DD)",

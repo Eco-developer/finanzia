@@ -3,20 +3,30 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/presentation/context/auth.context';
-import { LogOut } from 'lucide-react';
+import { LogOut, X } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
   activeSection?: string;
   onNavigateSection?: (section: string) => void;
+  isOpenMobile?: boolean;
+  onCloseMobile?: () => void;
 }
 
-export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: SidebarProps) {
+export function Sidebar({
+  activeSection = 'dashboard',
+  onNavigateSection,
+  isOpenMobile = false,
+  onCloseMobile,
+}: SidebarProps) {
   const { user, logout } = useAuth();
 
   const handleNavClick = (sectionKey: string, href?: string) => {
     if (onNavigateSection && !href) {
       onNavigateSection(sectionKey);
+    }
+    if (onCloseMobile) {
+      onCloseMobile();
     }
   };
 
@@ -26,18 +36,43 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
     : 'Usuario FinanZIA';
 
   return (
-    <aside className={styles.sidebar}>
-      <div>
-        {/* Brand Header */}
-        <div className={styles.brand}>
-          <div className={styles.brandIcon}>⚡</div>
-          <div className={styles.brandInfo}>
-            <div className={styles.brandTitle}>
-              Finan<span>ZIA</span>
+    <>
+      {/* Backdrop semi-transparente para móvil/tablet */}
+      <div
+        className={`${styles.backdrop} ${isOpenMobile ? styles.backdropOpen : ''}`}
+        onClick={onCloseMobile}
+        aria-hidden="true"
+      />
+
+      <aside
+        className={`${styles.sidebar} ${isOpenMobile ? styles.sidebarOpen : ''}`}
+      >
+        <div>
+          {/* Brand Header */}
+          <div className={styles.brand}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
+              <div className={styles.brandIcon}>⚡</div>
+              <div className={styles.brandInfo}>
+                <div className={styles.brandTitle}>
+                  Finan<span>ZIA</span>
+                </div>
+                <div className={styles.brandSubtitle}>IA VERIFICABLE</div>
+              </div>
             </div>
-            <div className={styles.brandSubtitle}>IA VERIFICABLE</div>
+
+            {/* Botón cerrar para móvil */}
+            {onCloseMobile && (
+              <button
+                type="button"
+                className={styles.closeBtn}
+                onClick={onCloseMobile}
+                aria-label="Cerrar menú lateral"
+                title="Cerrar menú"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
-        </div>
 
         {/* Navigation Menu */}
         <nav className={styles.navMenu}>
@@ -52,27 +87,16 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
             <span>Dashboard</span>
           </Link>
 
-          <button
-            type="button"
+          <Link
+            href="/accounts"
             className={`${styles.navItem} ${
               activeSection === 'accounts' ? styles.navItemActive : ''
             }`}
-            onClick={() => handleNavClick('accounts')}
+            onClick={() => handleNavClick('accounts', '/accounts')}
           >
             <span className={styles.navIcon}>💳</span>
             <span>Cuentas y Tarjetas</span>
-          </button>
-
-          <button
-            type="button"
-            className={`${styles.navItem} ${
-              activeSection === 'transactions' ? styles.navItemActive : ''
-            }`}
-            onClick={() => handleNavClick('transactions')}
-          >
-            <span className={styles.navIcon}>↕️</span>
-            <span>Transacciones</span>
-          </button>
+          </Link>
 
           <Link
             href="/budgets"
@@ -136,5 +160,6 @@ export function Sidebar({ activeSection = 'dashboard', onNavigateSection }: Side
         </div>
       </div>
     </aside>
-  );
+  </>
+);
 }

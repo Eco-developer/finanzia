@@ -66,6 +66,7 @@ describe("TransactionsService (Unit Tests)", () => {
       findAllByUserId: jest.fn(),
       findById: jest.fn(),
       deleteTransactionWithBalance: jest.fn(),
+      updateTransactionWithBalance: jest.fn(),
     };
 
     mockAccountRepository = {
@@ -418,6 +419,292 @@ describe("TransactionsService (Unit Tests)", () => {
         mockTransactionRepository.deleteTransactionWithBalance,
       ).toHaveBeenCalledWith("tx-1");
       expect(result.deletedId).toBe("tx-1");
+    });
+
+    it("debe eliminar múltiples transacciones y acumular cuentas afectadas", async () => {
+      const tx1 = new TransactionEntity(
+        "tx-1",
+        "user-owner-id",
+        "acc-owner-1",
+        null,
+        BigInt(-5000),
+        TransactionType.EXPENSE,
+        new Date(),
+        "Prueba 1",
+        null,
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+      const tx2 = new TransactionEntity(
+        "tx-2",
+        "user-owner-id",
+        "acc-owner-2",
+        null,
+        BigInt(-3000),
+        TransactionType.EXPENSE,
+        new Date(),
+        "Prueba 2",
+        null,
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      mockTransactionRepository.findById.mockImplementation((id: string) => {
+        if (id === "tx-1") return Promise.resolve(tx1);
+        if (id === "tx-2") return Promise.resolve(tx2);
+        return Promise.resolve(null);
+      });
+      mockTransactionRepository.deleteTransactionWithBalance.mockImplementation(
+        (id: string) =>
+          Promise.resolve({
+            deletedId: id,
+            affectedAccountIds:
+              id === "tx-1" ? ["acc-owner-1"] : ["acc-owner-2"],
+          }),
+      );
+
+      const result = await transactionsService.deleteMultipleTransactions(
+        "user-owner-id",
+        ["tx-1", "tx-2"],
+      );
+
+      expect(result.deletedCount).toBe(2);
+      expect(result.affectedAccountIds).toContain("acc-owner-1");
+      expect(result.affectedAccountIds).toContain("acc-owner-2");
+    });
+  });
+
+  describe("Modificación de transacciones (updateTransaction)", () => {
+    it("debe actualizar concepto e importe y sincronizar saldos", async () => {
+      const existingTx = new TransactionEntity(
+        "tx-1",
+        "user-owner-id",
+        "acc-owner-1",
+        null,
+        BigInt(-5000),
+        TransactionType.EXPENSE,
+        new Date(),
+        "Concepto Original",
+        null,
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      const updatedTx = new TransactionEntity(
+        "tx-1",
+        "user-owner-id",
+        "acc-owner-1",
+        null,
+        BigInt(-7500),
+        TransactionType.EXPENSE,
+        new Date(),
+        "Concepto Modificado",
+        null,
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      mockTransactionRepository.findById.mockResolvedValue(existingTx);
+      mockTransactionRepository.updateTransactionWithBalance.mockResolvedValue({
+        transaction: updatedTx,
+        affectedAccountIds: ["acc-owner-1"],
+      });
+
+      const result = await transactionsService.updateTransaction(
+        "user-owner-id",
+        "tx-1",
+        {
+          description: "Concepto Modificado",
+          amountCents: 7500,
+        },
+      );
+
+      expect(result.transaction.description).toBe("Concepto Modificado");
+      expect(result.transaction.amountCents).toBe(-7500);
+      expect(
+        mockTransactionRepository.updateTransactionWithBalance,
+      ).toHaveBeenCalledWith(
+        "tx-1",
+        expect.objectContaining({
+          description: "Concepto Modificado",
+          amountCents: -7500n,
+        }),
+      );
+    });
+
+    it("debe rechazar la modificación de una transferencia directa", async () => {
+      const transferTx = new TransactionEntity(
+        "tx-transfer-1",
+        "user-owner-id",
+        "acc-owner-1",
+        null,
+        BigInt(-5000),
+        TransactionType.TRANSFER,
+        new Date(),
+        "Traspaso",
+        null,
+        false,
+        "tx-transfer-2",
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      mockTransactionRepository.findById.mockResolvedValue(transferTx);
+
+      await expect(
+        transactionsService.updateTransaction(
+          "user-owner-id",
+          "tx-transfer-1",
+          {
+            description: "Cambio no permitido",
+          },
+        ),
+      ).rejects.toThrow(InvalidTransferException);
+    });
+  });
+
+  describe("getTransactions con paginación y filtros", () => {
+    it("debe retornar transacciones paginadas con valores por defecto (page=1, limit=20)", async () => {
+      const mockTx = new TransactionEntity(
+        "tx-page-1",
+        "user-owner-id",
+        "acc-owner-1",
+        "cat-owner-1",
+        BigInt(-2500),
+        TransactionType.EXPENSE,
+        new Date("2026-09-15T10:00:00.000Z"),
+        "Cena",
+        null,
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      mockTransactionRepository.findAllByUserId.mockResolvedValue({
+        transactions: [mockTx],
+        totalRecords: 1,
+      });
+
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {},
+      );
+
+      expect(result.page).toBe(1);
+      expect(result.limit).toBe(20);
+      expect(result.totalRecords).toBe(1);
+      expect(result.totalPages).toBe(1);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe("tx-page-1");
+      expect(mockTransactionRepository.findAllByUserId).toHaveBeenCalledWith(
+        "user-owner-id",
+        expect.objectContaining({
+          page: 1,
+          limit: 20,
+        }),
+      );
+    });
+
+    it("debe respetar parámetros de paginación personalizados (page=3, limit=10) y calcular totalPages", async () => {
+      mockTransactionRepository.findAllByUserId.mockResolvedValue({
+        transactions: [],
+        totalRecords: 45,
+      });
+
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          page: 3,
+          limit: 10,
+        },
+      );
+
+      expect(result.page).toBe(3);
+      expect(result.limit).toBe(10);
+      expect(result.totalRecords).toBe(45);
+      expect(result.totalPages).toBe(5); // Math.ceil(45 / 10) = 5
+      expect(mockTransactionRepository.findAllByUserId).toHaveBeenCalledWith(
+        "user-owner-id",
+        expect.objectContaining({
+          page: 3,
+          limit: 10,
+        }),
+      );
+    });
+
+    it("debe garantizar que totalPages sea al menos 1 cuando totalRecords es 0", async () => {
+      mockTransactionRepository.findAllByUserId.mockResolvedValue({
+        transactions: [],
+        totalRecords: 0,
+      });
+
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          page: 1,
+          limit: 10,
+        },
+      );
+
+      expect(result.totalRecords).toBe(0);
+      expect(result.totalPages).toBe(1);
+    });
+
+    it("debe verificar que la cuenta pertenezca al usuario si se filtra por accountId", async () => {
+      mockAccountRepository.findById.mockResolvedValue(mockAccount);
+      mockTransactionRepository.findAllByUserId.mockResolvedValue({
+        transactions: [],
+        totalRecords: 0,
+      });
+
+      const result = await transactionsService.getTransactions(
+        "user-owner-id",
+        {
+          accountId: "acc-owner-1",
+        },
+      );
+
+      expect(mockAccountRepository.findById).toHaveBeenCalledWith(
+        "acc-owner-1",
+      );
+      expect(result.totalRecords).toBe(0);
+    });
+
+    it("debe rechazar la consulta si la cuenta pertenece a otro usuario", async () => {
+      const foreignAccount = new AccountEntity(
+        "acc-foreign",
+        "other-user",
+        "Cuenta Ajena",
+        AccountType.CHECKING,
+        BigInt(10000),
+        BigInt(10000),
+        "EUR",
+        false,
+        new Date(),
+        new Date(),
+      );
+      mockAccountRepository.findById.mockResolvedValue(foreignAccount);
+
+      await expect(
+        transactionsService.getTransactions("user-owner-id", {
+          accountId: "acc-foreign",
+        }),
+      ).rejects.toThrow(UnauthorizedAccountAccessException);
     });
   });
 });

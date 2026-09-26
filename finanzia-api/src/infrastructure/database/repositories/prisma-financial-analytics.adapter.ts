@@ -5,9 +5,33 @@ import {
   CategoryExpenseItem,
   BudgetStatusItem,
   ProposeRecommendationResult,
+  TotalBalancesResult,
+  SavingsGoalItem,
+  HistoricalBaselineResult,
+  ProactiveInsightItem,
 } from "../../../core/application/ai/ai-tools.service";
 import { IFinancialAnalyticsPort } from "../../../core/application/ports/financial-analytics.port";
 import { RecommendationType as PrismaRecommendationType } from "@prisma/client";
+
+const FIXED_EXPENSE_KEYWORDS = [
+  "alquiler",
+  "hipoteca",
+  "comunidad",
+  "iberdrola",
+  "endesa",
+  "naturgy",
+  "suministro",
+  "luz",
+  "gas",
+  "agua",
+  "seguro",
+  "salud",
+  "educacion",
+  "colegio",
+  "universidad",
+  "impuesto",
+  "tasa",
+];
 
 @Injectable()
 export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort {
@@ -236,6 +260,8 @@ export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort 
       validRecommendationType = PrismaRecommendationType.SAVINGS_BOOST;
     } else if (type === "EXPENSE_ALERT") {
       validRecommendationType = PrismaRecommendationType.EXPENSE_ALERT;
+    } else if (type === "GOAL_CREATION") {
+      validRecommendationType = PrismaRecommendationType.GOAL_CREATION;
     }
 
     const rec = await this.prisma.aiRecommendation.create({
@@ -254,6 +280,313 @@ export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort 
       status: "PROPOSED",
       type: validRecommendationType,
       title: rec.title,
+    };
+  }
+
+  async getAccountBalances(userId: string): Promise<TotalBalancesResult> {
+    const accounts = await this.prisma.account.findMany({
+      where: { userId, isArchived: false },
+      orderBy: { createdAt: "asc" },
+    });
+
+    const items = accounts.map((acc) => ({
+      accountId: acc.id,
+      name: acc.name,
+      type: acc.type,
+      currency: acc.currency,
+      balanceCents: Number(acc.currentBalanceCents),
+    }));
+
+    const totalBalanceCents = items.reduce(
+      (sum, acc) => sum + acc.balanceCents,
+      0,
+    );
+
+    return {
+      totalBalanceCents,
+      accounts: items,
+      currency: "EUR",
+    };
+  }
+
+  async getSavingsGoals(userId: string): Promise<SavingsGoalItem[]> {
+    const goals = await this.prisma.savingsGoal.findMany({
+      where: { userId },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return goals.map((g) => {
+      const target = Number(g.targetAmountCents);
+      const current = Number(g.currentAmountCents);
+      const progressPercent =
+        target > 0
+          ? Math.min(100, Number(((current / target) * 100).toFixed(1)))
+          : 0;
+
+      return {
+        goalId: g.id,
+        name: g.name,
+        targetAmountCents: target,
+        currentAmountCents: current,
+        progressPercent,
+        targetDate: g.targetDate ? g.targetDate.toISOString() : null,
+        isCompleted: g.isCompleted,
+      };
+    });
+  }
+
+  async getHistoricalBaseline(
+    userId: string,
+  ): Promise<HistoricalBaselineResult> {
+    const now = new Date();
+    const threeMonthsAgo = new Date(
+      Date.UTC(now.getFullYear(), now.getMonth() - 3, 1, 0, 0, 0),
+    );
+
+    const transactions = await this.prisma.transaction.findMany({
+      where: {
+        account: { userId },
+        transactionDate: { gte: threeMonthsAgo },
+      },
+      include: { category: true },
+    });
+
+    const monthsAnalyzed = 3;
+    let totalIncomeCents = 0;
+    let totalFixedExpensesCents = 0;
+    let totalVariableExpensesCents = 0;
+
+    const variableCatMap = new Map<
+      string,
+      { categoryId: string; categoryName: string; totalCents: number }
+    >();
+
+    for (const tx of transactions) {
+      const amount = Math.abs(Number(tx.amountCents));
+      if (tx.type === "INCOME") {
+        totalIncomeCents += amount;
+      } else if (tx.type === "EXPENSE") {
+        const catName = tx.category ? tx.category.name.toLowerCase() : "otros";
+        const isFixed = FIXED_EXPENSE_KEYWORDS.some((kw) =>
+          catName.includes(kw),
+        );
+
+        if (isFixed) {
+          totalFixedExpensesCents += amount;
+        } else {
+          totalVariableExpensesCents += amount;
+          const catId = tx.categoryId || "uncategorized";
+          const displayName = tx.category ? tx.category.name : "Otros Gastos";
+          const existing = variableCatMap.get(catId);
+          if (existing) {
+            existing.totalCents += amount;
+          } else {
+            variableCatMap.set(catId, {
+              categoryId: catId,
+              categoryName: displayName,
+              totalCents: amount,
+            });
+          }
+        }
+      }
+    }
+
+    const averageMonthlyIncomeCents = Math.round(
+      totalIncomeCents / monthsAnalyzed,
+    );
+    const averageMonthlyFixedExpensesCents = Math.round(
+      totalFixedExpensesCents / monthsAnalyzed,
+    );
+    const averageMonthlyVariableExpensesCents = Math.round(
+      totalVariableExpensesCents / monthsAnalyzed,
+    );
+    const averageMonthlyTotalExpensesCents =
+      averageMonthlyFixedExpensesCents + averageMonthlyVariableExpensesCents;
+    const averageMonthlyNetSavingsCents =
+      averageMonthlyIncomeCents - averageMonthlyTotalExpensesCents;
+    const averageSavingsRatePercent =
+      averageMonthlyIncomeCents > 0
+        ? Number(
+            (
+              (averageMonthlyNetSavingsCents / averageMonthlyIncomeCents) *
+              100
+            ).toFixed(1),
+          )
+        : 0;
+
+    const topVariableCategories = Array.from(variableCatMap.values())
+      .map((item) => {
+        const monthlyAverageCents = Math.round(
+          item.totalCents / monthsAnalyzed,
+        );
+        const percentageOfVariable =
+          averageMonthlyVariableExpensesCents > 0
+            ? Number(
+                (
+                  (monthlyAverageCents / averageMonthlyVariableExpensesCents) *
+                  100
+                ).toFixed(1),
+              )
+            : 0;
+        return {
+          categoryId: item.categoryId,
+          categoryName: item.categoryName,
+          monthlyAverageCents,
+          percentageOfVariable,
+        };
+      })
+      .sort((a, b) => b.monthlyAverageCents - a.monthlyAverageCents);
+
+    return {
+      monthsAnalyzed,
+      averageMonthlyIncomeCents,
+      averageMonthlyFixedExpensesCents,
+      averageMonthlyVariableExpensesCents,
+      averageMonthlyTotalExpensesCents,
+      averageMonthlyNetSavingsCents,
+      averageSavingsRatePercent,
+      topVariableCategories,
+    };
+  }
+
+  async getProactiveInsights(userId: string): Promise<ProactiveInsightItem[]> {
+    const insights: ProactiveInsightItem[] = [];
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+
+    const [baseline, currentExpenses, goals, budgets] = await Promise.all([
+      this.getHistoricalBaseline(userId),
+      this.getExpensesByCategory(
+        userId,
+        `${currentYear}-${String(currentMonth).padStart(2, "0")}-01`,
+        `${currentYear}-${String(currentMonth).padStart(2, "0")}-28`,
+      ),
+      this.getSavingsGoals(userId),
+      this.getBudgetStatus(userId, currentMonth, currentYear),
+    ]);
+
+    // 1. Detección de repuntes de gasto (+30% vs media histórica)
+    for (const cur of currentExpenses) {
+      const hist = baseline.topVariableCategories.find(
+        (b) => b.categoryId === cur.categoryId,
+      );
+      if (hist && hist.monthlyAverageCents > 2000) {
+        // Al menos 20€ de media para evitar ruido
+        const surgeRatio = cur.totalAmountCents / hist.monthlyAverageCents;
+        if (surgeRatio >= 1.3) {
+          const deviation = Math.round((surgeRatio - 1) * 100);
+          const curEur = (cur.totalAmountCents / 100)
+            .toFixed(2)
+            .replace(".", ",");
+          const histEur = (hist.monthlyAverageCents / 100)
+            .toFixed(2)
+            .replace(".", ",");
+          insights.push({
+            type: "EXPENSE_SURGE",
+            title: `Incremento de gasto en ${cur.categoryName}`,
+            description: `Este mes llevas ${curEur} € acumulados en ${cur.categoryName}, un +${deviation}% por encima de tu media habitual (${histEur} €/mes).`,
+            importance: deviation > 50 ? "HIGH" : "MEDIUM",
+            metric: {
+              label: "Desviación",
+              value: `+${deviation}%`,
+              deviationPercent: deviation,
+            },
+          });
+        }
+      }
+    }
+
+    // 2. Metas cercanas a cumplirse (>80% y no completadas)
+    for (const g of goals) {
+      if (!g.isCompleted && g.progressPercent >= 80) {
+        const remainingCents = g.targetAmountCents - g.currentAmountCents;
+        const remEur = (remainingCents / 100).toFixed(2).replace(".", ",");
+        insights.push({
+          type: "GOAL_PROGRESS",
+          title: `¡Cerca de cumplir "${g.name}"!`,
+          description: `Has alcanzado el ${g.progressPercent}% de tu objetivo. Con solo ${remEur} € más completarás esta meta con éxito.`,
+          importance: "HIGH",
+          metric: {
+            label: "Progreso",
+            value: `${g.progressPercent}%`,
+          },
+        });
+      }
+    }
+
+    // 3. Presupuestos en alerta o excedidos
+    for (const b of budgets) {
+      if (b.status === "EXCEEDED") {
+        insights.push({
+          type: "BUDGET_WARNING",
+          title: `Límite superado en ${b.categoryName}`,
+          description: `Has utilizado el ${b.percentageUsed}% de tu presupuesto fijado en ${b.categoryName}.`,
+          importance: "HIGH",
+        });
+      }
+    }
+
+    return insights;
+  }
+
+  async saveUserCategoryRule(
+    userId: string,
+    pattern: string,
+    categoryId: string,
+  ): Promise<{ id: string; pattern: string; categoryId: string }> {
+    const rule = await this.prisma.userCategoryRule.upsert({
+      where: {
+        userId_pattern: {
+          userId,
+          pattern,
+        },
+      },
+      create: {
+        userId,
+        pattern,
+        categoryId,
+      },
+      update: {
+        categoryId,
+      },
+    });
+
+    return {
+      id: rule.id,
+      pattern: rule.pattern,
+      categoryId: rule.categoryId,
+    };
+  }
+
+  async findUserCategoryRule(
+    userId: string,
+    pattern: string,
+  ): Promise<{
+    id: string;
+    pattern: string;
+    categoryId: string;
+    categoryName: string;
+  } | null> {
+    const rule = await this.prisma.userCategoryRule.findUnique({
+      where: {
+        userId_pattern: {
+          userId,
+          pattern,
+        },
+      },
+      include: {
+        category: true,
+      },
+    });
+
+    if (!rule) return null;
+
+    return {
+      id: rule.id,
+      pattern: rule.pattern,
+      categoryId: rule.categoryId,
+      categoryName: rule.category.name,
     };
   }
 }

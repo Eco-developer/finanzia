@@ -35,6 +35,8 @@ export default function AdvisorPage() {
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [isLoadingRecs, setIsLoadingRecs] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'recommendations' | 'history'>('chat');
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -114,6 +116,14 @@ export default function AdvisorPage() {
     setActiveConversationId(null);
     setMessages([]);
     setInputText('');
+    setActiveMobileTab('chat');
+  };
+
+  const handleBottomNavChange = (tabKey: string) => {
+    if (tabKey === 'dashboard') router.push('/');
+    else if (tabKey === 'transactions') router.push('/#transactions-section');
+    else if (tabKey === 'budgets') router.push('/budgets');
+    else if (tabKey === 'settings') setIsMobileMenuOpen(true);
   };
 
   const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
@@ -213,8 +223,60 @@ export default function AdvisorPage() {
 
   return (
     <div className={styles.layout}>
-      <Sidebar activeSection="advisor" />
-      <MobileTopBar />
+      <Sidebar
+        activeSection="advisor"
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
+
+      {/* Selector de pestañas para móvil / tablet (< 1024px) */}
+      <div className={styles.mobileTabsBar} role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMobileTab === 'chat'}
+          className={`${styles.tabBtn} ${
+            activeMobileTab === 'chat' ? styles.tabBtnActive : ''
+          }`}
+          onClick={() => setActiveMobileTab('chat')}
+        >
+          <span>💬</span>
+          <span>Chat</span>
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMobileTab === 'recommendations'}
+          className={`${styles.tabBtn} ${
+            activeMobileTab === 'recommendations' ? styles.tabBtnActive : ''
+          }`}
+          onClick={() => setActiveMobileTab('recommendations')}
+        >
+          <span>💡</span>
+          <span>Propuestas</span>
+          {recommendations.length > 0 && (
+            <span className={styles.tabBadge}>{recommendations.length}</span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeMobileTab === 'history'}
+          className={`${styles.tabBtn} ${
+            activeMobileTab === 'history' ? styles.tabBtnActive : ''
+          }`}
+          onClick={() => setActiveMobileTab('history')}
+        >
+          <span>📜</span>
+          <span>Historial</span>
+          {conversations.length > 0 && (
+            <span className={styles.tabBadge}>{conversations.length}</span>
+          )}
+        </button>
+      </div>
 
       <main className={styles.main}>
         {/* Toast Notification */}
@@ -235,7 +297,13 @@ export default function AdvisorPage() {
 
         <div className={styles.container}>
           {/* Columna Izquierda: Historial de Sesiones */}
-          <aside className={styles.historyPanel}>
+          <aside
+            className={`${styles.historyPanel} ${
+              activeMobileTab === 'history'
+                ? styles.panelVisibleOnMobile
+                : styles.panelHiddenOnMobile
+            }`}
+          >
             <div className={styles.historyHeader}>
               <h3 className={styles.historyTitle}>Historial</h3>
               <button
@@ -259,7 +327,10 @@ export default function AdvisorPage() {
                     <div
                       key={c.id}
                       className={`${styles.convItem} ${isActive ? styles.convItemActive : ''}`}
-                      onClick={() => setActiveConversationId(c.id)}
+                      onClick={() => {
+                        setActiveConversationId(c.id);
+                        setActiveMobileTab('chat');
+                      }}
                     >
                       <div className={styles.convInfo}>
                         <span className={styles.convTitle}>{c.title}</span>
@@ -283,7 +354,13 @@ export default function AdvisorPage() {
           </aside>
 
           {/* Columna Central: Chat Interactivo */}
-          <section className={styles.chatSection}>
+          <section
+            className={`${styles.chatSection} ${
+              activeMobileTab === 'chat'
+                ? styles.panelVisibleOnMobile
+                : styles.panelHiddenOnMobile
+            }`}
+          >
             <div className={styles.chatHeader}>
               <div className={styles.chatHeaderBrand}>
                 <div className={styles.sparkleIcon}>
@@ -296,8 +373,29 @@ export default function AdvisorPage() {
                   </p>
                 </div>
               </div>
-              <div className={styles.statusPill}>
-                <span className={styles.greenDot} /> Cero Alucinaciones
+
+              <div className={styles.chatHeaderActions}>
+                <button
+                  type="button"
+                  className={styles.headerActionBtn}
+                  onClick={handleStartNewConversation}
+                  title="Nueva consulta"
+                  aria-label="Nueva consulta"
+                >
+                  <Plus size={15} />
+                  <span className={styles.headerActionText}>Nueva</span>
+                </button>
+                {recommendations.length > 0 && (
+                  <button
+                    type="button"
+                    className={styles.headerRecsBadgeBtn}
+                    onClick={() => setActiveMobileTab('recommendations')}
+                    title="Ver propuestas pendientes"
+                  >
+                    <span>💡</span>
+                    <span>{recommendations.length}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -356,7 +454,7 @@ export default function AdvisorPage() {
                 <input
                   type="text"
                   className={styles.chatInput}
-                  placeholder="Pregúntale a FinanZIA (ej. ¿Cuánto he gastado este mes en restaurantes?)..."
+                  placeholder="Pregúntale a FinanZIA (ej. ¿Cuánto he gastado en restaurantes?)..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -372,11 +470,24 @@ export default function AdvisorPage() {
                   <Send size={18} />
                 </button>
               </div>
+
+              <div className={styles.legalDisclaimer}>
+                <span className={styles.legalIcon}>ℹ️</span>
+                <span>
+                  <strong>Aviso legal:</strong> FinanZIA AI Advisor ofrece información y análisis financiero personal. Sus propuestas no constituyen asesoramiento financiero regulado bajo MiFID II / CNMV. Ninguna acción se aplica sin tu aprobación explícita.
+                </span>
+              </div>
             </div>
           </section>
 
           {/* Columna Derecha: Recomendaciones Human-in-the-Loop */}
-          <aside className={styles.recommendationsPanel}>
+          <aside
+            className={`${styles.recommendationsPanel} ${
+              activeMobileTab === 'recommendations'
+                ? styles.panelVisibleOnMobile
+                : styles.panelHiddenOnMobile
+            }`}
+          >
             <div className={styles.recsHeader}>
               <div className={styles.recsHeaderTitle}>
                 <span className={styles.recsIcon}>💡</span>
@@ -422,7 +533,7 @@ export default function AdvisorPage() {
         </div>
       </main>
 
-      <MobileBottomNav activeTab="ai" />
+      <MobileBottomNav activeTab="ai" onTabChange={handleBottomNavChange} />
     </div>
   );
 }

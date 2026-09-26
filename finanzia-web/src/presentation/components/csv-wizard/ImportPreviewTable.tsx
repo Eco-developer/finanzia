@@ -24,6 +24,8 @@ export interface EnrichedRowItem {
   hash: string;
   isDuplicate: boolean;
   selected: boolean;
+  accountId: string;
+  type: 'EXPENSE' | 'INCOME';
   categoryId: string | null;
 }
 
@@ -33,6 +35,12 @@ export interface CategorySelectItem {
   type: string;
   parentId?: string | null;
   icon?: string | null;
+}
+
+export interface AccountSelectItem {
+  id: string;
+  name: string;
+  currency?: string;
 }
 
 export interface ImportPreviewTableProps {
@@ -45,7 +53,10 @@ export interface ImportPreviewTableProps {
     preview: RowPreviewResult;
   }>;
   categories: CategorySelectItem[];
+  accounts: AccountSelectItem[];
+  defaultAccountId?: string;
   onCommit: (selectedRows: Array<{
+    accountId?: string;
     date: string;
     description: string;
     amountCents: number;
@@ -59,25 +70,49 @@ export interface ImportPreviewTableProps {
 export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
   initialRows,
   categories,
+  accounts,
+  defaultAccountId,
   onCommit,
   onBack,
   isCommitting = false,
 }) => {
+  const fallbackAccountId = defaultAccountId || accounts[0]?.id || '';
+
   const [rows, setRows] = useState<EnrichedRowItem[]>(() =>
-    initialRows.map((item) => ({
-      rowId: item.rowId,
-      date: item.date,
-      description: item.description,
-      amountCents: item.amountCents,
-      hash: item.hash,
-      isDuplicate: item.preview?.isDuplicate ?? false,
-      // Duplicados desmarcados por defecto conforme a CA-03.4
-      selected: !item.preview?.isDuplicate,
-      categoryId: item.preview?.suggestedCategoryId || null,
-    })),
+    initialRows.map((item) => {
+      // Inferencia inteligente de tipo: comprobar sugerencia o signo de importe
+      const suggestedCat = item.preview?.suggestedCategoryId
+        ? categories.find((c) => c.id === item.preview.suggestedCategoryId)
+        : null;
+
+      let inferredType: 'EXPENSE' | 'INCOME' = 'EXPENSE';
+      if (suggestedCat) {
+        inferredType = suggestedCat.type === 'INCOME' ? 'INCOME' : 'EXPENSE';
+      } else {
+        inferredType = item.amountCents >= 0 ? 'INCOME' : 'EXPENSE';
+      }
+
+      return {
+        rowId: item.rowId,
+        date: item.date,
+        description: item.description,
+        amountCents: item.amountCents,
+        hash: item.hash,
+        isDuplicate: item.preview?.isDuplicate ?? false,
+        selected: !item.preview?.isDuplicate,
+        accountId: fallbackAccountId,
+        type: inferredType,
+        categoryId: item.preview?.suggestedCategoryId || null,
+      };
+    }),
   );
 
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Estados de herramientas masivas
+  const [bulkAccount, setBulkAccount] = useState('');
+  const [bulkType, setBulkType] = useState<'EXPENSE' | 'INCOME' | ''>('');
+  const [bulkCategory, setBulkCategory] = useState('');
 
   // Estadísticas KPI
   const stats = useMemo(() => {
@@ -169,6 +204,83 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
     );
   };
 
+  const handleTypeChange = (rowId: string, newType: 'EXPENSE' | 'INCOME') => {
+    setRows((prev) =>
+      prev.map((r) => {
+        if (r.rowId !== rowId) return r;
+
+        // Invertir o ajustar el signo de amountCents
+        const absVal = Math.abs(r.amountCents);
+        const newAmountCents = newType === 'INCOME' ? absVal : -absVal;
+
+        // Comprobar si la categoría actual sigue perteneciendo al nuevo tipo
+        let newCategoryId = r.categoryId;
+        if (newCategoryId) {
+          const cat = categories.find((c) => c.id === newCategoryId);
+          if (cat && cat.type !== newType) {
+            newCategoryId = null;
+          }
+        }
+
+        return {
+          ...r,
+          type: newType,
+          amountCents: newAmountCents,
+          categoryId: newCategoryId,
+        };
+      }),
+    );
+  };
+
+  const handleAccountChange = (rowId: string, accId: string) => {
+    setRows((prev) =>
+      prev.map((r) => (r.rowId === rowId ? { ...r, accountId: accId } : r)),
+    );
+  };
+
+  const handleApplyBulk = () => {
+    if (!bulkAccount && !bulkType && !bulkCategory) return;
+
+    setRows((prev) =>
+      prev.map((r) => {
+        if (!r.selected) return r;
+
+        let newAcc = r.accountId;
+        let newType = r.type;
+        let newAmount = r.amountCents;
+        let newCat = r.categoryId;
+
+        if (bulkAccount) {
+          newAcc = bulkAccount;
+        }
+
+        if (bulkType) {
+          newType = bulkType;
+          const absVal = Math.abs(r.amountCents);
+          newAmount = bulkType === 'INCOME' ? absVal : -absVal;
+          if (newCat) {
+            const cat = categories.find((c) => c.id === newCat);
+            if (cat && cat.type !== bulkType) {
+              newCat = null;
+            }
+          }
+        }
+
+        if (bulkCategory !== '') {
+          newCat = bulkCategory;
+        }
+
+        return {
+          ...r,
+          accountId: newAcc,
+          type: newType,
+          amountCents: newAmount,
+          categoryId: newCat,
+        };
+      }),
+    );
+  };
+
   // Filtrado por buscador
   const filteredRows = useMemo(() => {
     if (!searchTerm.trim()) return rows;
@@ -180,6 +292,7 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
     const selected = rows
       .filter((r) => r.selected)
       .map((r) => ({
+        accountId: r.accountId,
         date: r.date,
         description: r.description,
         amountCents: r.amountCents,
@@ -249,6 +362,72 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
         </div>
       </div>
 
+      {/* Herramientas de Asignación Masiva */}
+      {stats.selectedCount > 0 && (
+        <div className={styles.bulkToolsBar}>
+          <span className={styles.bulkToolsLabel}>
+            <Tag size={15} /> Asignar a seleccionadas ({stats.selectedCount}):
+          </span>
+
+          <select
+            className={styles.bulkSelect}
+            value={bulkAccount}
+            onChange={(e) => setBulkAccount(e.target.value)}
+          >
+            <option value="">-- Asignar cuenta --</option>
+            {accounts.map((acc) => (
+              <option key={acc.id} value={acc.id}>
+                {acc.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            className={styles.bulkSelect}
+            value={bulkType}
+            onChange={(e) => {
+              const val = e.target.value as 'EXPENSE' | 'INCOME' | '';
+              setBulkType(val);
+              setBulkCategory('');
+            }}
+          >
+            <option value="">-- Asignar tipo --</option>
+            <option value="INCOME">🟢 Ingreso</option>
+            <option value="EXPENSE">🔴 Gasto</option>
+          </select>
+
+          <select
+            className={styles.bulkSelect}
+            value={bulkCategory}
+            onChange={(e) => setBulkCategory(e.target.value)}
+            disabled={!bulkType}
+          >
+            <option value="">-- Asignar categoría --</option>
+            {bulkType === 'EXPENSE' &&
+              expenseCategories.map(({ category, formattedName }) => (
+                <option key={category.id} value={category.id}>
+                  {formattedName}
+                </option>
+              ))}
+            {bulkType === 'INCOME' &&
+              incomeCategories.map(({ category, formattedName }) => (
+                <option key={category.id} value={category.id}>
+                  {formattedName}
+                </option>
+              ))}
+          </select>
+
+          <button
+            type="button"
+            className={styles.bulkApplyBtn}
+            onClick={handleApplyBulk}
+            disabled={!bulkAccount && !bulkType && !bulkCategory}
+          >
+            Aplicar
+          </button>
+        </div>
+      )}
+
       {/* Interactive Table */}
       <div className={styles.tableContainer}>
         <div className={styles.tableWrapper}>
@@ -263,11 +442,13 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                     onChange={(e) => (e.target.checked ? selectAll() : deselectAll())}
                   />
                 </th>
-                <th style={{ width: '130px' }}>Estado</th>
-                <th style={{ width: '120px' }}>Fecha</th>
+                <th style={{ width: '110px' }}>Estado</th>
+                <th style={{ width: '100px' }}>Fecha</th>
                 <th>Concepto / Descripción</th>
-                <th style={{ width: '200px' }}>Categoría Sugerida</th>
-                <th style={{ textAlign: 'right', width: '140px' }}>Importe</th>
+                <th style={{ width: '160px' }}>Cuenta</th>
+                <th style={{ width: '120px' }}>Tipo</th>
+                <th style={{ width: '200px' }}>Categoría</th>
+                <th style={{ textAlign: 'right', width: '120px' }}>Importe</th>
               </tr>
             </thead>
             <tbody>
@@ -275,10 +456,10 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                 const parsedDate = new Date(row.date);
                 const formattedDate = !isNaN(parsedDate.getTime())
                   ? parsedDate.toLocaleDateString('es-ES', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })
                   : row.date;
 
                 return (
@@ -309,29 +490,47 @@ export const ImportPreviewTable: React.FC<ImportPreviewTableProps> = ({
                     <td style={{ fontWeight: 500 }}>{row.description}</td>
                     <td>
                       <select
+                        className={styles.accountSelectInRow}
+                        value={row.accountId}
+                        onChange={(e) => handleAccountChange(row.rowId, e.target.value)}
+                      >
+                        {accounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                    <td>
+                      <select
+                        className={styles.typeSelectInRow}
+                        value={row.type}
+                        onChange={(e) =>
+                          handleTypeChange(row.rowId, e.target.value as 'EXPENSE' | 'INCOME')
+                        }
+                      >
+                        <option value="INCOME">🟢 Ingreso</option>
+                        <option value="EXPENSE">🔴 Gasto</option>
+                      </select>
+                    </td>
+                    <td>
+                      <select
                         className={styles.categorySelect}
                         value={row.categoryId || ''}
                         onChange={(e) => handleCategoryChange(row.rowId, e.target.value)}
                       >
                         <option value="">-- Sin categoría --</option>
-                        {expenseCategories.length > 0 && (
-                          <optgroup label="🔴 GASTOS">
-                            {expenseCategories.map(({ category, formattedName }) => (
-                              <option key={category.id} value={category.id}>
-                                {formattedName}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
-                        {incomeCategories.length > 0 && (
-                          <optgroup label="🟢 INGRESOS">
-                            {incomeCategories.map(({ category, formattedName }) => (
-                              <option key={category.id} value={category.id}>
-                                {formattedName}
-                              </option>
-                            ))}
-                          </optgroup>
-                        )}
+                        {row.type === 'EXPENSE'
+                          ? expenseCategories.map(({ category, formattedName }) => (
+                            <option key={category.id} value={category.id}>
+                              {formattedName}
+                            </option>
+                          ))
+                          : incomeCategories.map(({ category, formattedName }) => (
+                            <option key={category.id} value={category.id}>
+                              {formattedName}
+                            </option>
+                          ))}
                       </select>
                     </td>
                     <td style={{ textAlign: 'right' }}>

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { ChatMessage } from '@/infrastructure/api/advisor.api';
+import { MultiModalWidgets } from './MultiModalWidgets';
 import styles from './ChatBubble.module.css';
 
 interface ChatBubbleProps {
@@ -27,22 +28,31 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         )}
 
         <div className={styles.content}>
-          {message.content.split('\n').map((line, i) => {
-            if (!line.trim()) return <div key={i} className={styles.spacer} />;
-            // Formatear negritas básicas **texto**
-            const parts = line.split(/(\*\*.*?\*\*)/g);
-            return (
-              <p key={i} className={styles.textLine}>
-                {parts.map((p, j) => {
-                  if (p.startsWith('**') && p.endsWith('**')) {
-                    return <strong key={j}>{p.slice(2, -2)}</strong>;
-                  }
-                  return p;
-                })}
-              </p>
-            );
-          })}
+          {message.content
+            .replace(/\n*ℹ️\s*\*?Aviso legal:.*$/is, '')
+            .trim()
+            .split('\n')
+            .map((line, i) => {
+              if (!line.trim()) return <div key={i} className={styles.spacer} />;
+              // Formatear negritas básicas **texto**
+              const parts = line.split(/(\*\*.*?\*\*)/g);
+              return (
+                <p key={i} className={styles.textLine}>
+                  {parts.map((p, j) => {
+                    if (p.startsWith('**') && p.endsWith('**')) {
+                      return <strong key={j}>{p.slice(2, -2)}</strong>;
+                    }
+                    return p;
+                  })}
+                </p>
+              );
+            })}
         </div>
+
+        {/* Widgets visuales multi-modales */}
+        {!isUser && message.toolCalls && (
+          <MultiModalWidgets toolExecutions={message.toolCalls} />
+        )}
 
         <div className={styles.time}>
           {new Date(message.createdAt).toLocaleTimeString([], {

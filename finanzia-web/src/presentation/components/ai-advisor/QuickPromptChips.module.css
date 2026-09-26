@@ -54,3 +54,28 @@
 .chipText {
   font-weight: 500;
 }
+
+@media (max-width: 767px) {
+  .container {
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .chipsRow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .chipsRow::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip {
+    padding: 5px 10px;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+  }
+}

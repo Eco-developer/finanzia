@@ -10,24 +10,34 @@ interface QuickPromptChipsProps {
 
 const PROMPTS = [
   {
+    icon: '🎯',
+    text: 'Quiero ahorrar 3.000€ en 6 meses para vacaciones',
+    label: 'Planificar meta de ahorro',
+  },
+  {
+    icon: '💳',
+    text: '¿Cuánto dinero tengo en total en mis cuentas y cuál es mi patrimonio?',
+    label: 'Saldos consolidados',
+  },
+  {
     icon: '📈',
     text: '¿Cuánto he gastado este mes y cuál es mi tasa de ahorro?',
-    label: 'Resumen mensual',
+    label: 'Resumen financiero',
   },
   {
     icon: '🛒',
-    text: '¿En qué categorías he tenido más gastos este mes?',
-    label: 'Desglose por categoría',
+    text: '¿En qué categorías he gastado más dinero este mes?',
+    label: 'Desglose de gastos',
   },
   {
-    icon: '📊',
-    text: '¿Cómo van mis presupuestos y cuáles están en riesgo?',
-    label: 'Ritmo presupuestario',
+    icon: '🏷️',
+    text: '¿En qué categoría entra una compra en Decathlon?',
+    label: 'Clasificar gasto',
   },
   {
-    icon: '💡',
-    text: '¿Qué recomendaciones me sugieres para optimizar mis finanzas?',
-    label: 'Propuestas de ahorro',
+    icon: '🔔',
+    text: '¿Hay alertas o repuntes de gasto detectados este mes?',
+    label: 'Alertas proactivas',
   },
 ];
 

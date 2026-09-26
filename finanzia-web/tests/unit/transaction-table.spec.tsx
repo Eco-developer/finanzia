@@ -101,4 +101,117 @@ describe('TransactionTable Component', () => {
 
     expect(onDeleteMock).toHaveBeenCalledWith('tx-1');
   });
+
+  it('llama a onRequestDelete con la transacción individual si se proporciona', () => {
+    const onRequestDeleteMock = vi.fn();
+
+    render(
+      <TransactionTable
+        transactions={mockTransactions}
+        accounts={mockAccounts}
+        categories={mockCategories}
+        onRequestDelete={onRequestDeleteMock}
+      />,
+    );
+
+    const deleteBtn = screen.getByLabelText('Eliminar Compra en Mercadona');
+    fireEvent.click(deleteBtn);
+
+    expect(onRequestDeleteMock).toHaveBeenCalledWith([mockTransactions[0]]);
+  });
+
+  it('muestra el botón de editar en gastos/ingresos y llama a onEdit', () => {
+    const onEditMock = vi.fn();
+
+    render(
+      <TransactionTable
+        transactions={mockTransactions}
+        accounts={mockAccounts}
+        categories={mockCategories}
+        onEdit={onEditMock}
+      />,
+    );
+
+    const editBtn = screen.getByLabelText('Editar Compra en Mercadona');
+    expect(editBtn).toBeInTheDocument();
+    fireEvent.click(editBtn);
+
+    expect(onEditMock).toHaveBeenCalledWith(mockTransactions[0]);
+  });
+
+  it('no muestra el botón de editar en transferencias/traspasos', () => {
+    const transferTx: TransactionItem = {
+      id: 'tx-transfer',
+      userId: 'user-1',
+      accountId: 'acc-1',
+      categoryId: null,
+      amountCents: -5000,
+      type: 'TRANSFER',
+      transactionDate: '2026-09-13T12:00:00.000Z',
+      description: 'Traspaso a cuenta ahorro',
+      notes: null,
+      isPending: false,
+      transferCounterpartId: 'tx-transfer-dest',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    render(
+      <TransactionTable
+        transactions={[transferTx]}
+        accounts={mockAccounts}
+        categories={mockCategories}
+        onEdit={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByLabelText('Editar Traspaso a cuenta ahorro')).not.toBeInTheDocument();
+  });
+
+  it('permite seleccionar múltiples transacciones y muestra la barra de acciones masivas', () => {
+    const onRequestDeleteMock = vi.fn();
+
+    const tx2: TransactionItem = {
+      id: 'tx-2',
+      userId: 'user-1',
+      accountId: 'acc-1',
+      categoryId: 'cat-1',
+      amountCents: 200000,
+      type: 'INCOME',
+      transactionDate: '2026-09-14T10:00:00.000Z',
+      description: 'Nómina',
+      notes: null,
+      isPending: false,
+      transferCounterpartId: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    render(
+      <TransactionTable
+        transactions={[mockTransactions[0], tx2]}
+        accounts={mockAccounts}
+        categories={mockCategories}
+        onRequestDelete={onRequestDeleteMock}
+      />,
+    );
+
+    // Seleccionar checkbox de la primera transacción
+    const checkbox1 = screen.getByLabelText('Seleccionar Compra en Mercadona');
+    fireEvent.click(checkbox1);
+
+    expect(screen.getByText(/1 transacción seleccionada/i)).toBeInTheDocument();
+
+    // Seleccionar checkbox de la segunda transacción
+    const checkbox2 = screen.getByLabelText('Seleccionar Nómina');
+    fireEvent.click(checkbox2);
+
+    expect(screen.getByText(/2 transacciones seleccionadas/i)).toBeInTheDocument();
+
+    // Pulsar botón eliminar seleccionadas
+    const deleteBatchBtn = screen.getByText(/Eliminar seleccionadas \(2\)/i);
+    fireEvent.click(deleteBatchBtn);
+
+    expect(onRequestDeleteMock).toHaveBeenCalledWith([mockTransactions[0], tx2]);
+  });
 });

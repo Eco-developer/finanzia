@@ -29,8 +29,10 @@ export type CategoryType = (typeof CategoryType)[keyof typeof CategoryType];
 export const RecommendationType = {
   BUDGET_ADJUSTMENT: "BUDGET_ADJUSTMENT",
   SAVINGS_OPPORTUNITY: "SAVINGS_OPPORTUNITY",
+  SAVINGS_BOOST: "SAVINGS_BOOST",
   EXPENSE_ALERT: "EXPENSE_ALERT",
   HABIT_NUDGE: "HABIT_NUDGE",
+  GOAL_CREATION: "GOAL_CREATION",
 } as const;
 export type RecommendationType =
   (typeof RecommendationType)[keyof typeof RecommendationType];

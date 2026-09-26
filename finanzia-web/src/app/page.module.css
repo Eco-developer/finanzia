@@ -211,12 +211,12 @@
   font-weight: 500;
 }
 
-/* Fila Intermedia: Cuentas y Propuesta IA */
+/* Fila Intermedia: Cuentas */
 .middleRow {
-  display: grid;
-  grid-template-columns: 2fr 1.2fr;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
   gap: 1.5rem;
-  align-items: start;
 }
 
 .accountsContainer {
@@ -567,15 +567,60 @@
 @media (max-width: 1023px) {
   .appContainer {
     flex-direction: column;
+    width: 100%;
+    overflow-x: hidden;
   }
 
   .mainContent {
-    padding: 1rem 1rem 5.5rem;
+    padding: 1.25rem 1.25rem 5.5rem;
     gap: 1.5rem;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .header {
     display: none; /* Reemplazado por MobileTopBar */
+  }
+
+  .middleRow {
+    width: 100%;
+    gap: 1.25rem;
+  }
+}
+
+/* Tablet (768px - 1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    width: 100%;
+  }
+
+  .mobileHeroCard {
+    display: none;
+  }
+
+  .mobileQuickActions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+  }
+
+  .accountsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+}
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .mainContent {
+    padding: 0.875rem 0.875rem 5.5rem;
+    gap: 1.25rem;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .kpiGrid {
@@ -584,20 +629,74 @@
 
   .mobileHeroCard {
     display: flex;
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .mobileQuickActions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0.25rem 0;
   }
 
-  .middleRow {
-    grid-template-columns: 1fr;
-    gap: 1.25rem;
+  .mobileQuickActionBtn {
+    width: 100%;
+  }
+
+  .mobileActionCircle {
+    width: 46px;
+    height: 46px;
+    font-size: 1.15rem;
+  }
+
+  .mobileActionLabel {
+    font-size: 0.6875rem;
+    white-space: nowrap;
   }
 
   .accountsGrid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: 1fr;
     gap: 0.75rem;
+    width: 100%;
+  }
+
+  .sectionHeader {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+
+  .filtersGroup {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.25rem;
+  }
+
+  .filterBtn {
+    flex: 1;
+    min-width: max-content;
+    text-align: center;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 420px) {
+  .mobileActionCircle {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .mobileActionLabel {
+    font-size: 0.625rem;
   }
 }
 

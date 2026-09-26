@@ -282,10 +282,12 @@ export class ImportsService {
     // Mantener un set local para evitar duplicados repetidos dentro del mismo lote entrante
     const seenBatchHashes = new Set<string>();
 
-    const validRows: CreateTransactionData[] = [];
+    const rowsByAccount = new Map<string, CreateTransactionData[]>();
     let skippedCount = 0;
 
     for (const row of dto.rows) {
+      const targetAccountId = row.accountId || dto.accountId;
+
       if (row.deduplicationHash) {
         if (
           existingHashSet.has(row.deduplicationHash) ||
@@ -300,30 +302,43 @@ export class ImportsService {
       const amountCentsBigInt = BigInt(row.amountCents);
       const isExpense = amountCentsBigInt < 0n;
 
-      validRows.push({
+      const txData: CreateTransactionData = {
         userId,
-        accountId: dto.accountId,
+        accountId: targetAccountId,
         categoryId: row.categoryId ?? null,
         amountCents: amountCentsBigInt,
         type: isExpense ? TransactionType.EXPENSE : TransactionType.INCOME,
         transactionDate: new Date(row.date),
         description: sanitizeCsvField(row.description),
         deduplicationHash: row.deduplicationHash ?? null,
-      });
+      };
+
+      const list = rowsByAccount.get(targetAccountId) || [];
+      list.push(txData);
+      rowsByAccount.set(targetAccountId, list);
     }
 
-    // 3. Inserción atómica en bloque
-    const result = await this.transactionRepository.createManyWithBalance(
-      userId,
-      dto.accountId,
-      validRows,
-    );
+    // 3. Inserción atómica en bloque por cuenta
+    let importedCount = 0;
+    let finalMainAccountBalanceCents = Number(account.currentBalanceCents);
+
+    for (const [accId, txs] of rowsByAccount.entries()) {
+      const result = await this.transactionRepository.createManyWithBalance(
+        userId,
+        accId,
+        txs,
+      );
+      importedCount += result.count;
+      if (accId === dto.accountId) {
+        finalMainAccountBalanceCents = Number(result.newAccountBalanceCents);
+      }
+    }
 
     return {
-      importedCount: result.count,
+      importedCount,
       skippedCount,
       totalProcessed: dto.rows.length,
-      newAccountBalanceCents: Number(result.newAccountBalanceCents),
+      newAccountBalanceCents: finalMainAccountBalanceCents,
     };
   }
 

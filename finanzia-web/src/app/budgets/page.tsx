@@ -8,6 +8,7 @@ import { MobileTopBar } from '@/presentation/components/navigation/MobileTopBar'
 import { MobileBottomNav } from '@/presentation/components/navigation/MobileBottomNav';
 import { BudgetProgressBar } from '@/presentation/components/financial/BudgetProgressBar';
 import { CreateBudgetModal } from '@/presentation/components/financial/CreateBudgetModal';
+import { DeleteBudgetModal } from '@/presentation/components/financial/DeleteBudgetModal';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
 import {
@@ -45,10 +46,13 @@ export default function BudgetsPage() {
   const [summary, setSummary] = useState<BudgetPacingSummary | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Modales
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<BudgetPacingItem | null>(null);
+  const [budgetToDelete, setBudgetToDelete] = useState<BudgetPacingItem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -101,14 +105,18 @@ export default function BudgetsPage() {
     setIsModalOpen(true);
   };
 
-  const handleDeleteBudget = async (budgetId: string) => {
-    if (window.confirm('¿Seguro que deseas eliminar este presupuesto mensual?')) {
-      try {
-        await budgetsApi.deleteBudget(budgetId);
-        loadData();
-      } catch (err) {
-        console.error('Error al eliminar presupuesto:', err);
-      }
+  const handleOpenDelete = (item: BudgetPacingItem) => {
+    setBudgetToDelete(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!budgetToDelete) return;
+    try {
+      await budgetsApi.deleteBudget(budgetToDelete.budgetId);
+      await loadData();
+    } catch (err) {
+      console.error('Error al eliminar presupuesto:', err);
     }
   };
 
@@ -133,8 +141,12 @@ export default function BudgetsPage() {
 
   return (
     <div className={styles.appContainer}>
-      <Sidebar activeSection="budgets" />
-      <MobileTopBar />
+      <Sidebar
+        activeSection="budgets"
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       <main className={styles.mainContent}>
         {/* Cabecera */}
@@ -222,7 +234,7 @@ export default function BudgetsPage() {
                   key={item.budgetId}
                   item={item}
                   onEdit={handleOpenEdit}
-                  onDelete={handleDeleteBudget}
+                  onDelete={() => handleOpenDelete(item)}
                 />
               ))}
             </div>
@@ -257,6 +269,17 @@ export default function BudgetsPage() {
         initialMonth={selectedMonth}
         initialYear={selectedYear}
         editingItem={editingItem}
+      />
+
+      {/* Modal de Eliminar Presupuesto */}
+      <DeleteBudgetModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setBudgetToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        budget={budgetToDelete}
       />
     </div>
   );

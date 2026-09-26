@@ -15,6 +15,8 @@ import { MobileBottomNav } from '@/presentation/components/navigation/MobileBott
 import { CreateAccountModal } from '@/presentation/components/financial/CreateAccountModal';
 import { CreateTransactionModal } from '@/presentation/components/financial/CreateTransactionModal';
 import { CreateTransferModal } from '@/presentation/components/financial/CreateTransferModal';
+import { DeleteTransactionModal } from '@/presentation/components/financial/DeleteTransactionModal';
+import { EditTransactionModal } from '@/presentation/components/financial/EditTransactionModal';
 import { accountsApi, AccountItem } from '@/infrastructure/api/accounts.api';
 import { categoriesApi, CategoryItem } from '@/infrastructure/api/categories.api';
 import {
@@ -41,34 +43,90 @@ export default function HomePage() {
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [transactions, setTransactions] = useState<TransactionItem[]>([]);
+  const [monthlyTransactions, setMonthlyTransactions] = useState<TransactionItem[]>([]);
   const [activeFilterType, setActiveFilterType] = useState<TransactionType | 'ALL'>('ALL');
   const [isDataLoading, setIsDataLoading] = useState(false);
   const [activeSection, setActiveSection] = useState('dashboard');
 
-  // Estados de modales
+  // Estados de paginación de movimientos
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalRecords, setTotalRecords] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // Estados de modales y navegación móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [transactionToEdit, setTransactionToEdit] = useState<TransactionItem | null>(null);
+  const [transactionsToDelete, setTransactionsToDelete] = useState<TransactionItem[] | null>(null);
 
-  // Carga reactiva de datos
+  // Función dedicada para paginar y filtrar movimientos desde el backend
+  const loadTransactions = useCallback(
+    async (p: number, s: number, f: TransactionType | 'ALL') => {
+      if (!isAuthenticated) return;
+      try {
+        const res = await transactionsApi.getTransactions({
+          page: p,
+          limit: s,
+          type: f === 'ALL' ? undefined : f,
+        });
+        setTransactions(res.items);
+        setCurrentPage(res.page);
+        setTotalRecords(res.totalRecords);
+        setTotalPages(res.totalPages);
+      } catch (err) {
+        console.error('Error al paginar transacciones:', err);
+      }
+    },
+    [isAuthenticated],
+  );
+
+  // Carga reactiva de datos consolidados del dashboard
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
     setIsDataLoading(true);
     try {
-      const [accs, cats, txs] = await Promise.all([
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0,
+        23,
+        59,
+        59,
+        999,
+      ).toISOString();
+
+      const [accs, cats, monthlyRes, txsRes] = await Promise.all([
         accountsApi.getAccounts(),
         categoriesApi.getCategories(),
-        transactionsApi.getTransactions({ limit: 50 }),
+        transactionsApi.getTransactions({
+          startDate: startOfMonth,
+          endDate: endOfMonth,
+          limit: 100,
+        }),
+        transactionsApi.getTransactions({
+          page: currentPage,
+          limit: pageSize,
+          type: activeFilterType === 'ALL' ? undefined : activeFilterType,
+        }),
       ]);
       setAccounts(accs);
       setCategories(cats);
-      setTransactions(txs.items);
+      setMonthlyTransactions(monthlyRes.items);
+      setTransactions(txsRes.items);
+      setCurrentPage(txsRes.page);
+      setTotalRecords(txsRes.totalRecords);
+      setTotalPages(txsRes.totalPages);
     } catch (err) {
       console.error('Error al cargar datos del dashboard:', err);
     } finally {
       setIsDataLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentPage, pageSize, activeFilterType]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -76,14 +134,49 @@ export default function HomePage() {
     }
   }, [isAuthenticated, loadData]);
 
-  // Borrar transacción y revertir saldo
-  const handleDeleteTransaction = async (id: string) => {
+  // Manejadores para modal de eliminación (individual y masiva)
+  const handleRequestDelete = (txs: TransactionItem[]) => {
+    setTransactionsToDelete(txs);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!transactionsToDelete || transactionsToDelete.length === 0) return;
     try {
-      await transactionsApi.deleteTransaction(id);
+      if (transactionsToDelete.length === 1) {
+        await transactionsApi.deleteTransaction(transactionsToDelete[0].id);
+      } else {
+        await transactionsApi.deleteMultipleTransactions(
+          transactionsToDelete.map((t) => t.id),
+        );
+      }
+      setTransactionsToDelete(null);
       await loadData();
     } catch (err: any) {
-      alert(err.message || 'Error al eliminar la transacción');
+      alert(err.message || 'Error al eliminar las transacciones');
     }
+  };
+
+  // Manejador para modal de edición
+  const handleEditTransaction = (tx: TransactionItem) => {
+    setTransactionToEdit(tx);
+  };
+
+  // Manejadores de paginación y filtrado
+  const handleFilterChange = (filter: TransactionType | 'ALL') => {
+    setActiveFilterType(filter);
+    setCurrentPage(1);
+    loadTransactions(1, pageSize, filter);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    loadTransactions(newPage, pageSize, activeFilterType);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+    loadTransactions(1, newPageSize, activeFilterType);
   };
 
   // Cálculos matemáticos en céntimos enteros (cero números flotantes)
@@ -91,13 +184,15 @@ export default function HomePage() {
     return accounts.reduce((total, acc) => total + acc.currentBalanceCents, 0);
   }, [accounts]);
 
-  // Cálculos del mes en curso
+  // Cálculos del mes en curso para los KPIs
   const { monthlyIncomeCents, monthlyExpenseCents, incomeCount, expenseCount } = useMemo(() => {
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
-    const currentMonthTxs = transactions.filter((tx) => {
+    const txsToUse = monthlyTransactions.length > 0 ? monthlyTransactions : transactions;
+
+    const currentMonthTxs = txsToUse.filter((tx) => {
       const d = new Date(tx.transactionDate);
       return d.getFullYear() === currentYear && d.getMonth() === currentMonth;
     });
@@ -114,18 +209,14 @@ export default function HomePage() {
       incomeCount: incomeTxs.length,
       expenseCount: expenseTxs.length,
     };
-  }, [transactions]);
-
-  // Filtrado de transacciones
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      if (activeFilterType === 'ALL') return true;
-      return tx.type === activeFilterType;
-    });
-  }, [transactions, activeFilterType]);
+  }, [monthlyTransactions, transactions]);
 
   // Navegación por secciones
   const handleNavigateSection = (sectionKey: string) => {
+    if (sectionKey === 'settings') {
+      setIsMobileMenuOpen(true);
+      return;
+    }
     setActiveSection(sectionKey);
     if (sectionKey === 'accounts') {
       document.getElementById('accounts-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -230,14 +321,16 @@ export default function HomePage() {
   // Vista Autenticada: Dashboard con Shell Responsive
   return (
     <div className={styles.appContainer}>
-      {/* Sidebar Fija Lateral para Desktop (260px) */}
+      {/* Sidebar (Desktop fija 260px / Mobile Drawer offcanvas con backdrop) */}
       <Sidebar
         activeSection={activeSection}
         onNavigateSection={handleNavigateSection}
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
       />
 
-      {/* Barra Superior Móvil */}
-      <MobileTopBar />
+      {/* Barra Superior Móvil con botón hamburguesa */}
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       {/* Contenedor Principal de Contenido */}
       <main className={styles.mainContent}>
@@ -435,20 +528,6 @@ export default function HomePage() {
               </div>
             )}
           </div>
-
-          {/* Tarjeta de Recomendación FinanZIA AI (Human-in-the-Loop) */}
-          <div id="ai-section">
-            <RecommendationCard
-              title="Potenciar Meta 'Fondo Emergencia'"
-              description="Detectado un excedente de liquidez en tu cuenta corriente. Se sugiere programar un traspaso para maximizar rentabilidad."
-              onApprove={() => {
-                console.log('Propuesta aprobada por el usuario');
-              }}
-              onDismiss={() => {
-                console.log('Propuesta descartada por el usuario');
-              }}
-            />
-          </div>
         </section>
 
         {/* Sección: Histórico de Movimientos */}
@@ -468,7 +547,7 @@ export default function HomePage() {
                   type="button"
                   className={`${styles.filterBtn} ${activeFilterType === filter ? styles.filterBtnActive : ''
                     }`}
-                  onClick={() => setActiveFilterType(filter)}
+                  onClick={() => handleFilterChange(filter)}
                 >
                   {filter === 'ALL'
                     ? 'Todos'
@@ -483,11 +562,18 @@ export default function HomePage() {
           </div>
 
           <TransactionTable
-            transactions={filteredTransactions}
+            transactions={transactions}
             accounts={accounts}
             categories={categories}
-            onDelete={handleDeleteTransaction}
+            onRequestDelete={handleRequestDelete}
+            onEdit={handleEditTransaction}
             isLoading={isDataLoading}
+            page={currentPage}
+            pageSize={pageSize}
+            totalRecords={totalRecords}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
           />
         </section>
       </main>
@@ -504,7 +590,7 @@ export default function HomePage() {
         onClose={() => setIsAccountModalOpen(false)}
         onSuccess={() => loadData()}
       />
-      {accounts.length > 0 ?
+      {accounts.length > 0 ? (
         <CreateTransactionModal
           isOpen={isTransactionModalOpen}
           onClose={() => setIsTransactionModalOpen(false)}
@@ -512,7 +598,7 @@ export default function HomePage() {
           accounts={accounts}
           categories={categories}
         />
-        : null}
+      ) : null}
 
       <CreateTransferModal
         isOpen={isTransferModalOpen}
@@ -520,6 +606,30 @@ export default function HomePage() {
         onSuccess={() => loadData()}
         accounts={accounts}
       />
+
+      {/* Modal de Eliminación Detallada (Manual o Masiva) */}
+      {transactionsToDelete && transactionsToDelete.length > 0 && (
+        <DeleteTransactionModal
+          isOpen={Boolean(transactionsToDelete)}
+          onClose={() => setTransactionsToDelete(null)}
+          onConfirm={handleConfirmDelete}
+          transactions={transactionsToDelete}
+          accounts={accounts}
+          categories={categories}
+        />
+      )}
+
+      {/* Modal de Edición de Gasto/Ingreso */}
+      {transactionToEdit && (
+        <EditTransactionModal
+          isOpen={Boolean(transactionToEdit)}
+          onClose={() => setTransactionToEdit(null)}
+          onSuccess={() => loadData()}
+          transaction={transactionToEdit}
+          accounts={accounts}
+          categories={categories}
+        />
+      )}
     </div>
   );
 }

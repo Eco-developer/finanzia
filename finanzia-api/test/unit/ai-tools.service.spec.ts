@@ -4,12 +4,24 @@ import {
   IFinancialAnalyticsPort,
   FINANCIAL_ANALYTICS_PORT,
 } from "../../src/core/application/ports/financial-analytics.port";
+import { MultiStepPlannerService } from "../../src/core/application/ai/multi-step-planner.service";
+import { TransactionLearningService } from "../../src/core/application/ai/transaction-learning.service";
+import { BudgetsService } from "../../src/core/application/budgets/budgets.service";
+import { TransactionsService } from "../../src/core/application/transactions/transactions.service";
+import { ACCOUNT_REPOSITORY } from "../../src/core/domain/repositories/account.repository.interface";
+import { CATEGORY_REPOSITORY } from "../../src/core/domain/repositories/category.repository.interface";
 import { PrismaFinancialAnalyticsAdapter } from "../../src/infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaService } from "../../src/infrastructure/database/prisma.service";
 
 describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
   let service: AiToolsService;
   let mockAnalytics: jest.Mocked<IFinancialAnalyticsPort>;
+  let mockPlanner: { calculateGoalPlan: jest.Mock };
+  let mockLearning: { categorizeTransaction: jest.Mock; learnRule: jest.Mock };
+  let mockBudgetsService: { createOrUpdateBudget: jest.Mock };
+  let mockTransactionsService: { createTransaction: jest.Mock };
+  let mockAccountRepository: { findAllByUserId: jest.Mock };
+  let mockCategoryRepository: { findAllForUser: jest.Mock };
 
   beforeEach(async () => {
     mockAnalytics = {
@@ -17,6 +29,37 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       getExpensesByCategory: jest.fn(),
       getBudgetStatus: jest.fn(),
       proposeRecommendation: jest.fn(),
+      getAccountBalances: jest.fn(),
+      getSavingsGoals: jest.fn(),
+      getHistoricalBaseline: jest.fn(),
+      getProactiveInsights: jest.fn(),
+      saveUserCategoryRule: jest.fn(),
+      findUserCategoryRule: jest.fn(),
+    };
+
+    mockPlanner = {
+      calculateGoalPlan: jest.fn(),
+    };
+
+    mockLearning = {
+      categorizeTransaction: jest.fn(),
+      learnRule: jest.fn(),
+    };
+
+    mockBudgetsService = {
+      createOrUpdateBudget: jest.fn(),
+    };
+
+    mockTransactionsService = {
+      createTransaction: jest.fn(),
+    };
+
+    mockAccountRepository = {
+      findAllByUserId: jest.fn(),
+    };
+
+    mockCategoryRepository = {
+      findAllForUser: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -25,6 +68,30 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
         {
           provide: FINANCIAL_ANALYTICS_PORT,
           useValue: mockAnalytics,
+        },
+        {
+          provide: MultiStepPlannerService,
+          useValue: mockPlanner,
+        },
+        {
+          provide: TransactionLearningService,
+          useValue: mockLearning,
+        },
+        {
+          provide: BudgetsService,
+          useValue: mockBudgetsService,
+        },
+        {
+          provide: TransactionsService,
+          useValue: mockTransactionsService,
+        },
+        {
+          provide: ACCOUNT_REPOSITORY,
+          useValue: mockAccountRepository,
+        },
+        {
+          provide: CATEGORY_REPOSITORY,
+          useValue: mockCategoryRepository,
         },
       ],
     }).compile();
@@ -105,6 +172,230 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       "Razón",
       { amountCents: 5000 },
     );
+  });
+
+  it("debe delegar getAccountBalances al port de analíticas", async () => {
+    const balances = {
+      totalBalanceCents: 150000,
+      accounts: [],
+      currency: "EUR",
+    };
+    mockAnalytics.getAccountBalances.mockResolvedValue(balances);
+
+    const result = await service.getAccountBalances("user-1");
+    expect(result).toEqual(balances);
+    expect(mockAnalytics.getAccountBalances).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar getSavingsGoals al port de analíticas", async () => {
+    mockAnalytics.getSavingsGoals.mockResolvedValue([]);
+    const result = await service.getSavingsGoals("user-1");
+    expect(result).toEqual([]);
+    expect(mockAnalytics.getSavingsGoals).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar calculateSavingsPlan a MultiStepPlannerService", async () => {
+    const plan = {
+      goalName: "Vacaciones",
+      targetAmountCents: 300000,
+      months: 6,
+      monthlyQuotaCents: 50000,
+      averageNetSavingsCents: 30000,
+      gapCents: 20000,
+      isViableWithCurrentSavings: false,
+      suggestedCuts: [],
+      summary: "Plan",
+    };
+    mockPlanner.calculateGoalPlan.mockResolvedValue(plan);
+
+    const result = await service.calculateSavingsPlan(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones",
+    );
+    expect(result).toEqual(plan);
+    expect(mockPlanner.calculateGoalPlan).toHaveBeenCalledWith(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones",
+    );
+  });
+
+  it("debe delegar categorizeTransaction a TransactionLearningService", async () => {
+    const cat = {
+      suggestedCategoryId: "cat-1",
+      suggestedCategoryName: "Supermercado",
+      source: "PATTERN_MATCH" as const,
+      confidence: 0.9,
+    };
+    mockLearning.categorizeTransaction.mockResolvedValue(cat);
+
+    const result = await service.categorizeTransaction("user-1", "Mercadona");
+    expect(result).toEqual(cat);
+    expect(mockLearning.categorizeTransaction).toHaveBeenCalledWith(
+      "user-1",
+      "Mercadona",
+    );
+  });
+
+  it("debe delegar getProactiveInsights al port de analíticas", async () => {
+    mockAnalytics.getProactiveInsights.mockResolvedValue([]);
+    const result = await service.getProactiveInsights("user-1");
+    expect(result).toEqual([]);
+    expect(mockAnalytics.getProactiveInsights).toHaveBeenCalledWith("user-1");
+  });
+
+  it("debe delegar getHistoricalBaseline al port de analíticas", async () => {
+    const baseline = {
+      monthsAnalyzed: 3,
+      averageMonthlyIncomeCents: 200000,
+      averageMonthlyFixedExpensesCents: 100000,
+      averageMonthlyVariableExpensesCents: 50000,
+      averageMonthlyTotalExpensesCents: 150000,
+      averageMonthlyNetSavingsCents: 50000,
+      averageSavingsRatePercent: 25,
+      topVariableCategories: [],
+    };
+    mockAnalytics.getHistoricalBaseline.mockResolvedValue(baseline);
+
+    const result = await service.getHistoricalBaseline("user-1");
+    expect(result).toEqual(baseline);
+    expect(mockAnalytics.getHistoricalBaseline).toHaveBeenCalledWith("user-1");
+  });
+
+  describe("createBudget", () => {
+    it("debe resolver la categoría por nombre y crear el presupuesto con importes en céntimos", async () => {
+      mockCategoryRepository.findAllForUser.mockResolvedValue([
+        { id: "cat-ocio-1", name: "Ocio y Cultura" },
+        { id: "cat-alim-2", name: "Alimentación" },
+      ]);
+
+      mockBudgetsService.createOrUpdateBudget.mockResolvedValue({
+        id: "bgt-123",
+        categoryId: "cat-ocio-1",
+        amountLimitCents: 30000,
+        periodMonth: 9,
+        periodYear: 2026,
+        alertThresholdPct: 80,
+      });
+
+      const result = await service.createBudget("user-1", {
+        categoryNameOrId: "ocio",
+        amountLimitEur: 300,
+        month: 9,
+        year: 2026,
+      });
+
+      expect(result.budgetId).toBe("bgt-123");
+      expect(result.categoryName).toBe("Ocio y Cultura");
+      expect(result.amountLimitCents).toBe(30000);
+      expect(result.amountLimitEur).toBe(300);
+      expect(mockBudgetsService.createOrUpdateBudget).toHaveBeenCalledWith(
+        "user-1",
+        {
+          categoryId: "cat-ocio-1",
+          amountLimitCents: 30000,
+          periodMonth: 9,
+          periodYear: 2026,
+          alertThresholdPct: 80,
+        },
+      );
+    });
+
+    it("debe lanzar un error descriptivo si la categoría no existe", async () => {
+      mockCategoryRepository.findAllForUser.mockResolvedValue([
+        { id: "cat-1", name: "Alimentación" },
+      ]);
+
+      await expect(
+        service.createBudget("user-1", {
+          categoryNameOrId: "criptomonedas",
+          amountLimitEur: 200,
+        }),
+      ).rejects.toThrow("No se ha encontrado ninguna categoría");
+    });
+  });
+
+  describe("createTransaction", () => {
+    it("debe registrar un gasto seleccionando la cuenta adecuada y deduciendo saldo", async () => {
+      mockAccountRepository.findAllByUserId.mockResolvedValue([
+        { id: "acc-1", name: "Cuenta Corriente", type: "CHECKING" },
+      ]);
+      mockCategoryRepository.findAllForUser.mockResolvedValue([
+        { id: "cat-transp", name: "Transporte" },
+      ]);
+
+      mockTransactionsService.createTransaction.mockResolvedValue({
+        transaction: {
+          id: "tx-1",
+          amountCents: -4500,
+          description: "Gasolina Repsol",
+          transactionDate: "2026-09-22T20:00:00.000Z",
+        },
+        newAccountBalanceCents: 155500,
+      });
+
+      const result = await service.createTransaction("user-1", {
+        type: "EXPENSE",
+        amountEur: 45,
+        description: "Gasolina Repsol",
+        categoryNameOrId: "Transporte",
+      });
+
+      expect(result.transactionId).toBe("tx-1");
+      expect(result.amountEur).toBe(45);
+      expect(result.accountName).toBe("Cuenta Corriente");
+      expect(result.categoryName).toBe("Transporte");
+      expect(result.newAccountBalanceEur).toBe(1555);
+      expect(mockTransactionsService.createTransaction).toHaveBeenCalledWith(
+        "user-1",
+        {
+          accountId: "acc-1",
+          categoryId: "cat-transp",
+          amountCents: 4500,
+          type: "EXPENSE",
+          transactionDate: expect.any(String),
+          description: "Gasolina Repsol",
+        },
+      );
+    });
+
+    it("debe clasificar automáticamente con TransactionLearningService si no se especifica categoría", async () => {
+      mockAccountRepository.findAllByUserId.mockResolvedValue([
+        { id: "acc-1", name: "Cuenta Corriente", type: "CHECKING" },
+      ]);
+      mockCategoryRepository.findAllForUser.mockResolvedValue([
+        { id: "cat-alim", name: "Alimentación" },
+      ]);
+      mockLearning.categorizeTransaction.mockResolvedValue({
+        suggestedCategoryId: "cat-alim",
+        suggestedCategoryName: "Alimentación",
+      });
+
+      mockTransactionsService.createTransaction.mockResolvedValue({
+        transaction: {
+          id: "tx-2",
+          amountCents: -1250,
+          description: "Mercadona",
+          transactionDate: "2026-09-22T20:00:00.000Z",
+        },
+        newAccountBalanceCents: 140000,
+      });
+
+      const result = await service.createTransaction("user-1", {
+        type: "EXPENSE",
+        amountEur: 12.5,
+        description: "Mercadona",
+      });
+
+      expect(mockLearning.categorizeTransaction).toHaveBeenCalledWith(
+        "user-1",
+        "Mercadona",
+      );
+      expect(result.categoryName).toBe("Alimentación");
+    });
   });
 });
 

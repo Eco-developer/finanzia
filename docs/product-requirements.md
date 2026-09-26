@@ -64,8 +64,8 @@ El producto se concibe como una solución privada, modular y local-first, estruc
   - Suite de tests unitarios y de integración con Jest/Supertest en backend y React Testing Library en frontend.
   - Contenedores Docker y Docker Compose para desarrollo local con PostgreSQL.
 
-### 3.2 Fuera del Alcance (Roadmap Futuro)
-- Agregación bancaria automática mediante APIs PSD2 / Open Banking (Nordigen, GoCardless, Plaid).
+### 3.2 Fuera del Alcance Inmediato (Roadmap Futuro)
+- Agregación bancaria automática mediante APIs PSD2 / Open Banking (Nordigen, GoCardless, Plaid) — *Planificada y especificada en Épica 6 (ver `docs/epic-open-banking-ais.md`).*
 - Digitalización y escaneo OCR de tickets y facturas mediante visión por computador.
 - Gestión de carteras de inversión complejas (acciones, criptomonedas, cálculo de plusvalías y fiscalidad IRPF).
 - Cuentas multidivisa con conversión histórica y cobertura de tipo de cambio en tiempo real.
@@ -101,6 +101,15 @@ El producto se concibe como una solución privada, modular y local-first, estruc
 - **HU-14**: Como usuario, quiero preguntar a la IA cosas como *"¿Cuánto he gastado en ocio este mes?"* y recibir una respuesta exacta basada en mis números reales sin datos inventados.
 - **HU-15**: Como usuario, quiero que la IA me ofrezca consejos de ahorro fundamentados y me presente propuestas de ajuste concretas.
 - **HU-16**: Como usuario, quiero tener el control absoluto para aprobar o descartar explícitamente cualquier sugerencia de la IA antes de que modifique mis presupuestos o datos.
+
+### Épica 6: Conexión Bancaria y Lectura en Tiempo Real (Open Banking AIS — Futuro / Backlog)
+> *Especificación detallada de historias, criterios de aceptación y arquitectura en [`docs/epic-open-banking-ais.md`](./epic-open-banking-ais.md) y [`docs/open-banking-implementation-plan.md`](./open-banking-implementation-plan.md).*
+- **HU-17**: Como usuario, quiero vincular de forma segura mi banco o tarjeta mediante SCA de solo lectura sin entregar contraseñas bancarias a FinanZIA.
+- **HU-18**: Como usuario, quiero que mis pagos con tarjeta y movimientos bancarios se sincronicen automáticamente vía webhooks en tiempo real sin descargar archivos CSV.
+- **HU-19**: Como usuario, quiero que el sistema reconozca transacciones pendientes y liquidadas para evitar registros duplicados.
+- **HU-20**: Como usuario, quiero que los nuevos movimientos se clasifiquen automáticamente con mis reglas o con la IA de FinanZIA al instante.
+- **HU-21**: Como usuario, quiero recibir notificaciones visuales in-app cuando se detecte un nuevo gasto con tarjeta.
+- **HU-22**: Como usuario, quiero consultar el estado de mi consentimiento (máx. 180 días) y desvincular mi banco en cualquier momento con revocación y borrado inmediato.
 
 ---
 

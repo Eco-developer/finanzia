@@ -9,6 +9,7 @@ import { MobileBottomNav } from '@/presentation/components/navigation/MobileBott
 import { GoalCard } from '@/presentation/components/financial/GoalCard';
 import { CreateGoalModal } from '@/presentation/components/financial/CreateGoalModal';
 import { ContributeGoalModal } from '@/presentation/components/financial/ContributeGoalModal';
+import { DeleteGoalModal } from '@/presentation/components/financial/DeleteGoalModal';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
 import { goalsApi, GoalItem } from '@/infrastructure/api/goals.api';
@@ -21,11 +22,14 @@ export default function GoalsPage() {
   const [goals, setGoals] = useState<GoalItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Modales
+  // Modales y menú móvil
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isContributeModalOpen, setIsContributeModalOpen] = useState(false);
   const [selectedGoal, setSelectedGoal] = useState<GoalItem | null>(null);
   const [editingGoal, setEditingGoal] = useState<GoalItem | null>(null);
+  const [goalToDelete, setGoalToDelete] = useState<GoalItem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -59,14 +63,18 @@ export default function GoalsPage() {
     setIsContributeModalOpen(true);
   };
 
-  const handleDeleteGoal = async (goalId: string) => {
-    if (window.confirm('¿Seguro que deseas eliminar esta meta de ahorro?')) {
-      try {
-        await goalsApi.deleteGoal(goalId);
-        loadData();
-      } catch (err) {
-        console.error('Error al eliminar meta:', err);
-      }
+  const handleOpenDelete = (goal: GoalItem) => {
+    setGoalToDelete(goal);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!goalToDelete) return;
+    try {
+      await goalsApi.deleteGoal(goalToDelete.id);
+      await loadData();
+    } catch (err) {
+      console.error('Error al eliminar meta:', err);
     }
   };
 
@@ -96,8 +104,12 @@ export default function GoalsPage() {
 
   return (
     <div className={styles.appContainer}>
-      <Sidebar activeSection="goals" />
-      <MobileTopBar />
+      <Sidebar
+        activeSection="goals"
+        isOpenMobile={isMobileMenuOpen}
+        onCloseMobile={() => setIsMobileMenuOpen(false)}
+      />
+      <MobileTopBar onOpenMenu={() => setIsMobileMenuOpen(true)} />
 
       <main className={styles.mainContent}>
         {/* Cabecera */}
@@ -155,7 +167,7 @@ export default function GoalsPage() {
                   goal={goal}
                   onContribute={handleOpenContribute}
                   onEdit={handleOpenEdit}
-                  onDelete={handleDeleteGoal}
+                  onDelete={() => handleOpenDelete(goal)}
                 />
               ))}
             </div>
@@ -189,6 +201,17 @@ export default function GoalsPage() {
         onClose={() => setIsContributeModalOpen(false)}
         onSuccess={loadData}
         goal={selectedGoal}
+      />
+
+      {/* Modal de Eliminar Meta */}
+      <DeleteGoalModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setGoalToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        goal={goalToDelete}
       />
     </div>
   );
