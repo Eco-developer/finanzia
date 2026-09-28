@@ -19,6 +19,7 @@ import { DeleteTransactionModal } from '@/presentation/components/financial/Dele
 import { EditTransactionModal } from '@/presentation/components/financial/EditTransactionModal';
 import { accountsApi, AccountItem } from '@/infrastructure/api/accounts.api';
 import { categoriesApi, CategoryItem } from '@/infrastructure/api/categories.api';
+import { LandingPage } from '@/presentation/components/landing/LandingPage';
 import {
   transactionsApi,
   TransactionItem,
@@ -239,83 +240,9 @@ export default function HomePage() {
     );
   }
 
-  // Vista desautenticada: Landing Promocional Dark Glassmorphism
+  // Vista desautenticada: Landing Promocional Premium Dark Glassmorphism
   if (!isAuthenticated) {
-    return (
-      <main className={styles.landingMain}>
-        <header className={styles.landingHeader}>
-          <div className={styles.landingBrand}>
-            <div className={styles.logoIcon}>⚡</div>
-            <h1 className={styles.logoText}>
-              Finan<span>ZIA</span>
-            </h1>
-          </div>
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-            <a
-              href="http://localhost:3001/api/docs"
-              target="_blank"
-              rel="noreferrer"
-              className={styles.swaggerLink}
-            >
-              📖 Swagger API
-            </a>
-            <Link href="/login">
-              <Button variant="outline" size="sm">
-                Iniciar Sesión
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button variant="primary" size="sm">
-                Crear Cuenta
-              </Button>
-            </Link>
-          </div>
-        </header>
-
-        <section className={styles.heroSection}>
-          <div className={styles.heroBadge}>
-            <Sparkles size={14} /> Finanzas Personales con IA Verificable
-          </div>
-          <h2 className={styles.heroTitle}>
-            Control riguroso de tus finanzas sin alucinaciones
-          </h2>
-          <p className={styles.heroDescription}>
-            Registra tus cuentas bancarias, concilia extractos CSV y opera con precisión estricta
-            en céntimos enteros auditados por un asistente financiero determinista.
-          </p>
-          <div className={styles.heroCtas}>
-            <Link href="/register">
-              <Button variant="primary" size="lg">
-                Comenzar Gratis
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg">
-                Acceder a mi Panel
-              </Button>
-            </Link>
-          </div>
-
-          <div className={styles.heroGrid}>
-            <div className={`glass-card ${styles.featureCard}`}>
-              <ShieldCheck className={styles.featureIcon} size={28} />
-              <h3>Cero Floats y Precisión</h3>
-              <p>Todos los saldos se operan en números enteros en céntimos con integridad matemática.</p>
-            </div>
-            <div className={`glass-card ${styles.featureCard}`}>
-              <Wallet className={styles.featureIcon} size={28} />
-              <h3>Multi-cuenta y Traspasos</h3>
-              <p>Maneja cuentas corrientes, depósitos de ahorro y efectivo con movimientos atómicos.</p>
-            </div>
-            <div className={`glass-card ${styles.featureCard}`}>
-              <TrendingUp className={styles.featureIcon} size={28} />
-              <h3>Aislamiento Multi-tenant</h3>
-              <p>Tus datos financieros viajan encriptados y aislados estrictamente para tu usuario.</p>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
+    return <LandingPage />;
   }
 
   // Vista Autenticada: Dashboard con Shell Responsive
