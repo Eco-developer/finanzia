@@ -77,6 +77,7 @@ model User {
   emailVerified            Boolean        @default(false) @map("email_verified")
   emailVerificationToken   String?        @unique @map("email_verification_token")
   emailVerificationExpires DateTime?      @map("email_verification_expires")
+  onboardingCompleted      Boolean        @default(false) @map("onboarding_completed")
   createdAt                DateTime       @default(now())
   updatedAt                DateTime       @updatedAt
 
@@ -91,6 +92,9 @@ model User {
   categoryRules   UserCategoryRule[]
   debts           Debt[]
   debtAmortizations DebtAmortization[]
+  profile           UserProfile?
+  financialProfile  UserFinancialProfile?
+  disclaimerLog     UserDisclaimerLog?
 
   @@map("users")
 }
@@ -347,3 +351,61 @@ model DebtAmortization {
   @@map("debt_amortizations")
 }
 
+/// Perfil general de uso y metas del usuario (Paso 1 del Onboarding)
+model UserProfile {
+  id                String   @id @default(uuid())
+  userId            String   @unique @map("user_id")
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  usageGoals        String[] @map("usage_goals")
+  customGoal        String?  @map("custom_goal")
+  preferredCurrency String   @default("EUR") @map("preferred_currency")
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("user_profiles")
+}
+
+/// Perfil económico y patrimonial (Paso 2 del Onboarding - Opcional)
+model UserFinancialProfile {
+  id                   String                    @id @default(uuid())
+  userId               String                    @unique @map("user_id")
+  user                 User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  profession           String?
+  annualGrossIncome    String?                   @map("annual_gross_income")
+  hasRealEstateIncome  Boolean?                  @map("has_real_estate_income")
+  hasStockInvestments  Boolean?                  @map("has_stock_investments")
+  hasCryptoInvestments Boolean?                  @map("has_crypto_investments")
+
+  emergencyFundRange   String?                   @map("emergency_fund_range")
+  experienceLevel      FinancialExperienceLevel? @default(INTERMEDIATE) @map("experience_level")
+
+  createdAt            DateTime                  @default(now()) @map("created_at")
+  updatedAt            DateTime                  @updatedAt @map("updated_at")
+
+  @@map("user_financial_profiles")
+}
+
+/// Registro de auditoría y aceptación de disclaimers legales y privacidad (Paso 3)
+model UserDisclaimerLog {
+  id            String   @id @default(uuid())
+  userId        String   @unique @map("user_id")
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  termsAccepted Boolean  @default(true) @map("terms_accepted")
+  acceptedAt    DateTime @default(now()) @map("accepted_at")
+  appVersion    String   @default("1.0.0") @map("app_version")
+
+  @@map("user_disclaimer_logs")
+}
+
+
+
+
+enum FinancialExperienceLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}

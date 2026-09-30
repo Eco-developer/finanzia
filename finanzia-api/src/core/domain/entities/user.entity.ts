@@ -9,5 +9,6 @@ export class UserEntity {
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
     public readonly emailVerified: boolean = false,
+    public readonly onboardingCompleted: boolean = false,
   ) {}
 }

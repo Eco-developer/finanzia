@@ -195,6 +195,7 @@ export class AuthService {
       lastName: user.lastName,
       defaultCurrency: user.defaultCurrency,
       emailVerified: user.emailVerified,
+      onboardingCompleted: user.onboardingCompleted,
       createdAt: user.createdAt,
     };
   }

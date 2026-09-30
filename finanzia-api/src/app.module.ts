@@ -18,11 +18,13 @@ import { PrismaAiRecommendationRepository } from "./infrastructure/database/repo
 import { PrismaAdvisorHistoryRepository } from "./infrastructure/database/repositories/prisma-advisor-history.repository";
 import { PrismaFinancialAnalyticsAdapter } from "./infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaDebtRepository } from "./infrastructure/database/repositories/prisma-debt.repository";
+import { PrismaProfileRepository } from "./infrastructure/database/repositories/prisma-profile.repository";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
 
 // Ports & Tokens
 import { USER_REPOSITORY } from "./core/domain/repositories/user.repository.interface";
+import { PROFILE_REPOSITORY } from "./core/domain/repositories/profile.repository.interface";
 import { ACCOUNT_REPOSITORY } from "./core/domain/repositories/account.repository.interface";
 import { CATEGORY_REPOSITORY } from "./core/domain/repositories/category.repository.interface";
 import { TRANSACTION_REPOSITORY } from "./core/domain/repositories/transaction.repository.interface";
@@ -40,6 +42,7 @@ import { NodemailerEmailAdapter } from "./infrastructure/email/nodemailer-email.
 
 // Application
 import { AuthService } from "./core/application/auth/auth.service";
+import { ProfileService } from "./core/application/profile/profile.service";
 import { AccountsService } from "./core/application/accounts/accounts.service";
 import { CategoriesService } from "./core/application/categories/categories.service";
 import { TransactionsService } from "./core/application/transactions/transactions.service";
@@ -68,6 +71,8 @@ import { GoalsController } from "./presentation/controllers/goals.controller";
 import { AdvisorController } from "./presentation/controllers/advisor.controller";
 import { RecommendationsController } from "./presentation/controllers/recommendations.controller";
 import { DebtsController } from "./presentation/controllers/debts.controller";
+import { ProfileController } from "./presentation/controllers/profile.controller";
+import { OnboardingController } from "./presentation/controllers/onboarding.controller";
 import { GlobalExceptionFilter } from "./presentation/filters/global-exception.filter";
 
 @Module({
@@ -108,6 +113,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     AdvisorController,
     RecommendationsController,
     DebtsController,
+    ProfileController,
+    OnboardingController,
   ],
   providers: [
     PrismaService,
@@ -122,10 +129,12 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaAdvisorHistoryRepository,
     PrismaFinancialAnalyticsAdapter,
     PrismaDebtRepository,
+    PrismaProfileRepository,
     HashingService,
     JwtStrategy,
     // Bindings de Puertos e Interfaces (Hexagonal Architecture / DIP)
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
+    { provide: PROFILE_REPOSITORY, useClass: PrismaProfileRepository },
     { provide: ACCOUNT_REPOSITORY, useClass: PrismaAccountRepository },
     { provide: CATEGORY_REPOSITORY, useClass: PrismaCategoryRepository },
     { provide: TRANSACTION_REPOSITORY, useClass: PrismaTransactionRepository },
@@ -150,6 +159,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     { provide: EMAIL_PORT, useClass: NodemailerEmailAdapter },
     // Application Services
     AuthService,
+    ProfileService,
     AccountsService,
     CategoriesService,
     TransactionsService,
@@ -182,11 +192,13 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     AI_RECOMMENDATION_REPOSITORY,
     ADVISOR_HISTORY_REPOSITORY,
     DEBT_REPOSITORY,
+    PROFILE_REPOSITORY,
     FINANCIAL_ANALYTICS_PORT,
     HASHING_SERVICE,
     AI_ADVISOR_PORT,
     EMAIL_PORT,
     AuthService,
+    ProfileService,
     AccountsService,
     CategoriesService,
     TransactionsService,

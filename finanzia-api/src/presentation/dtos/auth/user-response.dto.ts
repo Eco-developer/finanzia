@@ -39,6 +39,13 @@ export class UserResponseDto {
   emailVerified: boolean;
 
   @ApiProperty({
+    example: false,
+    description:
+      "Indica si el usuario ha completado el proceso de bienvenida (onboarding)",
+  })
+  onboardingCompleted: boolean;
+
+  @ApiProperty({
     example: "2026-09-13T10:00:00.000Z",
     description: "Fecha y hora de creación de la cuenta",
   })

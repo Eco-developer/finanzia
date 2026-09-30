@@ -30,8 +30,12 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       const normalizedEmail = email.trim().toLowerCase();
-      await login({ email: normalizedEmail, password });
-      router.push('/');
+      const loggedUser = await login({ email: normalizedEmail, password });
+      if (!loggedUser?.onboardingCompleted) {
+        router.push('/onboarding');
+      } else {
+        router.push('/');
+      }
     } catch (err: any) {
       if (err?.errorCode === 'EMAIL_NOT_VERIFIED') {
         const normalizedEmail = email.trim().toLowerCase();

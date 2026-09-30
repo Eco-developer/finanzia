@@ -14,6 +14,10 @@ export interface IUserRepository {
   findByVerificationToken(token: string): Promise<UserEntity | null>;
   create(data: CreateUserData): Promise<UserEntity>;
   updateEmailVerified(id: string, verified: boolean): Promise<UserEntity>;
+  updateOnboardingCompleted(
+    id: string,
+    completed: boolean,
+  ): Promise<UserEntity>;
   saveVerificationToken(
     userId: string,
     token: string,
