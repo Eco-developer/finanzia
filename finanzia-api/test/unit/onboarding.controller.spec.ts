@@ -47,7 +47,9 @@ describe("OnboardingController", () => {
 
       const result = await controller.getStatus(mockUser);
 
-      expect(mockProfileService.getOnboardingStatus).toHaveBeenCalledWith("usr-1");
+      expect(mockProfileService.getOnboardingStatus).toHaveBeenCalledWith(
+        "usr-1",
+      );
       expect(result).toEqual({ onboardingCompleted: false });
     });
   });

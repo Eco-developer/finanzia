@@ -86,7 +86,10 @@ describe("ProfileController", () => {
 
       const result = await controller.updateProfile(mockUser, dto);
 
-      expect(mockProfileService.updateProfile).toHaveBeenCalledWith("usr-1", dto);
+      expect(mockProfileService.updateProfile).toHaveBeenCalledWith(
+        "usr-1",
+        dto,
+      );
       expect(result).toEqual(mockResponse);
     });
   });
@@ -108,7 +111,9 @@ describe("ProfileController", () => {
         updatedAt: new Date(),
       };
 
-      mockProfileService.updateFinancialProfile!.mockResolvedValue(mockResponse);
+      mockProfileService.updateFinancialProfile!.mockResolvedValue(
+        mockResponse,
+      );
 
       const result = await controller.updateFinancialProfile(mockUser, dto);
 
