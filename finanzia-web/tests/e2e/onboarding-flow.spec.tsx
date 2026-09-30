@@ -209,7 +209,7 @@ describe('E2E Onboarding & Profile Flow', () => {
       onboardingCompleted: true,
       defaultCurrency: 'EUR',
       profile: {
-        usageGoals: ['control_expenses', 'ai_expense_optimization'],
+        usageGoals: ['control_expenses', 'ai_expense_optimization', 'other'],
         customGoal: 'Ahorrar para la entrada de vivienda',
         preferredCurrency: 'EUR',
         updatedAt: new Date().toISOString(),
@@ -241,7 +241,7 @@ describe('E2E Onboarding & Profile Flow', () => {
     });
 
     // Pestaña 2: Metas e IA
-    const goalsTabBtn = screen.getByRole('button', { name: /Metas e IA/i });
+    const goalsTabBtn = screen.getByRole('button', { name: /Objetivos y Asistente IA/i });
     fireEvent.click(goalsTabBtn);
 
     expect(
@@ -263,7 +263,7 @@ describe('E2E Onboarding & Profile Flow', () => {
     });
 
     // Pestaña 3: Perfil Económico y Activos
-    const financialTabBtn = screen.getByRole('button', { name: /Perfil Económico/i });
+    const financialTabBtn = screen.getByRole('button', { name: /Perfil Económico y Activos/i });
     fireEvent.click(financialTabBtn);
 
     expect(screen.getByDisplayValue('Ingeniera de Software')).toBeInTheDocument();
@@ -279,18 +279,18 @@ describe('E2E Onboarding & Profile Flow', () => {
       updatedAt: new Date().toISOString(),
     });
 
-    const saveFinancialBtn = screen.getByRole('button', { name: /Guardar Perfil Económico/i });
+    const saveFinancialBtn = screen.getByRole('button', { name: /Actualizar Perfil Económico/i });
     fireEvent.click(saveFinancialBtn);
 
     await waitFor(() => {
       expect(profileApi.updateFinancialProfile).toHaveBeenCalled();
     });
 
-    // Pestaña 4: Privacidad y Términos Aceptados
-    const privacyTabBtn = screen.getByRole('button', { name: /Privacidad y Términos/i });
+    // Pestaña 4: Privacidad y Límites
+    const privacyTabBtn = screen.getByRole('button', { name: /Privacidad y Límites/i });
     fireEvent.click(privacyTabBtn);
 
-    expect(screen.getByText(/Términos y condiciones aceptados/i)).toBeInTheDocument();
-    expect(screen.getByText(/Versión del consentimiento: 1.0.0/i)).toBeInTheDocument();
+    expect(screen.getByText(/Garantías de Privacidad y Marco Legal/i)).toBeInTheDocument();
+    expect(screen.getByText(/Aceptado y Verificado/i)).toBeInTheDocument();
   });
 });
