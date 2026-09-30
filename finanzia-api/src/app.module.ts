@@ -17,6 +17,7 @@ import { PrismaSavingsGoalRepository } from "./infrastructure/database/repositor
 import { PrismaAiRecommendationRepository } from "./infrastructure/database/repositories/prisma-ai-recommendation.repository";
 import { PrismaAdvisorHistoryRepository } from "./infrastructure/database/repositories/prisma-advisor-history.repository";
 import { PrismaFinancialAnalyticsAdapter } from "./infrastructure/database/repositories/prisma-financial-analytics.adapter";
+import { PrismaDebtRepository } from "./infrastructure/database/repositories/prisma-debt.repository";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
 
@@ -30,6 +31,7 @@ import { BUDGET_REPOSITORY } from "./core/domain/repositories/budget.repository.
 import { SAVINGS_GOAL_REPOSITORY } from "./core/domain/repositories/savings-goal.repository.interface";
 import { AI_RECOMMENDATION_REPOSITORY } from "./core/domain/repositories/ai-recommendation.repository.interface";
 import { ADVISOR_HISTORY_REPOSITORY } from "./core/domain/repositories/advisor-history.repository.interface";
+import { DEBT_REPOSITORY } from "./core/domain/repositories/debt.repository.interface";
 import { FINANCIAL_ANALYTICS_PORT } from "./core/application/ports/financial-analytics.port";
 import { HASHING_SERVICE } from "./core/application/ports/hashing.port";
 import { AI_ADVISOR_PORT } from "./core/application/ports/ai-advisor.port";
@@ -44,6 +46,8 @@ import { TransactionsService } from "./core/application/transactions/transaction
 import { ImportsService } from "./core/application/imports/imports.service";
 import { BudgetsService } from "./core/application/budgets/budgets.service";
 import { GoalsService } from "./core/application/goals/goals.service";
+import { DebtsService } from "./core/application/debts/debts.service";
+import { DebtInterestCalculatorService } from "./core/domain/services/debt-interest-calculator.service";
 import { AiToolsService } from "./core/application/ai/ai-tools.service";
 import { GeminiAdvisorService } from "./infrastructure/ai/gemini-advisor.service";
 import { AiAdvisorService } from "./core/application/ai/ai-advisor.service";
@@ -63,6 +67,7 @@ import { BudgetsController } from "./presentation/controllers/budgets.controller
 import { GoalsController } from "./presentation/controllers/goals.controller";
 import { AdvisorController } from "./presentation/controllers/advisor.controller";
 import { RecommendationsController } from "./presentation/controllers/recommendations.controller";
+import { DebtsController } from "./presentation/controllers/debts.controller";
 import { GlobalExceptionFilter } from "./presentation/filters/global-exception.filter";
 
 @Module({
@@ -102,6 +107,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     GoalsController,
     AdvisorController,
     RecommendationsController,
+    DebtsController,
   ],
   providers: [
     PrismaService,
@@ -115,6 +121,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaAiRecommendationRepository,
     PrismaAdvisorHistoryRepository,
     PrismaFinancialAnalyticsAdapter,
+    PrismaDebtRepository,
     HashingService,
     JwtStrategy,
     // Bindings de Puertos e Interfaces (Hexagonal Architecture / DIP)
@@ -133,6 +140,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
       provide: ADVISOR_HISTORY_REPOSITORY,
       useClass: PrismaAdvisorHistoryRepository,
     },
+    { provide: DEBT_REPOSITORY, useClass: PrismaDebtRepository },
     {
       provide: FINANCIAL_ANALYTICS_PORT,
       useClass: PrismaFinancialAnalyticsAdapter,
@@ -148,6 +156,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     ImportsService,
     BudgetsService,
     GoalsService,
+    DebtsService,
+    DebtInterestCalculatorService,
     AiToolsService,
     GeminiAdvisorService,
     AiAdvisorService,
@@ -171,6 +181,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     SAVINGS_GOAL_REPOSITORY,
     AI_RECOMMENDATION_REPOSITORY,
     ADVISOR_HISTORY_REPOSITORY,
+    DEBT_REPOSITORY,
     FINANCIAL_ANALYTICS_PORT,
     HASHING_SERVICE,
     AI_ADVISOR_PORT,
@@ -182,6 +193,8 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     ImportsService,
     BudgetsService,
     GoalsService,
+    DebtsService,
+    DebtInterestCalculatorService,
     AiToolsService,
     GeminiAdvisorService,
     AiAdvisorService,

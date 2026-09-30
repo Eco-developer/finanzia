@@ -9,6 +9,7 @@ import { MobileBottomNav } from '@/presentation/components/navigation/MobileBott
 import { ChatBubble } from '@/presentation/components/ai-advisor/ChatBubble';
 import { RecommendationCard } from '@/presentation/components/ai-advisor/RecommendationCard';
 import { QuickPromptChips } from '@/presentation/components/ai-advisor/QuickPromptChips';
+import { DeleteConversationModal } from '@/presentation/components/ai-advisor/DeleteConversationModal';
 import {
   advisorApi,
   ChatMessage,
@@ -37,6 +38,8 @@ export default function AdvisorPage() {
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeMobileTab, setActiveMobileTab] = useState<'chat' | 'recommendations' | 'history'>('chat');
+  const [conversationToDelete, setConversationToDelete] = useState<ConversationItem | null>(null);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -126,17 +129,24 @@ export default function AdvisorPage() {
     else if (tabKey === 'settings') setIsMobileMenuOpen(true);
   };
 
-  const handleDeleteConversation = async (e: React.MouseEvent, id: string) => {
+  const handleOpenDeleteConversation = (e: React.MouseEvent, conv: ConversationItem) => {
     e.stopPropagation();
-    if (!confirm('¿Deseas eliminar esta conversación?')) return;
+    setConversationToDelete(conv);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!conversationToDelete) return;
     try {
-      await advisorApi.deleteConversation(id);
-      setConversations((prev) => prev.filter((c) => c.id !== id));
-      if (activeConversationId === id) {
+      await advisorApi.deleteConversation(conversationToDelete.id);
+      setConversations((prev) => prev.filter((c) => c.id !== conversationToDelete.id));
+      if (activeConversationId === conversationToDelete.id) {
         handleStartNewConversation();
       }
+      showToast('Conversación eliminada con éxito', 'success');
     } catch (err) {
       console.error('Error al eliminar conversación:', err);
+      showToast('Error al eliminar la conversación', 'error');
     }
   };
 
@@ -341,8 +351,9 @@ export default function AdvisorPage() {
                       <button
                         type="button"
                         className={styles.deleteConvBtn}
-                        onClick={(e) => handleDeleteConversation(e, c.id)}
+                        onClick={(e) => handleOpenDeleteConversation(e, c)}
                         title="Eliminar conversación"
+                        aria-label={`Eliminar conversación ${c.title}`}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -534,6 +545,17 @@ export default function AdvisorPage() {
       </main>
 
       <MobileBottomNav activeTab="ai" onTabChange={handleBottomNavChange} />
+
+      {/* Modal de confirmación para eliminar conversación */}
+      <DeleteConversationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setConversationToDelete(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        conversation={conversationToDelete}
+      />
     </div>
   );
 }

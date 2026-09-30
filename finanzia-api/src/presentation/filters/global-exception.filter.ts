@@ -21,6 +21,9 @@ import { InvalidTransactionAmountException } from "../../core/domain/exceptions/
 import { InvalidTransferException } from "../../core/domain/exceptions/invalid-transfer.exception";
 import { EmailNotVerifiedException } from "../../core/domain/exceptions/email-not-verified.exception";
 import { InvalidVerificationTokenException } from "../../core/domain/exceptions/invalid-verification-token.exception";
+import { DebtNotFoundException } from "../../core/domain/exceptions/debt-not-found.exception";
+import { UnauthorizedDebtAccessException } from "../../core/domain/exceptions/unauthorized-debt-access.exception";
+import { ImmutableDebtException } from "../../core/domain/exceptions/immutable-debt.exception";
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {
@@ -92,6 +95,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     } else if (exception instanceof InvalidTransferException) {
       status = HttpStatus.BAD_REQUEST;
       errorCode = "INVALID_TRANSFER";
+      message = exception.message;
+    } else if (exception instanceof DebtNotFoundException) {
+      status = HttpStatus.NOT_FOUND;
+      errorCode = "DEBT_NOT_FOUND";
+      message = exception.message;
+    } else if (exception instanceof UnauthorizedDebtAccessException) {
+      status = HttpStatus.FORBIDDEN;
+      errorCode = "UNAUTHORIZED_DEBT_ACCESS";
+      message = exception.message;
+    } else if (exception instanceof ImmutableDebtException) {
+      status = HttpStatus.FORBIDDEN;
+      errorCode = "IMMUTABLE_DEBT";
       message = exception.message;
     } else if (exception instanceof HttpException) {
       status = exception.getStatus();

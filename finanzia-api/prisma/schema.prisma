@@ -35,6 +35,17 @@ enum RecommendationType {
   SAVINGS_BOOST     // Aporte extraordinario a meta de ahorro
   EXPENSE_ALERT     // Alerta de gasto excesivo o suscripción recurrente
   GOAL_CREATION     // Propuesta para crear una nueva meta de ahorro
+  DEBT_AMORTIZATION // Recomendación de amortización acelerada de deuda
+}
+
+enum InterestRateType {
+  ANNUAL            // Tasa nominal/efectiva anual
+  MONTHLY           // Tasa mensual (tarjetas revolving, etc.)
+}
+
+enum DebtStatus {
+  ACTIVE            // Deuda con saldo pendiente
+  PAID_OFF          // Amortizada al 100% (archivada en historial inmutable)
 }
 
 enum RecommendationStatus {
@@ -78,6 +89,8 @@ model User {
   aiConversations AiConversation[]
   recommendations AiRecommendation[]
   categoryRules   UserCategoryRule[]
+  debts           Debt[]
+  debtAmortizations DebtAmortization[]
 
   @@map("users")
 }
@@ -97,6 +110,7 @@ model Account {
 
   user                User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions        Transaction[]
+  debtAmortizations   DebtAmortization[]
 
   @@index([userId])
   @@map("accounts")
@@ -154,6 +168,7 @@ model Transaction {
   user                  User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   account               Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category              Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  debtAmortization      DebtAmortization?
 
   @@unique([userId, deduplicationHash])
   @@index([userId, transactionDate])
@@ -280,3 +295,55 @@ model UserCategoryRule {
   @@index([userId])
   @@map("user_category_rules")
 }
+
+/// Registro de una deuda o pasivo financiero del usuario
+model Debt {
+  id                         String            @id @default(uuid())
+  userId                     String
+  concept                    String            // Concepto (ej. "Préstamo Coche", "Tarjeta Crédito", "Hipoteca")
+  creditor                   String?           // Entidad o acreedor (ej. "Banco Santander", "BBVA")
+  initialAmountCents         BigInt            // Importe original en céntimos (cero float)
+  remainingAmountCents       BigInt            // Saldo pendiente en céntimos (cero float)
+  interestRateBasisPts       Int               // Tasa de interés en puntos básicos (ej. 750 = 7.50%)
+  interestRateType           InterestRateType  @default(ANNUAL)
+  minimumMonthlyPaymentCents BigInt?           // Cuota mensual mínima o estimada en céntimos
+  dueDate                    DateTime?         // Fecha límite o vencimiento final
+  status                     DebtStatus        @default(ACTIVE)
+  paidOffAt                  DateTime?         // Fecha de amortización al 100%
+  isImmutable                Boolean           @default(false) // Bloqueo estricto cuando llega al 100%
+  notes                      String?           @db.Text
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+
+  user                       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amortizations              DebtAmortization[]
+
+  @@index([userId, status])
+  @@map("debts")
+}
+
+/// Registro individual de un abono o amortización de deuda
+model DebtAmortization {
+  id                  String       @id @default(uuid())
+  debtId              String
+  userId              String
+  accountId           String?      // Cuenta financiera local de donde salió el dinero (opcional)
+  transactionId       String?      @unique // Transacción contable vinculada generada en la cuenta
+  amountCents         BigInt       // Importe total abonado en céntimos
+  principalCents      BigInt       // Cantidad destinada a amortizar capital
+  interestCents       BigInt       // Cantidad destinada a cubrir intereses
+  remainingAfterCents BigInt       // Saldo pendiente restante tras este abono
+  paymentDate         DateTime     @default(now())
+  notes               String?      // Notas o concepto de la amortización
+  createdAt           DateTime     @default(now())
+
+  debt                Debt         @relation(fields: [debtId], references: [id], onDelete: Cascade)
+  user                User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account             Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  transaction         Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@index([debtId, paymentDate])
+  @@index([userId])
+  @@map("debt_amortizations")
+}
+
