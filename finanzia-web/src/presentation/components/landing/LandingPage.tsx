@@ -259,7 +259,7 @@ export function LandingPage() {
                   </div>
 
                   <div className={styles.toolExecBadge}>
-                    ⚡ calculate_debt_payoff(strategy: "AVALANCHE", extra_payment: 120000)
+                    ⚡ calculate_debt_payoff(strategy: &apos;AVALANCHE&apos;, extra_payment: 120000)
                   </div>
 
                   <p>
