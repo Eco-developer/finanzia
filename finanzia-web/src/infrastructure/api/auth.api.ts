@@ -7,6 +7,7 @@ export interface UserProfile {
   lastName?: string | null;
   defaultCurrency?: string;
   emailVerified?: boolean;
+  onboardingCompleted?: boolean;
   createdAt?: string;
 }
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/presentation/context/auth.context';
 import { MoneyDisplay } from '@/presentation/components/financial/MoneyDisplay';
 import { Button } from '@/presentation/components/ui/Button';
@@ -38,7 +39,15 @@ import {
 import styles from './page.module.css';
 
 export default function HomePage() {
+  const router = useRouter();
   const { user, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+
+  // Redirigir al wizard si el usuario autenticado aún no completó el onboarding
+  useEffect(() => {
+    if (!isAuthLoading && isAuthenticated && user && !user.onboardingCompleted) {
+      router.replace('/onboarding');
+    }
+  }, [isAuthLoading, isAuthenticated, user, router]);
 
   // Estados de datos del dominio
   const [accounts, setAccounts] = useState<AccountItem[]>([]);
@@ -66,7 +75,7 @@ export default function HomePage() {
   // Función dedicada para paginar y filtrar movimientos desde el backend
   const loadTransactions = useCallback(
     async (p: number, s: number, f: TransactionType | 'ALL') => {
-      if (!isAuthenticated) return;
+      if (!isAuthenticated || !user?.onboardingCompleted) return;
       try {
         const res = await transactionsApi.getTransactions({
           page: p,
@@ -81,12 +90,12 @@ export default function HomePage() {
         console.error('Error al paginar transacciones:', err);
       }
     },
-    [isAuthenticated],
+    [isAuthenticated, user?.onboardingCompleted],
   );
 
   // Carga reactiva de datos consolidados del dashboard
   const loadData = useCallback(async () => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !user?.onboardingCompleted) return;
     setIsDataLoading(true);
     try {
       const now = new Date();
@@ -127,7 +136,7 @@ export default function HomePage() {
     } finally {
       setIsDataLoading(false);
     }
-  }, [isAuthenticated, currentPage, pageSize, activeFilterType]);
+  }, [isAuthenticated, user?.onboardingCompleted, currentPage, pageSize, activeFilterType]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -243,6 +252,16 @@ export default function HomePage() {
   // Vista desautenticada: Landing Promocional Premium Dark Glassmorphism
   if (!isAuthenticated) {
     return <LandingPage />;
+  }
+
+  // Si está autenticado pero aún no completó el onboarding, mostrar pantalla de transición
+  if (user && !user.onboardingCompleted) {
+    return (
+      <div className={styles.loadingScreen}>
+        <div className={styles.spinner} />
+        <p>Configurando tu espacio... Redirigiendo a la bienvenida.</p>
+      </div>
+    );
   }
 
   // Vista Autenticada: Dashboard con Shell Responsive

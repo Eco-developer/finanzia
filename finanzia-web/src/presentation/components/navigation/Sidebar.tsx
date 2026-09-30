@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/presentation/context/auth.context';
-import { LogOut, X } from 'lucide-react';
+import { LogOut, X, User } from 'lucide-react';
 import styles from './Sidebar.module.css';
 
 interface SidebarProps {
@@ -145,6 +145,19 @@ export function Sidebar({
           >
             <span className={styles.navIcon}>✨</span>
             <span>FinanZIA AI Advisor</span>
+          </Link>
+
+          <Link
+            href="/profile"
+            className={`${styles.navItem} ${
+              activeSection === 'profile' ? styles.navItemActive : ''
+            }`}
+            onClick={() => handleNavClick('profile', '/profile')}
+          >
+            <span className={styles.navIcon}>
+              <User size={18} />
+            </span>
+            <span>Mi Perfil</span>
           </Link>
         </nav>
       </div>

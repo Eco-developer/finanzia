@@ -136,7 +136,7 @@ function VerifyEmailContent() {
             <div className={styles.actions}>
               <Button
                 variant="primary"
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/onboarding')}
                 className={styles.actionBtn}
               >
                 Continuar a la aplicación <ArrowRight size={18} />

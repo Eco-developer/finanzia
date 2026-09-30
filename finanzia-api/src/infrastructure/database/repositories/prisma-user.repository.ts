@@ -68,6 +68,19 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toDomain(record);
   }
 
+  async updateOnboardingCompleted(
+    id: string,
+    completed: boolean,
+  ): Promise<UserEntity> {
+    const record = await this.prisma.user.update({
+      where: { id },
+      data: {
+        onboardingCompleted: completed,
+      },
+    });
+    return this.toDomain(record);
+  }
+
   async saveVerificationToken(
     userId: string,
     token: string,
@@ -92,6 +105,7 @@ export class PrismaUserRepository implements IUserRepository {
     createdAt: Date;
     updatedAt: Date;
     emailVerified?: boolean;
+    onboardingCompleted?: boolean;
   }): UserEntity {
     return new UserEntity(
       record.id,
@@ -103,6 +117,7 @@ export class PrismaUserRepository implements IUserRepository {
       record.createdAt,
       record.updatedAt,
       record.emailVerified ?? false,
+      record.onboardingCompleted ?? false,
     );
   }
 }
