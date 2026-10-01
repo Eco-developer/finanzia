@@ -191,17 +191,23 @@ export class PrismaProfileRepository implements IProfileRepository {
         },
       });
 
-      // 4. Crear primera cuenta manual
-      const accountRecord = await tx.account.create({
-        data: {
-          userId,
-          name: data.initialAccount.name,
-          type: data.initialAccount.type,
-          initialBalanceCents: data.initialAccount.initialBalanceCents,
-          currentBalanceCents: data.initialAccount.initialBalanceCents,
-          currency: data.initialAccount.currency || "EUR",
-        },
+      // 4. Crear primera cuenta manual (solo si el usuario no tiene ninguna previa)
+      let accountRecord = await tx.account.findFirst({
+        where: { userId },
       });
+
+      if (!accountRecord) {
+        accountRecord = await tx.account.create({
+          data: {
+            userId,
+            name: data.initialAccount.name,
+            type: data.initialAccount.type,
+            initialBalanceCents: data.initialAccount.initialBalanceCents,
+            currentBalanceCents: data.initialAccount.initialBalanceCents,
+            currency: data.initialAccount.currency || "EUR",
+          },
+        });
+      }
 
       // 5. Marcar onboarding como completado en el usuario
       await tx.user.update({

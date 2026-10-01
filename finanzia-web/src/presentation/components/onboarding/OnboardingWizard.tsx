@@ -18,7 +18,7 @@ export function OnboardingWizard() {
   const { user, refreshUser, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { completeOnboarding } = useProfile();
 
-  // Redirección inversa: Si ya completó el onboarding, redirigir al panel principal
+  // Redirección inversa: Si ya completó el onboarding, redirigir al módulo de cuentas
   useEffect(() => {
     if (!isAuthLoading) {
       if (!isAuthenticated) {
@@ -138,12 +138,6 @@ export function OnboardingWizard() {
     accountCurrency,
   ]);
 
-  // Si el usuario ya completó onboarding, redirigir a dashboard
-  useEffect(() => {
-    if (user && user.onboardingCompleted) {
-      router.push('/accounts');
-    }
-  }, [user, router]);
 
   // Handlers Step 1
   const handleToggleGoal = (id: string) => {

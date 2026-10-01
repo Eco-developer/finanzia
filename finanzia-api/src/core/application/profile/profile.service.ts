@@ -118,6 +118,12 @@ export class ProfileService {
       throw new UserNotFoundException(userId);
     }
 
+    if (user.onboardingCompleted) {
+      throw new BadRequestException(
+        "El proceso de configuración inicial (onboarding) ya ha sido completado previamente.",
+      );
+    }
+
     if (!dto.termsAccepted) {
       throw new BadRequestException(
         "Debes aceptar los términos y disclaimers para continuar",
