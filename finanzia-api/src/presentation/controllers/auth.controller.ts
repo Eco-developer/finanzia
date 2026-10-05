@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Body,
+  Query,
   Res,
   UseGuards,
   HttpCode,
@@ -15,6 +16,7 @@ import {
   ApiBearerAuth,
   ApiCookieAuth,
 } from "@nestjs/swagger";
+import { Throttle } from "@nestjs/throttler";
 import { Response } from "express";
 import { AuthService } from "../../core/application/auth/auth.service";
 import { RegisterDto } from "../dtos/auth/register.dto";
@@ -23,6 +25,8 @@ import {
   VerifyEmailDto,
   ResendVerificationDto,
 } from "../dtos/auth/verify-email.dto";
+import { ForgotPasswordDto } from "../dtos/auth/forgot-password.dto";
+import { ResetPasswordDto } from "../dtos/auth/reset-password.dto";
 import {
   UserResponseDto,
   AuthResponseDto,
@@ -223,6 +227,95 @@ export class AuthController {
     return {
       success: true,
       data: userProfile,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("forgot-password")
+  @Throttle({ default: { limit: 5, ttl: 900000 } })
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Solicitar restablecimiento de contraseña",
+    description:
+      "Genera un enlace de recuperación con token temporal (30 min) y lo envía al correo si existe. Respuesta neutra OWASP.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Solicitud procesada con respuesta neutra de confirmación",
+  })
+  @ApiResponse({
+    status: 429,
+    description:
+      "Demasiadas solicitudes. Límite de 5 peticiones cada 15 minutos superado.",
+  })
+  async forgotPassword(@Body() dto: ForgotPasswordDto) {
+    const result = await this.authService.requestPasswordReset(dto.email);
+    return {
+      success: true,
+      message: result.message,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Get("verify-reset-token")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Verificar validez del token de restablecimiento",
+    description:
+      "Valida que el token provisto no haya expirado (> 30 min) y no haya sido utilizado previamente.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Token válido y vigente",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Token inválido, expirado o ya consumido",
+  })
+  async verifyResetToken(@Query("token") token: string) {
+    const result = await this.authService.verifyResetToken(token);
+    return {
+      success: true,
+      data: result,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("reset-password")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Restablecer contraseña de usuario",
+    description:
+      "Actualiza la contraseña cifrándola con Argon2id, invalida el token temporal y revoca sesiones previas.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Contraseña actualizada exitosamente",
+  })
+  @ApiResponse({
+    status: 400,
+    description: "Contraseña débil o no cumple los criterios de registro",
+  })
+  @ApiResponse({
+    status: 401,
+    description: "No autenticado o token de reseteo inválido/expirado",
+  })
+  async resetPassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ResetPasswordDto,
+  ) {
+    const result = await this.authService.resetPassword(user.id, dto.password);
+    return {
+      success: true,
+      message: result.message,
       meta: {
         timestamp: new Date().toISOString(),
       },

@@ -4,8 +4,10 @@ import * as nodemailer from "nodemailer";
 import {
   IEmailPort,
   SendVerificationEmailParams,
+  SendPasswordResetEmailParams,
 } from "../../core/application/ports/email.port";
 import { renderVerificationEmail } from "./templates/verification-email.template";
+import { renderPasswordResetEmail } from "./templates/password-reset-email.template";
 
 @Injectable()
 export class NodemailerEmailAdapter implements IEmailPort {
@@ -68,7 +70,41 @@ export class NodemailerEmailAdapter implements IEmailPort {
       this.logger.warn(
         `[Email] No se pudo enviar el correo vía SMTP (${error?.message || error}). Enlace de respaldo: ${verificationLink}`,
       );
-      // En modo local/pruebas, no bloquear el flujo de registro si el servidor SMTP no está accesible
+      return false;
+    }
+  }
+
+  async sendPasswordResetEmail(
+    params: SendPasswordResetEmailParams,
+  ): Promise<boolean> {
+    const { to, firstName, resetLink, expiresInMinutes = 30 } = params;
+    const { html, text } = renderPasswordResetEmail(
+      firstName,
+      resetLink,
+      expiresInMinutes,
+    );
+
+    try {
+      this.logger.log(
+        `[Email] Enviando correo de recuperación de contraseña a ${to}... (Enlace: ${resetLink})`,
+      );
+
+      const info = await this.transporter.sendMail({
+        from: this.fromAddress,
+        to,
+        subject: "⚡ Restablece tu contraseña en FinanZIA",
+        text,
+        html,
+      });
+
+      this.logger.log(
+        `[Email] Correo de recuperación entregado a ${to}. ID: ${info.messageId}`,
+      );
+      return true;
+    } catch (error: any) {
+      this.logger.warn(
+        `[Email] No se pudo enviar el correo vía SMTP (${error?.message || error}). Enlace de respaldo: ${resetLink}`,
+      );
       return false;
     }
   }

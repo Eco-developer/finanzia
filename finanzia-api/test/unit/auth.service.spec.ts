@@ -46,6 +46,9 @@ describe("AuthService (Unit Tests)", () => {
       create: jest.fn(),
       saveVerificationToken: jest.fn().mockResolvedValue(undefined),
       updateEmailVerified: jest.fn().mockResolvedValue(undefined),
+      savePasswordResetToken: jest.fn().mockResolvedValue(undefined),
+      findByPasswordResetToken: jest.fn(),
+      updatePasswordAndRevokeSessions: jest.fn(),
     };
 
     mockHashingService = {
@@ -55,10 +58,12 @@ describe("AuthService (Unit Tests)", () => {
 
     mockJwtService = {
       sign: jest.fn().mockReturnValue("mocked.jwt.token"),
+      verify: jest.fn(),
     };
 
     mockEmailPort = {
       sendVerificationEmail: jest.fn().mockResolvedValue(undefined),
+      sendPasswordResetEmail: jest.fn().mockResolvedValue(true),
     };
 
     mockConfigService = {
@@ -275,6 +280,124 @@ describe("AuthService (Unit Tests)", () => {
       await expect(authService.getCurrentUser("non-existent")).rejects.toThrow(
         UserNotFoundException,
       );
+    });
+  });
+
+  describe("Recuperación de contraseña (Password Recovery Flow)", () => {
+    describe("requestPasswordReset", () => {
+      it("debe retornar respuesta neutra OWASP si el correo no existe sin enviar email", async () => {
+        mockUserRepository.findByEmail.mockResolvedValue(null);
+
+        const result = await authService.requestPasswordReset(
+          "inexistente@example.com",
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.message).toContain(
+          "Si tu correo electrónico coincide con una cuenta registrada",
+        );
+        expect(
+          mockUserRepository.savePasswordResetToken,
+        ).not.toHaveBeenCalled();
+        expect(mockEmailPort.sendPasswordResetEmail).not.toHaveBeenCalled();
+      });
+
+      it("debe generar token JWT de 30m, guardar en BD y enviar correo si el usuario existe", async () => {
+        mockUserRepository.findByEmail.mockResolvedValue(mockUserVerified);
+
+        const result =
+          await authService.requestPasswordReset("test@example.com");
+
+        expect(result.success).toBe(true);
+        expect(result.message).toContain(
+          "Si tu correo electrónico coincide con una cuenta registrada",
+        );
+        expect(mockJwtService.sign).toHaveBeenCalledWith(
+          expect.objectContaining({
+            sub: mockUserVerified.id,
+            email: mockUserVerified.email,
+            type: "password_reset",
+            tokenVersion: mockUserVerified.tokenVersion,
+          }),
+          expect.objectContaining({ expiresIn: "30m" }),
+        );
+        expect(mockUserRepository.savePasswordResetToken).toHaveBeenCalledWith(
+          mockUserVerified.id,
+          "mocked.jwt.token",
+          expect.any(Date),
+        );
+        expect(mockEmailPort.sendPasswordResetEmail).toHaveBeenCalledWith(
+          expect.objectContaining({
+            to: mockUserVerified.email,
+            firstName: mockUserVerified.firstName,
+            resetLink: expect.stringContaining("mocked.jwt.token"),
+          }),
+        );
+      });
+    });
+
+    describe("verifyResetToken", () => {
+      it("debe lanzar UnauthorizedException si el token es corrupto o expiró en JwtService", async () => {
+        mockJwtService.verify = jest.fn().mockImplementation(() => {
+          throw new Error("jwt expired");
+        });
+
+        await expect(
+          authService.verifyResetToken("expired.token"),
+        ).rejects.toThrow();
+      });
+
+      it("debe lanzar UnauthorizedException si el token no existe o ya fue usado en BD", async () => {
+        mockJwtService.verify = jest.fn().mockReturnValue({
+          sub: mockUserVerified.id,
+          email: mockUserVerified.email,
+          type: "password_reset",
+        });
+        mockUserRepository.findByPasswordResetToken = jest
+          .fn()
+          .mockResolvedValue(null);
+
+        await expect(
+          authService.verifyResetToken("invalid.token"),
+        ).rejects.toThrow();
+      });
+
+      it("debe validar exitosamente si el token está vigente y registrado en BD", async () => {
+        mockJwtService.verify = jest.fn().mockReturnValue({
+          sub: mockUserVerified.id,
+          email: mockUserVerified.email,
+          type: "password_reset",
+        });
+        mockUserRepository.findByPasswordResetToken = jest
+          .fn()
+          .mockResolvedValue(mockUserVerified);
+
+        const result = await authService.verifyResetToken("valid.token");
+
+        expect(result.valid).toBe(true);
+        expect(result.email).toBe(mockUserVerified.email);
+      });
+    });
+
+    describe("resetPassword", () => {
+      it("debe hashear la nueva contraseña y revocar sesiones previas incrementando tokenVersion", async () => {
+        mockUserRepository.findById.mockResolvedValue(mockUserVerified);
+        mockUserRepository.updatePasswordAndRevokeSessions = jest
+          .fn()
+          .mockResolvedValue(mockUserVerified);
+
+        const result = await authService.resetPassword(
+          mockUserVerified.id,
+          "NuevaClave123!",
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.message).toContain("Tu contraseña se ha cambiado");
+        expect(mockHashingService.hash).toHaveBeenCalledWith("NuevaClave123!");
+        expect(
+          mockUserRepository.updatePasswordAndRevokeSessions,
+        ).toHaveBeenCalledWith(mockUserVerified.id, "hashed_password_123");
+      });
     });
   });
 });

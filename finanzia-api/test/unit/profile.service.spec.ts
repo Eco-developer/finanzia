@@ -97,6 +97,9 @@ describe("ProfileService", () => {
       updateEmailVerified: jest.fn(),
       updateOnboardingCompleted: jest.fn(),
       saveVerificationToken: jest.fn(),
+      savePasswordResetToken: jest.fn(),
+      findByPasswordResetToken: jest.fn(),
+      updatePasswordAndRevokeSessions: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
