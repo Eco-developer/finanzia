@@ -31,6 +31,7 @@ export function buildApiUrl(endpoint: string): string {
 export interface ApiResponse<T = any> {
   success: boolean;
   data: T;
+  message?: string;
   meta?: Record<string, any>;
   token?: string;
 }

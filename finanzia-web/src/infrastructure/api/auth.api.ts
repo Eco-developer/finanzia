@@ -94,14 +94,17 @@ export const authApi = {
   async forgotPassword(
     email: string
   ): Promise<{ success: boolean; message: string }> {
-    const res = await apiClient<{ success: boolean; message: string }>(
+    const res = await apiClient<{ success?: boolean; message?: string }>(
       '/auth/forgot-password',
       {
         method: 'POST',
         body: JSON.stringify({ email }),
       }
     );
-    return res;
+    return {
+      success: res.success,
+      message: res.message || res.data?.message || '',
+    };
   },
 
   async verifyResetToken(
@@ -117,7 +120,7 @@ export const authApi = {
     password: string,
     token: string
   ): Promise<{ success: boolean; message: string }> {
-    const res = await apiClient<{ success: boolean; message: string }>(
+    const res = await apiClient<{ success?: boolean; message?: string }>(
       '/auth/reset-password',
       {
         method: 'POST',
@@ -127,6 +130,9 @@ export const authApi = {
         },
       }
     );
-    return res;
+    return {
+      success: res.success,
+      message: res.message || res.data?.message || '',
+    };
   },
 };
