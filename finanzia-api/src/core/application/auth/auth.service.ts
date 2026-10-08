@@ -1,4 +1,9 @@
-import { Injectable, Inject, Logger } from "@nestjs/common";
+import {
+  Injectable,
+  Inject,
+  Logger,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
 import { ConfigService } from "@nestjs/config";
 import * as crypto from "crypto";
@@ -172,6 +177,107 @@ export class AuthService {
     };
   }
 
+  async requestPasswordReset(
+    email: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await this.userRepository.findByEmail(normalizedEmail);
+
+    const genericSuccessMessage =
+      "Si tu correo electrónico coincide con una cuenta registrada, te hemos enviado un enlace de recuperación.";
+
+    // OWASP Anti-Enumeración: Si el correo no existe, responder 200 neutro sin enviar correo
+    if (!user) {
+      this.logger.warn(
+        `[PasswordReset] Solicitud para correo no registrado: ${normalizedEmail}`,
+      );
+      return {
+        success: true,
+        message: genericSuccessMessage,
+      };
+    }
+
+    // Generar token JWT temporal con expiración de 30 minutos
+    const resetToken = this.jwtService.sign(
+      {
+        sub: user.id,
+        email: user.email,
+        type: "password_reset",
+        tokenVersion: user.tokenVersion,
+      },
+      { expiresIn: "30m" },
+    );
+
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000);
+    await this.userRepository.savePasswordResetToken(
+      user.id,
+      resetToken,
+      expiresAt,
+    );
+
+    const frontendUrl =
+      this.configService.get<string>("FRONTEND_URL") || "http://localhost:3000";
+    const resetLink = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+    await this.emailService.sendPasswordResetEmail({
+      to: user.email,
+      firstName: user.firstName,
+      resetLink,
+      expiresInMinutes: 30,
+    });
+
+    return {
+      success: true,
+      message: genericSuccessMessage,
+    };
+  }
+
+  async verifyResetToken(
+    token: string,
+  ): Promise<{ valid: boolean; email: string }> {
+    let payload: any;
+    try {
+      payload = this.jwtService.verify(token);
+    } catch {
+      throw new UnauthorizedException(
+        "El enlace de recuperación es inválido o ha caducado.",
+      );
+    }
+
+    const user = await this.userRepository.findByPasswordResetToken(token);
+    if (!user || user.id !== payload.sub) {
+      throw new UnauthorizedException(
+        "El enlace de recuperación es inválido, ha caducado o ya fue utilizado.",
+      );
+    }
+
+    return {
+      valid: true,
+      email: user.email,
+    };
+  }
+
+  async resetPassword(
+    userId: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new UserNotFoundException(userId);
+    }
+
+    const passwordHash = await this.hashingService.hash(newPassword);
+    await this.userRepository.updatePasswordAndRevokeSessions(
+      user.id,
+      passwordHash,
+    );
+
+    return {
+      success: true,
+      message: "Tu contraseña se ha cambiado exitosamente.",
+    };
+  }
+
   async getCurrentUser(userId: string): Promise<UserResponseDto> {
     const user = await this.userRepository.findById(userId);
     if (!user) {
@@ -184,6 +290,7 @@ export class AuthService {
     return this.jwtService.sign({
       sub: user.id,
       email: user.email,
+      tokenVersion: user.tokenVersion,
     });
   }
 

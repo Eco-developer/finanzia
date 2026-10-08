@@ -80,6 +80,25 @@
   margin-top: 0.5rem;
 }
 
+.forgotPasswordContainer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -0.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.forgotPasswordLink {
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+.forgotPasswordLink:hover {
+  color: var(--brand-primary);
+  text-decoration: underline;
+}
+
 .footer {
   margin-top: 1.75rem;
   padding-top: 1.25rem;

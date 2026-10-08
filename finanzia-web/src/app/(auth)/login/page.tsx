@@ -95,6 +95,12 @@ export default function LoginPage() {
             }
           />
 
+          <div className={styles.forgotPasswordContainer}>
+            <Link href="/forgot-password" className={styles.forgotPasswordLink}>
+              ¿Olvidó la contraseña?
+            </Link>
+          </div>
+
           <Button type="submit" variant="primary" disabled={isLoading} className={styles.submitBtn}>
             {isLoading ? 'Iniciando sesión...' : 'Entrar a FinanZIA'}
           </Button>

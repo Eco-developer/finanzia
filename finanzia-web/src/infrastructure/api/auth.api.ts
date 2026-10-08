@@ -90,4 +90,49 @@ export const authApi = {
     const res = await apiClient<UserProfile>('/auth/me');
     return res.data;
   },
+
+  async forgotPassword(
+    email: string
+  ): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient<{ success?: boolean; message?: string }>(
+      '/auth/forgot-password',
+      {
+        method: 'POST',
+        body: JSON.stringify({ email }),
+      }
+    );
+    return {
+      success: res.success,
+      message: res.message || res.data?.message || '',
+    };
+  },
+
+  async verifyResetToken(
+    token: string
+  ): Promise<{ valid: boolean; email: string }> {
+    const res = await apiClient<{ valid: boolean; email: string }>(
+      `/auth/verify-reset-token?token=${encodeURIComponent(token)}`
+    );
+    return res.data;
+  },
+
+  async resetPassword(
+    password: string,
+    token: string
+  ): Promise<{ success: boolean; message: string }> {
+    const res = await apiClient<{ success?: boolean; message?: string }>(
+      '/auth/reset-password',
+      {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+    return {
+      success: res.success,
+      message: res.message || res.data?.message || '',
+    };
+  },
 };

@@ -95,6 +95,51 @@ export class PrismaUserRepository implements IUserRepository {
     });
   }
 
+  async savePasswordResetToken(
+    userId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordResetToken: token,
+        passwordResetExpires: expiresAt,
+      },
+    });
+  }
+
+  async findByPasswordResetToken(token: string): Promise<UserEntity | null> {
+    const record = await this.prisma.user.findFirst({
+      where: {
+        passwordResetToken: token,
+        passwordResetExpires: {
+          gt: new Date(),
+        },
+      },
+    });
+    if (!record) return null;
+    return this.toDomain(record);
+  }
+
+  async updatePasswordAndRevokeSessions(
+    userId: string,
+    passwordHash: string,
+  ): Promise<UserEntity> {
+    const record = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+        tokenVersion: {
+          increment: 1,
+        },
+      },
+    });
+    return this.toDomain(record);
+  }
+
   private toDomain(record: {
     id: string;
     email: string;
@@ -106,6 +151,7 @@ export class PrismaUserRepository implements IUserRepository {
     updatedAt: Date;
     emailVerified?: boolean;
     onboardingCompleted?: boolean;
+    tokenVersion?: number;
   }): UserEntity {
     return new UserEntity(
       record.id,
@@ -118,6 +164,7 @@ export class PrismaUserRepository implements IUserRepository {
       record.updatedAt,
       record.emailVerified ?? false,
       record.onboardingCompleted ?? false,
+      record.tokenVersion ?? 1,
     );
   }
 }

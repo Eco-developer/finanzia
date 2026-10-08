@@ -23,6 +23,16 @@ export interface IUserRepository {
     token: string,
     expiresAt: Date,
   ): Promise<void>;
+  savePasswordResetToken(
+    userId: string,
+    token: string,
+    expiresAt: Date,
+  ): Promise<void>;
+  findByPasswordResetToken(token: string): Promise<UserEntity | null>;
+  updatePasswordAndRevokeSessions(
+    userId: string,
+    passwordHash: string,
+  ): Promise<UserEntity>;
 }
 
 export const USER_REPOSITORY = Symbol("IUserRepository");

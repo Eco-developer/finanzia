@@ -97,6 +97,9 @@ describe("ProfileService", () => {
       updateEmailVerified: jest.fn(),
       updateOnboardingCompleted: jest.fn(),
       saveVerificationToken: jest.fn(),
+      savePasswordResetToken: jest.fn(),
+      findByPasswordResetToken: jest.fn(),
+      updatePasswordAndRevokeSessions: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -300,6 +303,32 @@ describe("ProfileService", () => {
         service.completeOnboarding("usr-1", {
           usageGoals: ["control_expenses"],
           termsAccepted: false,
+          accountName: "Efectivo",
+          accountType: AccountType.CASH,
+          initialBalanceCents: 0,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it("debe rechazar si el usuario ya completó el onboarding previamente", async () => {
+      const alreadyCompletedUser = new UserEntity(
+        "usr-1",
+        "test@finanzia.com",
+        "hashed_password",
+        "Miguel",
+        "García",
+        "EUR",
+        new Date(),
+        new Date(),
+        true,
+        true,
+      );
+      mockUserRepo.findById.mockResolvedValue(alreadyCompletedUser);
+
+      await expect(
+        service.completeOnboarding("usr-1", {
+          usageGoals: ["control_expenses"],
+          termsAccepted: true,
           accountName: "Efectivo",
           accountType: AccountType.CASH,
           initialBalanceCents: 0,

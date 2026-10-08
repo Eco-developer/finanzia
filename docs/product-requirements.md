@@ -120,6 +120,13 @@ El producto se concibe como una solución privada, modular y local-first, estruc
 - **HU-27**: Como usuario, quiero que FinanZIA Advisor analice mis gastos prescindibles para proponerme planes de ahorro destinados a amortizar deuda anticipadamente.
 - **HU-28**: Como usuario, quiero simular escenarios de liquidación comparando las estrategias Avalancha (mayor interés primero) y Bola de Nieve (menor saldo primero).
 
+### Épica 8: Motor de IA y LLM 100% Local (Ollama y ReAct Determinista — Futuro / Backlog)
+> *Especificación detallada de historias, criterios de aceptación y arquitectura en [`docs/epic-local-llm-ollama.md`](./epic-local-llm-ollama.md) y [`docs/local-llm-implementation-plan.md`](./local-llm-implementation-plan.md).*
+- **HU-29**: Como usuario, quiero configurar mediante `AI_PROVIDER` qué motor de IA atiende mis consultas (Gemini, Ollama o ReAct Local) para elegir entre conveniencia cloud o soberanía de datos local.
+- **HU-30**: Como usuario, quiero consultar a FinanZIA Advisor sabiendo que el LLM corre íntegramente en mi equipo con Ollama, con garantía de que ningún proveedor externo se entrena con mis finanzas personales.
+- **HU-31**: Como usuario, quiero que el LLM local invoque las herramientas financieras con total precisión y datos reales desde mi base de datos PostgreSQL local.
+- **HU-32**: Como usuario, quiero que el sistema conmute automáticamente al motor ReAct determinista en memoria si el contenedor de Ollama no está disponible o el equipo tiene recursos limitados.
+
 ---
 
 ## 5. Requisitos No Funcionales (NFR)

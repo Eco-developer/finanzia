@@ -78,7 +78,7 @@ describe('useProfile Hook', () => {
       hasStockInvestments: true,
       hasCryptoInvestments: true,
       hasRealEstateIncome: false,
-      experienceLevel: 'INTERMEDIATE',
+      experienceLevel: 'INTERMEDIATE' as const,
     };
 
     const mockResponse = { ...dto, updatedAt: new Date().toISOString() };

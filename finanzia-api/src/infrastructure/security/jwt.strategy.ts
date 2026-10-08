@@ -8,6 +8,8 @@ import { PrismaUserRepository } from "../database/repositories/prisma-user.repos
 export interface JwtPayload {
   sub: string;
   email: string;
+  type?: string;
+  tokenVersion?: number;
   iat?: number;
   exp?: number;
 }
@@ -41,6 +43,18 @@ export class JwtStrategy extends PassportStrategy(Strategy, "jwt") {
         "El token no corresponde a ningún usuario válido",
       );
     }
+
+    // Revocación de sesiones: Si el payload incluye tokenVersion y es menor al de BD, la sesión fue revocada
+    if (
+      payload.tokenVersion !== undefined &&
+      user.tokenVersion !== undefined &&
+      payload.tokenVersion < user.tokenVersion
+    ) {
+      throw new UnauthorizedException(
+        "La sesión ha sido revocada debido a un cambio de credenciales.",
+      );
+    }
+
     return {
       id: user.id,
       email: user.email,
