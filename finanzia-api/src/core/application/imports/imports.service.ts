@@ -1,5 +1,9 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Injectable, Inject, Optional, Logger } from "@nestjs/common";
 import { TransactionType } from "../../domain/types/financial.types";
+import {
+  IAiAdvisorPort,
+  AI_ADVISOR_PORT,
+} from "../ports/ai-advisor.port";
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,
@@ -166,12 +170,32 @@ const CATEGORY_RULES: KeywordCategoryRule[] = [
       "hacienda",
       "aeat",
     ],
-    categoryNameMatch: ["finanzas", "comisiones"],
+    categoryNameMatch: ["finanzas", "comisiones", "bancario"],
+  },
+  {
+    keywords: [
+      "zara",
+      "mango",
+      "h&m",
+      "pull&bear",
+      "bershka",
+      "decathlon",
+      "nike",
+      "adidas",
+      "corte ingles",
+      "amazon",
+      "ikea",
+      "leroy merlin",
+      "primark",
+    ],
+    categoryNameMatch: ["compra", "ropa", "hogar"],
   },
 ];
 
 @Injectable()
 export class ImportsService {
+  private readonly logger = new Logger(ImportsService.name);
+
   constructor(
     @Inject(ACCOUNT_REPOSITORY)
     private readonly accountRepository: IAccountRepository,
@@ -181,6 +205,9 @@ export class ImportsService {
     private readonly categoryRepository: ICategoryRepository,
     @Inject(CSV_TEMPLATE_REPOSITORY)
     private readonly csvTemplateRepository: ICsvTemplateRepository,
+    @Optional()
+    @Inject(AI_ADVISOR_PORT)
+    private readonly aiAdvisorPort?: IAiAdvisorPort,
   ) {}
 
   async previewImport(
@@ -211,10 +238,50 @@ export class ImportsService {
     // 3. Obtener categorías del usuario para sugerir categorización automática
     const categories = await this.categoryRepository.findAllForUser(userId);
 
+    // 4. Clasificación inteligente mediante IA (Gemini)
+    const aiCategorizations = new Map<
+      string,
+      { categoryId: string | null; categoryName: string | null }
+    >();
+
+    if (
+      this.aiAdvisorPort?.categorizeMovements &&
+      categories.length > 0 &&
+      dto.rows.length > 0
+    ) {
+      try {
+        const categoryOptions = categories.map((c) => ({
+          id: c.id,
+          name: c.name,
+        }));
+        const movementsToClassify = dto.rows.map((r) => ({
+          rowId: r.rowId,
+          description: sanitizeCsvField(r.description),
+          amountCents: r.amountCents,
+        }));
+
+        const aiResults = await this.aiAdvisorPort.categorizeMovements(
+          categoryOptions,
+          movementsToClassify,
+        );
+
+        for (const res of aiResults) {
+          aiCategorizations.set(res.rowId, {
+            categoryId: res.suggestedCategoryId,
+            categoryName: res.suggestedCategoryName,
+          });
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[ImportsService] Error al clasificar con IA (${err?.message || err}). Usando clasificación local.`,
+        );
+      }
+    }
+
     let duplicateCount = 0;
     let newCount = 0;
 
-    // 4. Analizar cada fila
+    // 5. Analizar cada fila
     const preview: RowPreviewDto[] = dto.rows.map((row: ImportRowDto) => {
       // Neutralizar fórmula en la descripción (ej. =cmd|...)
       const sanitizedDesc = sanitizeCsvField(row.description);
@@ -226,14 +293,26 @@ export class ImportsService {
         newCount++;
       }
 
-      // Sugerir categoría
-      const suggestion = this.matchCategory(sanitizedDesc, categories);
+      let suggestedCategoryId: string | null = null;
+      let suggestedCategoryName: string | null = null;
+
+      // Si la IA evaluó la fila, usamos su resultado (incluso si determinó null por incertidumbre)
+      if (aiCategorizations.has(row.rowId)) {
+        const aiMatch = aiCategorizations.get(row.rowId)!;
+        suggestedCategoryId = aiMatch.categoryId;
+        suggestedCategoryName = aiMatch.categoryName;
+      } else {
+        // Fallback heurístico / determinista por reglas si la IA no estuvo disponible
+        const suggestion = this.matchCategory(sanitizedDesc, categories);
+        suggestedCategoryId = suggestion ? suggestion.id : null;
+        suggestedCategoryName = suggestion ? suggestion.name : null;
+      }
 
       return {
         rowId: row.rowId,
         isDuplicate,
-        suggestedCategoryId: suggestion ? suggestion.id : null,
-        suggestedCategoryName: suggestion ? suggestion.name : null,
+        suggestedCategoryId,
+        suggestedCategoryName,
       };
     });
 
@@ -384,14 +463,20 @@ export class ImportsService {
       return null;
     }
 
-    const lowerDesc = description.toLowerCase();
+    const lowerDesc = description
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
 
     // 1. Coincidencia por diccionario de reglas
     for (const rule of CATEGORY_RULES) {
       const keywordHit = rule.keywords.some((kw) => lowerDesc.includes(kw));
       if (keywordHit) {
         const found = categories.find((cat) => {
-          const catLower = cat.name.toLowerCase();
+          const catLower = cat.name
+            .toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
           return rule.categoryNameMatch.some((m) => catLower.includes(m));
         });
         if (found) {
@@ -402,7 +487,10 @@ export class ImportsService {
 
     // 2. Coincidencia directa con el nombre de la categoría
     for (const cat of categories) {
-      const catName = cat.name.toLowerCase();
+      const catName = cat.name
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
       if (catName.length > 3 && lowerDesc.includes(catName)) {
         return { id: cat.id, name: cat.name };
       }

@@ -191,6 +191,88 @@ describe("ImportsService (Unit Tests)", () => {
 
       expect(result.preview[0].isDuplicate).toBe(false);
     });
+
+    it("debe clasificar movimientos usando IA (Gemini) y asignar null si no logra clasificar", async () => {
+      mockAccountRepository.findById.mockResolvedValue(mockUserAccount);
+      mockTransactionRepository.findExistingHashes.mockResolvedValue([]);
+      mockCategoryRepository.findAllForUser.mockResolvedValue(mockCategories);
+
+      const mockAiPort = {
+        executeChat: jest.fn(),
+        categorizeMovements: jest.fn().mockResolvedValue([
+          {
+            rowId: "row-1",
+            suggestedCategoryId: "cat-food",
+            suggestedCategoryName: "Alimentación y Supermercado",
+          },
+          {
+            rowId: "row-2",
+            suggestedCategoryId: null,
+            suggestedCategoryName: null,
+          },
+        ]),
+      };
+
+      const serviceWithAi = new ImportsService(
+        mockAccountRepository,
+        mockTransactionRepository,
+        mockCategoryRepository,
+        mockCsvTemplateRepository,
+        mockAiPort as any,
+      );
+
+      const result = await serviceWithAi.previewImport("user-owner-id", {
+        accountId: "acc-123",
+        rows: [
+          {
+            rowId: "row-1",
+            date: "2026-09-10T00:00:00Z",
+            description: "UBER EATS PEDIDO CENA",
+            amountCents: -2450,
+            hash: "hash-ai-1",
+          },
+          {
+            rowId: "row-2",
+            date: "2026-09-10T00:00:00Z",
+            description: "OPERACION NO IDENTIFICADA 99881122",
+            amountCents: -1500,
+            hash: "hash-ai-2",
+          },
+        ],
+      });
+
+      expect(mockAiPort.categorizeMovements).toHaveBeenCalledTimes(1);
+      expect(result.preview[0].suggestedCategoryId).toBe("cat-food");
+      expect(result.preview[0].suggestedCategoryName).toBe(
+        "Alimentación y Supermercado",
+      );
+
+      // Fila 2: No se logró clasificar -> categoría null
+      expect(result.preview[1].suggestedCategoryId).toBeNull();
+      expect(result.preview[1].suggestedCategoryName).toBeNull();
+    });
+
+    it("debe asignar null a la categoría si no coincide ninguna regla en modo determinista", async () => {
+      mockAccountRepository.findById.mockResolvedValue(mockUserAccount);
+      mockTransactionRepository.findExistingHashes.mockResolvedValue([]);
+      mockCategoryRepository.findAllForUser.mockResolvedValue(mockCategories);
+
+      const result = await importsService.previewImport("user-owner-id", {
+        accountId: "acc-123",
+        rows: [
+          {
+            rowId: "row-unknown",
+            date: "2026-09-10T00:00:00Z",
+            description: "CONCEPTO CRIPTICO 7749204820",
+            amountCents: -999,
+            hash: "hash-unknown",
+          },
+        ],
+      });
+
+      expect(result.preview[0].suggestedCategoryId).toBeNull();
+      expect(result.preview[0].suggestedCategoryName).toBeNull();
+    });
   });
 
   describe("commitImport", () => {

@@ -8,6 +8,9 @@ import { ToolCallExecution } from "../../core/application/ai/dtos/chat.dto";
 import {
   IAiAdvisorPort,
   AdvisorExecutionResult,
+  CategorizeMovementInput,
+  CategorizeMovementOutput,
+  CategoryOption,
 } from "../../core/application/ports/ai-advisor.port";
 
 @Injectable()
@@ -84,6 +87,363 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
     }
 
     return await this.executeLocalFallback(userId, message, history);
+  }
+
+  /**
+   * Clasifica un lote de movimientos bancarios mediante IA generativa (Gemini) o fallback heurístico local.
+   * Si la IA o las reglas no logran clasificar un movimiento con certeza, asigna null a la categoría.
+   */
+  async categorizeMovements(
+    categories: CategoryOption[],
+    movements: CategorizeMovementInput[],
+  ): Promise<CategorizeMovementOutput[]> {
+    if (!movements || movements.length === 0) {
+      return [];
+    }
+
+    if (!categories || categories.length === 0) {
+      return movements.map((m) => ({
+        rowId: m.rowId,
+        suggestedCategoryId: null,
+        suggestedCategoryName: null,
+      }));
+    }
+
+    if (this.aiClient) {
+      try {
+        return await this.classifyMovementsWithGemini(categories, movements);
+      } catch (error: any) {
+        this.logger.warn(
+          `[Categorizer] Error en llamada a Gemini API (${error?.message || error}). Utilizando fallback heurístico local.`,
+        );
+      }
+    }
+
+    return this.classifyMovementsLocal(categories, movements);
+  }
+
+  /**
+   * Clasificación semántica de movimientos mediante Gemini con salida estructurada en formato JSON
+   */
+  private async classifyMovementsWithGemini(
+    categories: CategoryOption[],
+    movements: CategorizeMovementInput[],
+  ): Promise<CategorizeMovementOutput[]> {
+    const results: CategorizeMovementOutput[] = [];
+    const validCategoryMap = new Map(categories.map((c) => [c.id, c.name]));
+    const model =
+      this.configService.get<string>("GEMINI_MODEL") || "gemini-2.0-flash";
+
+    const BATCH_SIZE = 40;
+    for (let i = 0; i < movements.length; i += BATCH_SIZE) {
+      const batch = movements.slice(i, i + BATCH_SIZE);
+
+      const prompt = `Eres un asistente de finanzas personales especializado en clasificar movimientos bancarios.
+Tu tarea es asignar a cada movimiento bancario la categoría existente del usuario que mejor corresponda basándote en su concepto/descripción ('description').
+
+CATEGORÍAS EXISTENTES DEL USUARIO:
+${JSON.stringify(categories.map((c) => ({ id: c.id, name: c.name })))}
+
+MOVIMIENTOS BANCARIOS A CLASIFICAR:
+${JSON.stringify(
+  batch.map((m) => ({
+    rowId: m.rowId,
+    description: m.description,
+    amountCents: m.amountCents,
+  })),
+)}
+
+INSTRUCCIONES Y REGLAS ESTRICTAS:
+1. Analiza el concepto, establecimiento o beneficiario que aparece en 'description' y selecciona el 'id' de la categoría disponible que mejor encaje semánticamente.
+2. Si ninguna de las categorías existentes encaja razonablemente, o si la descripción es ambigua, genérica, meramente numérica, un código críptico o no concluyente, DEBES ASIGNAR null tanto a 'categoryId' como a 'categoryName'.
+3. NUNCA inventes categorías nuevas ni devuelvas un 'categoryId' que no esté presente en la lista de CATEGORÍAS EXISTENTES DEL USUARIO.
+4. Devuelve ÚNICAMENTE un array JSON válido, sin bloques markdown de código ni texto adicional. Formato exacto:
+[
+  {
+    "rowId": "identificador de la fila",
+    "categoryId": "UUID de la categoría o null",
+    "categoryName": "Nombre de la categoría o null"
+  }
+]`;
+
+      try {
+        const response = await this.aiClient!.models.generateContent({
+          model,
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          config: {
+            responseMimeType: "application/json",
+          },
+        });
+
+        const candidate = response.candidates?.[0];
+        const rawText =
+          candidate?.content?.parts
+            ?.map((p: any) => p.text || "")
+            .join("")
+            .trim() || "";
+
+        const cleaned = rawText
+          .replace(/^```(?:json)?\s*/i, "")
+          .replace(/\s*```$/i, "")
+          .trim();
+
+        const parsed = JSON.parse(cleaned);
+
+        if (Array.isArray(parsed)) {
+          const batchResultMap = new Map<
+            string,
+            { categoryId: string | null; categoryName: string | null }
+          >();
+
+          for (const item of parsed) {
+            if (item && item.rowId) {
+              const catId = item.categoryId;
+              if (catId && validCategoryMap.has(catId)) {
+                batchResultMap.set(item.rowId, {
+                  categoryId: catId,
+                  categoryName: validCategoryMap.get(catId)!,
+                });
+              } else {
+                batchResultMap.set(item.rowId, {
+                  categoryId: null,
+                  categoryName: null,
+                });
+              }
+            }
+          }
+
+          for (const m of batch) {
+            const found = batchResultMap.get(m.rowId);
+            results.push({
+              rowId: m.rowId,
+              suggestedCategoryId: found?.categoryId ?? null,
+              suggestedCategoryName: found?.categoryName ?? null,
+            });
+          }
+          continue;
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `[Categorizer] Error procesando lote en Gemini: ${err?.message || err}. Usando fallback local para el lote.`,
+        );
+      }
+
+      // Fallback local para este lote si falló la API
+      const localBatch = this.classifyMovementsLocal(categories, batch);
+      results.push(...localBatch);
+    }
+
+    return results;
+  }
+
+  /**
+   * Clasificador heurístico local determinista (para modo offline o fallback)
+   */
+  private classifyMovementsLocal(
+    categories: CategoryOption[],
+    movements: CategorizeMovementInput[],
+  ): CategorizeMovementOutput[] {
+    const rules: Array<{ keywords: string[]; categoryMatch: string[] }> = [
+      {
+        keywords: [
+          "mercadona",
+          "carrefour",
+          "lidl",
+          "dia",
+          "alcampo",
+          "eroski",
+          "supermercado",
+          "consum",
+          "hipercor",
+          "aldi",
+          "bonpreu",
+        ],
+        categoryMatch: ["supermercado", "alimentaci", "comida"],
+      },
+      {
+        keywords: [
+          "restaurante",
+          "bar ",
+          "cafeteria",
+          "mcdonald",
+          "burger",
+          "uber eats",
+          "glovo",
+          "just eat",
+          "kfc",
+          "starbucks",
+          "pizzeria",
+          "tapas",
+          "cerveceria",
+          "restauracion",
+        ],
+        categoryMatch: ["restaurante", "ocio", "alimentaci"],
+      },
+      {
+        keywords: [
+          "gasolinera",
+          "repsol",
+          "cepsa",
+          "bp ",
+          "galp",
+          "shell",
+          "combustible",
+          "uber",
+          "cabify",
+          "taxi",
+          "metro",
+          "renfe",
+          "parking",
+          "peaje",
+          "gasolina",
+        ],
+        categoryMatch: ["transporte", "gasolina", "coche"],
+      },
+      {
+        keywords: [
+          "alquiler",
+          "hipoteca",
+          "comunidad",
+          "iberdrola",
+          "endesa",
+          "naturgy",
+          "totalenergies",
+          "vodafone",
+          "movistar",
+          "orange",
+          "digi",
+          "yoigo",
+          "aguas",
+          "suministro",
+          "luz",
+        ],
+        categoryMatch: ["vivienda", "suministros", "hogar"],
+      },
+      {
+        keywords: [
+          "nomina",
+          "salario",
+          "paga extra",
+          "transferencia a su favor",
+          "abono de haberes",
+          "retribucion",
+        ],
+        categoryMatch: ["nomina", "trabajo", "salario", "ingreso"],
+      },
+      {
+        keywords: [
+          "farmacia",
+          "optica",
+          "clinica",
+          "hospital",
+          "dentista",
+          "dental",
+          "gimnasio",
+          "gym",
+          "sanitas",
+          "adeslas",
+          "asisa",
+          "medico",
+        ],
+        categoryMatch: ["salud", "bienestar", "deporte"],
+      },
+      {
+        keywords: [
+          "netflix",
+          "spotify",
+          "hbo",
+          "amazon prime",
+          "disney",
+          "cine",
+          "teatro",
+          "concierto",
+          "steam",
+          "playstation",
+          "nintendo",
+        ],
+        categoryMatch: ["ocio", "suscripciones", "entretenimiento"],
+      },
+      {
+        keywords: [
+          "zara",
+          "mango",
+          "h&m",
+          "pull&bear",
+          "bershka",
+          "decathlon",
+          "nike",
+          "adidas",
+          "corte ingles",
+          "amazon",
+          "ikea",
+          "leroy merlin",
+          "primark",
+        ],
+        categoryMatch: ["compra", "ropa", "hogar"],
+      },
+      {
+        keywords: [
+          "comision",
+          "mantenimiento cuenta",
+          "cuota tarjeta",
+          "impuesto",
+          "tasa",
+          "hacienda",
+          "aeat",
+        ],
+        categoryMatch: ["finanzas", "comisiones", "bancario"],
+      },
+    ];
+
+    return movements.map((m) => {
+      const desc = (m.description || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+      // 1. Reglas por palabras clave
+      for (const rule of rules) {
+        const matchesKeyword = rule.keywords.some((kw) => desc.includes(kw));
+        if (matchesKeyword) {
+          const found = categories.find((cat) => {
+            const catNorm = cat.name
+              .toLowerCase()
+              .normalize("NFD")
+              .replace(/[\u0300-\u036f]/g, "");
+            return rule.categoryMatch.some((match) => catNorm.includes(match));
+          });
+          if (found) {
+            return {
+              rowId: m.rowId,
+              suggestedCategoryId: found.id,
+              suggestedCategoryName: found.name,
+            };
+          }
+        }
+      }
+
+      // 2. Coincidencia directa con nombre de categoría
+      for (const cat of categories) {
+        const catNorm = cat.name
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "");
+        if (catNorm.length > 3 && desc.includes(catNorm)) {
+          return {
+            rowId: m.rowId,
+            suggestedCategoryId: cat.id,
+            suggestedCategoryName: cat.name,
+          };
+        }
+      }
+
+      // 3. Si no logra clasificarlo, asigna null
+      return {
+        rowId: m.rowId,
+        suggestedCategoryId: null,
+        suggestedCategoryName: null,
+      };
+    });
   }
 
   /**
