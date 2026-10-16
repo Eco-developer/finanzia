@@ -90,7 +90,14 @@ async function bootstrap() {
       in: "cookie",
       name: "jwt_token",
       description:
-        "Cookie de sesión HttpOnly con JWT emitido en /api/auth/login",
+        "Cookie de sesión HttpOnly con JWT de acceso (15 min) emitido en /api/auth/login",
+    })
+    .addCookieAuth("refresh_token", {
+      type: "apiKey",
+      in: "cookie",
+      name: "refresh_token",
+      description:
+        "Cookie HttpOnly con Refresh Token rotativo (7 días) para renovación en /api/auth/refresh",
     })
     .build();
 

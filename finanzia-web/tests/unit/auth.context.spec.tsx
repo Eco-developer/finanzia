@@ -56,4 +56,30 @@ describe('AuthContext & useAuth', () => {
     expect(result.current.user).toBeNull();
     expect(result.current.isAuthenticated).toBe(false);
   });
+
+  it('permite cerrar todas las sesiones con logoutAll limpiando el usuario', async () => {
+    const mockUser = {
+      id: 'usr-1',
+      email: 'test@finanzia.local',
+      firstName: 'Miguel',
+    };
+
+    vi.spyOn(authApi, 'getMe').mockResolvedValue(mockUser);
+    vi.spyOn(authApi, 'logoutAll').mockResolvedValue(undefined);
+
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <AuthProvider>{children}</AuthProvider>
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    await act(async () => {
+      await result.current.logoutAll();
+    });
+
+    expect(authApi.logoutAll).toHaveBeenCalledTimes(1);
+    expect(result.current.user).toBeNull();
+    expect(result.current.isAuthenticated).toBe(false);
+  });
 });
+

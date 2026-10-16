@@ -1,3 +1,4 @@
+import { UnauthorizedException } from "@nestjs/common";
 import { AuthService } from "../../src/core/application/auth/auth.service";
 import { UserAlreadyExistsException } from "../../src/core/domain/exceptions/user-already-exists.exception";
 import { InvalidCredentialsException } from "../../src/core/domain/exceptions/invalid-credentials.exception";
@@ -5,6 +6,7 @@ import { UserNotFoundException } from "../../src/core/domain/exceptions/user-not
 import { EmailNotVerifiedException } from "../../src/core/domain/exceptions/email-not-verified.exception";
 import { InvalidVerificationTokenException } from "../../src/core/domain/exceptions/invalid-verification-token.exception";
 import { UserEntity } from "../../src/core/domain/entities/user.entity";
+import { SessionEntity } from "../../src/core/domain/entities/session.entity";
 
 describe("AuthService (Unit Tests)", () => {
   let authService: AuthService;
@@ -13,6 +15,7 @@ describe("AuthService (Unit Tests)", () => {
   let mockJwtService: any;
   let mockEmailPort: any;
   let mockConfigService: any;
+  let mockSessionRepository: any;
 
   const mockUserVerified = new UserEntity(
     "user-uuid-1",
@@ -49,6 +52,16 @@ describe("AuthService (Unit Tests)", () => {
       savePasswordResetToken: jest.fn().mockResolvedValue(undefined),
       findByPasswordResetToken: jest.fn(),
       updatePasswordAndRevokeSessions: jest.fn(),
+      incrementTokenVersion: jest.fn().mockResolvedValue(mockUserVerified),
+    };
+
+    mockSessionRepository = {
+      create: jest.fn().mockResolvedValue(undefined),
+      findByTokenHash: jest.fn(),
+      revokeByTokenHash: jest.fn().mockResolvedValue(undefined),
+      revokeAllForUser: jest.fn().mockResolvedValue(1),
+      replaceToken: jest.fn(),
+      findActiveByUserId: jest.fn().mockResolvedValue([]),
     };
 
     mockHashingService = {
@@ -79,6 +92,7 @@ describe("AuthService (Unit Tests)", () => {
       mockEmailPort,
       mockJwtService,
       mockConfigService,
+      mockSessionRepository,
     );
   });
 
@@ -151,8 +165,17 @@ describe("AuthService (Unit Tests)", () => {
         "Password123!",
       );
       expect(result.token).toBe("mocked.jwt.token");
+      expect(result.refreshToken).toBeDefined();
+      expect(typeof result.refreshToken).toBe("string");
       expect(result.user.email).toBe("test@example.com");
       expect(result.user.emailVerified).toBe(true);
+      expect(mockSessionRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: mockUserVerified.id,
+          tokenHash: expect.any(String),
+          expiresAt: expect.any(Date),
+        }),
+      );
     });
 
     it("debe lanzar EmailNotVerifiedException si el usuario tiene credenciales válidas pero email sin verificar", async () => {
@@ -397,7 +420,149 @@ describe("AuthService (Unit Tests)", () => {
         expect(
           mockUserRepository.updatePasswordAndRevokeSessions,
         ).toHaveBeenCalledWith(mockUserVerified.id, "hashed_password_123");
+        expect(mockSessionRepository.revokeAllForUser).toHaveBeenCalledWith(
+          mockUserVerified.id,
+        );
       });
+    });
+  });
+
+  describe("Renovación de tokens (Refresh Token Rotation - RTR)", () => {
+    const validSession = new SessionEntity(
+      "session-1",
+      "user-uuid-1",
+      "hashed-valid-token",
+      "Mozilla/5.0",
+      "127.0.0.1",
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // expira en 7 días
+      false,
+      null,
+      null,
+      new Date(),
+      new Date(),
+    );
+
+    it("debe renovar exitosamente el access token y rotar el refresh token con RTR", async () => {
+      mockSessionRepository.findByTokenHash.mockResolvedValue(validSession);
+      mockUserRepository.findById.mockResolvedValue(mockUserVerified);
+      mockSessionRepository.replaceToken.mockResolvedValue(validSession);
+
+      const result = await authService.refreshToken("raw-valid-token", {
+        deviceInfo: "Chrome",
+        ipAddress: "192.168.1.1",
+      });
+
+      expect(result.token).toBe("mocked.jwt.token");
+      expect(result.refreshToken).toBeDefined();
+      expect(typeof result.refreshToken).toBe("string");
+      expect(result.refreshToken).not.toBe("raw-valid-token");
+      expect(result.user.email).toBe(mockUserVerified.email);
+      expect(mockSessionRepository.replaceToken).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          userId: mockUserVerified.id,
+          deviceInfo: "Chrome",
+          ipAddress: "192.168.1.1",
+          expiresAt: expect.any(Date),
+        }),
+      );
+    });
+
+    it("debe lanzar UnauthorizedException si no se proporciona refresh token", async () => {
+      await expect(authService.refreshToken("")).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it("debe lanzar UnauthorizedException si la sesión no existe en la base de datos", async () => {
+      mockSessionRepository.findByTokenHash.mockResolvedValue(null);
+
+      await expect(
+        authService.refreshToken("token-inexistente"),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it("debe detectar reúso de token: si la sesión estaba revocada, revocar todas las sesiones del usuario e incrementar tokenVersion", async () => {
+      const reusedSession = new SessionEntity(
+        "session-compromised",
+        "user-uuid-1",
+        "hashed-reused-token",
+        null,
+        null,
+        new Date(Date.now() + 100000),
+        true, // ya estaba revocada
+        new Date(),
+        "already-replaced-by-hash",
+        new Date(),
+        new Date(),
+      );
+
+      mockSessionRepository.findByTokenHash.mockResolvedValue(reusedSession);
+
+      await expect(
+        authService.refreshToken("raw-reused-token"),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSessionRepository.revokeAllForUser).toHaveBeenCalledWith(
+        "user-uuid-1",
+      );
+      expect(mockUserRepository.incrementTokenVersion).toHaveBeenCalledWith(
+        "user-uuid-1",
+      );
+    });
+
+    it("debe lanzar UnauthorizedException y revocar el token si la sesión está expirada", async () => {
+      const expiredSession = new SessionEntity(
+        "session-expired",
+        "user-uuid-1",
+        "hashed-expired-token",
+        null,
+        null,
+        new Date(Date.now() - 1000), // expiró en el pasado
+        false,
+        null,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      mockSessionRepository.findByTokenHash.mockResolvedValue(expiredSession);
+
+      await expect(
+        authService.refreshToken("raw-expired-token"),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(mockSessionRepository.revokeByTokenHash).toHaveBeenCalled();
+    });
+  });
+
+  describe("Cierre de sesión (Logout)", () => {
+    it("debe revocar el refresh token si se proporciona", async () => {
+      const result = await authService.logout("raw-token-to-revoke");
+
+      expect(result.success).toBe(true);
+      expect(mockSessionRepository.revokeByTokenHash).toHaveBeenCalled();
+    });
+
+    it("debe retornar éxito incluso si no se envía refresh token", async () => {
+      const result = await authService.logout();
+
+      expect(result.success).toBe(true);
+      expect(mockSessionRepository.revokeByTokenHash).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("Cierre de sesión global (LogoutAll)", () => {
+    it("debe revocar todas las sesiones del usuario e incrementar tokenVersion", async () => {
+      const result = await authService.logoutAll("user-uuid-1");
+
+      expect(result.success).toBe(true);
+      expect(mockSessionRepository.revokeAllForUser).toHaveBeenCalledWith(
+        "user-uuid-1",
+      );
+      expect(mockUserRepository.incrementTokenVersion).toHaveBeenCalledWith(
+        "user-uuid-1",
+      );
     });
   });
 });

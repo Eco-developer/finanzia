@@ -86,6 +86,26 @@ export const authApi = {
     }
   },
 
+  async logoutAll(): Promise<void> {
+    try {
+      await apiClient('/auth/logout-all', { method: 'POST' });
+    } catch {
+      // Ignorar fallo de logoutAll en backend
+    }
+  },
+
+  async refreshToken(): Promise<{ user: UserProfile; token?: string; refreshToken?: string }> {
+    const res = await apiClient<UserProfile>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+    return {
+      user: res.data,
+      token: res.token,
+      refreshToken: res.refreshToken,
+    };
+  },
+
   async getMe(): Promise<UserProfile> {
     const res = await apiClient<UserProfile>('/auth/me');
     return res.data;

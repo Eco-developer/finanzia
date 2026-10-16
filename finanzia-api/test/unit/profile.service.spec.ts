@@ -100,6 +100,7 @@ describe("ProfileService", () => {
       savePasswordResetToken: jest.fn(),
       findByPasswordResetToken: jest.fn(),
       updatePasswordAndRevokeSessions: jest.fn(),
+      incrementTokenVersion: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({

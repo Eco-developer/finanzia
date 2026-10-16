@@ -1,6 +1,7 @@
 import {
   Injectable,
   Inject,
+  Optional,
   Logger,
   UnauthorizedException,
 } from "@nestjs/common";
@@ -11,6 +12,14 @@ import {
   IUserRepository,
   USER_REPOSITORY,
 } from "../../domain/repositories/user.repository.interface";
+import {
+  ISessionRepository,
+  SESSION_REPOSITORY,
+} from "../../domain/repositories/session.repository.interface";
+import {
+  ISessionNotifierPort,
+  SESSION_NOTIFIER_PORT,
+} from "../ports/session-notifier.port";
 import { IHashingService, HASHING_SERVICE } from "../ports/hashing.port";
 import { IEmailPort, EMAIL_PORT } from "../ports/email.port";
 import { RegisterDto } from "../../../presentation/dtos/auth/register.dto";
@@ -39,6 +48,11 @@ export class AuthService {
     private readonly emailService: IEmailPort,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @Inject(SESSION_REPOSITORY)
+    private readonly sessionRepository: ISessionRepository,
+    @Optional()
+    @Inject(SESSION_NOTIFIER_PORT)
+    private readonly sessionNotifier?: ISessionNotifierPort,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResponseDto> {
@@ -83,7 +97,10 @@ export class AuthService {
     };
   }
 
-  async login(dto: LoginDto): Promise<AuthResponseDto> {
+  async login(
+    dto: LoginDto,
+    metadata?: { ipAddress?: string; deviceInfo?: string },
+  ): Promise<AuthResponseDto> {
     const user = await this.userRepository.findByEmail(dto.email);
     if (!user) {
       throw new InvalidCredentialsException();
@@ -103,10 +120,15 @@ export class AuthService {
     }
 
     const token = this.generateToken(user);
+    const refreshToken = await this.createSessionAndRefreshToken(
+      user.id,
+      metadata,
+    );
 
     return {
       user: this.toResponseDto(user),
       token,
+      refreshToken,
     };
   }
 
@@ -115,6 +137,7 @@ export class AuthService {
     message: string;
     user: UserResponseDto;
     token: string;
+    refreshToken: string;
   }> {
     const user = await this.userRepository.findByVerificationToken(token);
     if (!user) {
@@ -127,12 +150,16 @@ export class AuthService {
     );
 
     const sessionToken = this.generateToken(updatedUser);
+    const refreshToken = await this.createSessionAndRefreshToken(
+      updatedUser.id,
+    );
 
     return {
       success: true,
       message: "Correo electrónico verificado con éxito.",
       user: this.toResponseDto(updatedUser),
       token: sessionToken,
+      refreshToken,
     };
   }
 
@@ -271,11 +298,138 @@ export class AuthService {
       user.id,
       passwordHash,
     );
+    await this.sessionRepository.revokeAllForUser(user.id);
+    if (this.sessionNotifier) {
+      await this.sessionNotifier.notifyAllSessionsRevoked(user.id);
+    }
 
     return {
       success: true,
       message: "Tu contraseña se ha cambiado exitosamente.",
     };
+  }
+
+  async refreshToken(
+    oldRefreshToken: string,
+    metadata?: { ipAddress?: string; deviceInfo?: string },
+  ): Promise<AuthResponseDto> {
+    if (!oldRefreshToken) {
+      throw new UnauthorizedException("Token de refresco requerido.");
+    }
+
+    const oldHash = this.hashToken(oldRefreshToken);
+    const session = await this.sessionRepository.findByTokenHash(oldHash);
+
+    if (!session) {
+      throw new UnauthorizedException("Sesión no encontrada o token inválido.");
+    }
+
+    // Detección de reúso / robo de token: Si ya fue reemplazado o revocado previamente
+    if (session.isRevoked || session.replacedByTokenHash) {
+      this.logger.error(
+        `[Security Alert] Intento de reutilización de token revocado para el usuario ${session.userId}. Revocando todas las sesiones activas.`,
+      );
+      await this.sessionRepository.revokeAllForUser(session.userId);
+      await this.userRepository.incrementTokenVersion(session.userId);
+      if (this.sessionNotifier) {
+        await this.sessionNotifier.notifyAllSessionsRevoked(session.userId);
+      }
+      throw new UnauthorizedException(
+        "Intento de acceso sospechoso detectado. Todas las sesiones activas han sido cerradas por seguridad.",
+      );
+    }
+
+    if (session.isExpired()) {
+      await this.sessionRepository.revokeByTokenHash(oldHash);
+      throw new UnauthorizedException(
+        "La sesión ha caducado. Por favor, inicia sesión de nuevo.",
+      );
+    }
+
+    const user = await this.userRepository.findById(session.userId);
+    if (!user) {
+      throw new UnauthorizedException(
+        "Usuario asociado a la sesión no encontrado.",
+      );
+    }
+
+    // Generar nuevo par de tokens (Access Token 15m + Refresh Token rotado 7d)
+    const newAccessToken = this.generateToken(user);
+    const newRefreshToken = crypto.randomBytes(32).toString("hex");
+    const newHash = this.hashToken(newRefreshToken);
+    const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.sessionRepository.replaceToken(oldHash, {
+      userId: user.id,
+      tokenHash: newHash,
+      deviceInfo: metadata?.deviceInfo ?? session.deviceInfo,
+      ipAddress: metadata?.ipAddress ?? session.ipAddress,
+      expiresAt: newExpiresAt,
+    });
+
+    return {
+      user: this.toResponseDto(user),
+      token: newAccessToken,
+      refreshToken: newRefreshToken,
+    };
+  }
+
+  async logout(
+    refreshToken?: string,
+    userId?: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (refreshToken) {
+      const tokenHash = this.hashToken(refreshToken);
+      await this.sessionRepository.revokeByTokenHash(tokenHash);
+    }
+
+    if (userId && this.sessionNotifier) {
+      await this.sessionNotifier.notifySessionRevoked(userId);
+    }
+
+    return {
+      success: true,
+      message: "Sesión finalizada correctamente",
+    };
+  }
+
+  async logoutAll(
+    userId: string,
+  ): Promise<{ success: boolean; message: string }> {
+    await this.sessionRepository.revokeAllForUser(userId);
+    await this.userRepository.incrementTokenVersion(userId);
+
+    if (this.sessionNotifier) {
+      await this.sessionNotifier.notifyAllSessionsRevoked(userId);
+    }
+
+    return {
+      success: true,
+      message: "Todas las sesiones activas han sido finalizadas",
+    };
+  }
+
+  private async createSessionAndRefreshToken(
+    userId: string,
+    metadata?: { ipAddress?: string; deviceInfo?: string },
+  ): Promise<string> {
+    const rawRefreshToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = this.hashToken(rawRefreshToken);
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.sessionRepository.create({
+      userId,
+      tokenHash,
+      deviceInfo: metadata?.deviceInfo,
+      ipAddress: metadata?.ipAddress,
+      expiresAt,
+    });
+
+    return rawRefreshToken;
+  }
+
+  private hashToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
   }
 
   async getCurrentUser(userId: string): Promise<UserResponseDto> {
