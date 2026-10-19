@@ -13,14 +13,17 @@ import {
   LoginDto,
   RegisterDto,
 } from '@/infrastructure/api/auth.api';
+import { useSessionSocket } from '../hooks/use-session-socket';
 
 export interface AuthContextType {
   user: UserProfile | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isSocketConnected: boolean;
   login: (dto: LoginDto) => Promise<UserProfile>;
   register: (dto: RegisterDto) => Promise<{ requiresVerification?: boolean }>;
   logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
 
@@ -29,6 +32,19 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  const handleRemoteRevoke = useCallback(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('finanzia_token');
+    }
+    setUser(null);
+  }, []);
+
+  const { isConnected: isSocketConnected } = useSessionSocket({
+    enabled: !!user,
+    onSessionRevoked: handleRemoteRevoke,
+    onAllSessionsRevoked: handleRemoteRevoke,
+  });
 
   const refreshUser = useCallback(async () => {
     try {
@@ -92,15 +108,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const logoutAll = async () => {
+    await authApi.logoutAll();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('finanzia_token');
+    }
+    setUser(null);
+  };
+
   return (
     <AuthContext.Provider
       value={{
         user,
         isAuthenticated: !!user,
         isLoading,
+        isSocketConnected,
         login,
         register,
         logout,
+        logoutAll,
         refreshUser,
       }}
     >

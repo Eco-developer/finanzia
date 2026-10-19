@@ -140,6 +140,18 @@ export class PrismaUserRepository implements IUserRepository {
     return this.toDomain(record);
   }
 
+  async incrementTokenVersion(userId: string): Promise<UserEntity> {
+    const record = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        tokenVersion: {
+          increment: 1,
+        },
+      },
+    });
+    return this.toDomain(record);
+  }
+
   private toDomain(record: {
     id: string;
     email: string;

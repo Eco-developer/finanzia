@@ -19,11 +19,15 @@ import { PrismaAdvisorHistoryRepository } from "./infrastructure/database/reposi
 import { PrismaFinancialAnalyticsAdapter } from "./infrastructure/database/repositories/prisma-financial-analytics.adapter";
 import { PrismaDebtRepository } from "./infrastructure/database/repositories/prisma-debt.repository";
 import { PrismaProfileRepository } from "./infrastructure/database/repositories/prisma-profile.repository";
+import { PrismaSessionRepository } from "./infrastructure/database/repositories/prisma-session.repository";
+import { SessionGateway } from "./infrastructure/websockets/session.gateway";
 import { HashingService } from "./infrastructure/security/hashing.service";
 import { JwtStrategy } from "./infrastructure/security/jwt.strategy";
 
 // Ports & Tokens
 import { USER_REPOSITORY } from "./core/domain/repositories/user.repository.interface";
+import { SESSION_REPOSITORY } from "./core/domain/repositories/session.repository.interface";
+import { SESSION_NOTIFIER_PORT } from "./core/application/ports/session-notifier.port";
 import { PROFILE_REPOSITORY } from "./core/domain/repositories/profile.repository.interface";
 import { ACCOUNT_REPOSITORY } from "./core/domain/repositories/account.repository.interface";
 import { CATEGORY_REPOSITORY } from "./core/domain/repositories/category.repository.interface";
@@ -96,7 +100,7 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
           configService.get<string>("JWT_SECRET") ||
           "dev_jwt_secret_finanzia_super_secure_32_chars",
         signOptions: {
-          expiresIn: "7d",
+          expiresIn: "15m",
         },
       }),
     }),
@@ -130,10 +134,14 @@ import { GlobalExceptionFilter } from "./presentation/filters/global-exception.f
     PrismaFinancialAnalyticsAdapter,
     PrismaDebtRepository,
     PrismaProfileRepository,
+    PrismaSessionRepository,
     HashingService,
     JwtStrategy,
+    SessionGateway,
     // Bindings de Puertos e Interfaces (Hexagonal Architecture / DIP)
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
+    { provide: SESSION_REPOSITORY, useClass: PrismaSessionRepository },
+    { provide: SESSION_NOTIFIER_PORT, useClass: SessionGateway },
     { provide: PROFILE_REPOSITORY, useClass: PrismaProfileRepository },
     { provide: ACCOUNT_REPOSITORY, useClass: PrismaAccountRepository },
     { provide: CATEGORY_REPOSITORY, useClass: PrismaCategoryRepository },

@@ -34,6 +34,7 @@ export interface ApiResponse<T = any> {
   message?: string;
   meta?: Record<string, any>;
   token?: string;
+  refreshToken?: string;
 }
 
 export class ApiError extends Error {
@@ -46,6 +47,54 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
   }
+}
+
+// Variables de sincronización para refresco atómico concurrente (Mutex)
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
+async function executeTokenRefresh(): Promise<string | null> {
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const refreshUrl = buildApiUrl('/auth/refresh');
+      const refreshRes = await fetch(refreshUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+      });
+
+      if (!refreshRes.ok) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('finanzia_token');
+        }
+        return null;
+      }
+
+      const refreshData = await refreshRes.json();
+      const newToken = refreshData?.token || refreshData?.data?.token;
+      if (newToken && typeof window !== 'undefined') {
+        localStorage.setItem('finanzia_token', newToken);
+      }
+      return newToken || 'cookie-updated';
+    } catch {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('finanzia_token');
+      }
+      return null;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 
 export async function apiClient<T = any>(
@@ -81,6 +130,44 @@ export async function apiClient<T = any>(
     throw err;
   } finally {
     clearTimeout(timeoutId);
+  }
+
+  // Intercepción atómica ante 401 (Refresh Token Rotation)
+  const isAuthRoute =
+    endpoint.includes('/auth/login') ||
+    endpoint.includes('/auth/register') ||
+    endpoint.includes('/auth/refresh') ||
+    endpoint.includes('/auth/forgot-password') ||
+    endpoint.includes('/auth/reset-password');
+
+  if (response.status === 401 && !isAuthRoute) {
+    const refreshed = await executeTokenRefresh();
+    if (refreshed) {
+      const updatedToken =
+        typeof window !== 'undefined' ? localStorage.getItem('finanzia_token') : null;
+      const retryHeaders: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(updatedToken ? { Authorization: `Bearer ${updatedToken}` } : {}),
+        ...(options.headers || {}),
+      };
+
+      const retryRes = await fetch(url, {
+        ...options,
+        headers: retryHeaders,
+        credentials: 'include',
+      });
+
+      let retryJson: any;
+      try {
+        retryJson = await retryRes.json();
+      } catch {
+        retryJson = null;
+      }
+
+      if (retryRes.ok) {
+        return retryJson as ApiResponse<T>;
+      }
+    }
   }
 
   let jsonResponse: any;

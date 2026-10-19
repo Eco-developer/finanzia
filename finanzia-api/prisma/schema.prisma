@@ -98,6 +98,7 @@ model User {
   profile           UserProfile?
   financialProfile  UserFinancialProfile?
   disclaimerLog     UserDisclaimerLog?
+  sessions          Session[]
 
   @@map("users")
 }
@@ -406,6 +407,27 @@ model UserDisclaimerLog {
 
 
 
+
+/// Registro de sesión y token de refresco con rotación y detección de reúso
+model Session {
+  id                  String    @id @default(uuid())
+  userId              String    @map("user_id")
+  tokenHash           String    @unique @map("token_hash")
+  deviceInfo          String?   @map("device_info")
+  ipAddress           String?   @map("ip_address")
+  expiresAt           DateTime  @map("expires_at")
+  isRevoked           Boolean   @default(false) @map("is_revoked")
+  revokedAt           DateTime? @map("revoked_at")
+  replacedByTokenHash String?   @map("replaced_by_token_hash")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("sessions")
+}
 
 enum FinancialExperienceLevel {
   BEGINNER

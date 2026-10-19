@@ -4,6 +4,7 @@ import {
   Get,
   Body,
   Query,
+  Req,
   Res,
   UseGuards,
   HttpCode,
@@ -17,7 +18,7 @@ import {
   ApiCookieAuth,
 } from "@nestjs/swagger";
 import { Throttle } from "@nestjs/throttler";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { AuthService } from "../../core/application/auth/auth.service";
 import { RegisterDto } from "../dtos/auth/register.dto";
 import { LoginDto } from "../dtos/auth/login.dto";
@@ -38,6 +39,8 @@ import {
 } from "../decorators/current-user.decorator";
 
 const COOKIE_NAME = "jwt_token";
+const REFRESH_COOKIE_NAME = "refresh_token";
+const FIFTEEN_MINUTES_MS = 15 * 60 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
 @ApiTags("Auth")
@@ -72,13 +75,14 @@ export class AuthController {
   ) {
     const result = await this.authService.register(dto);
     if (result.token) {
-      this.setAuthCookie(response, result.token);
+      this.setAuthCookies(response, result.token, result.refreshToken);
     }
 
     return {
       success: true,
       data: result.user,
       token: result.token,
+      refreshToken: result.refreshToken,
       requiresVerification: result.requiresVerification,
       meta: {
         timestamp: new Date().toISOString(),
@@ -101,11 +105,19 @@ export class AuthController {
     status: 400,
     description: "Token inválido o expirado",
   })
-  async verifyEmail(@Body() dto: VerifyEmailDto) {
+  async verifyEmail(
+    @Body() dto: VerifyEmailDto,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const result = await this.authService.verifyEmail(dto.token);
+    this.setAuthCookies(response, result.token, result.refreshToken);
+
     return {
       success: true,
-      data: result,
+      data: result.user,
+      token: result.token,
+      refreshToken: result.refreshToken,
+      message: result.message,
       meta: {
         timestamp: new Date().toISOString(),
       },
@@ -139,7 +151,7 @@ export class AuthController {
   @ApiOperation({
     summary: "Iniciar sesión de usuario",
     description:
-      "Verifica las credenciales del usuario con Argon2id y establece la cookie de sesión HttpOnly.",
+      "Verifica las credenciales del usuario con Argon2id, emite Access Token (15m) y Refresh Token rotativo (7d) y establece cookies HttpOnly.",
   })
   @ApiResponse({
     status: 200,
@@ -152,15 +164,63 @@ export class AuthController {
   })
   async login(
     @Body() dto: LoginDto,
+    @Req() req: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.authService.login(dto);
-    this.setAuthCookie(response, result.token!);
+    const metadata = {
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    };
+    const result = await this.authService.login(dto, metadata);
+    this.setAuthCookies(response, result.token!, result.refreshToken);
 
     return {
       success: true,
       data: result.user,
       token: result.token,
+      refreshToken: result.refreshToken,
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("refresh")
+  @HttpCode(HttpStatus.OK)
+  @ApiCookieAuth("refresh_token")
+  @ApiOperation({
+    summary: "Renovar tokens de sesión (Refresh Token Rotation)",
+    description:
+      "Renueva el Access Token y rota el Refresh Token (RTR). Lee la cookie HttpOnly 'refresh_token' o el valor provisto en el cuerpo.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Tokens renovados exitosamente",
+    type: AuthResponseDto,
+  })
+  @ApiResponse({
+    status: 401,
+    description: "Token de refresco inválido, caducado o reutilizado",
+  })
+  async refresh(
+    @Req() req: Request,
+    @Body("refreshToken") bodyToken: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || bodyToken;
+    const metadata = {
+      ipAddress: req.ip,
+      deviceInfo: req.headers["user-agent"],
+    };
+
+    const result = await this.authService.refreshToken(refreshToken, metadata);
+    this.setAuthCookies(response, result.token!, result.refreshToken);
+
+    return {
+      success: true,
+      data: result.user,
+      token: result.token,
+      refreshToken: result.refreshToken,
       meta: {
         timestamp: new Date().toISOString(),
       },
@@ -172,32 +232,56 @@ export class AuthController {
   @ApiOperation({
     summary: "Cerrar sesión",
     description:
-      "Invalida la sesión eliminando las cookies seguras de autenticación.",
+      "Invalida la sesión actual en base de datos, emite notificación WebSocket y elimina las cookies seguras de autenticación.",
   })
   @ApiResponse({
     status: 200,
     description: "Sesión finalizada correctamente",
   })
-  async logout(@Res({ passthrough: true }) response: Response) {
-    const isProd = process.env.NODE_ENV === "production";
-    const sameSiteMode = isProd ? ("strict" as const) : ("lax" as const);
+  async logout(
+    @Req() req: Request,
+    @Body("refreshToken") bodyToken: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const refreshToken = req.cookies?.[REFRESH_COOKIE_NAME] || bodyToken;
+    const userId = (req as any).user?.id;
 
-    response.clearCookie(COOKIE_NAME, {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: sameSiteMode,
-      path: "/",
-    });
-    response.clearCookie("auth_token", {
-      httpOnly: true,
-      secure: isProd,
-      sameSite: sameSiteMode,
-      path: "/",
-    });
+    await this.authService.logout(refreshToken, userId);
+    this.clearAuthCookies(response);
 
     return {
       success: true,
       message: "Sesión finalizada correctamente",
+      meta: {
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  @Post("logout-all")
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiCookieAuth("jwt_token")
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: "Cerrar sesión en todos los dispositivos",
+    description:
+      "Invalida todas las sesiones activas del usuario, incrementa tokenVersion y emite difusión WebSocket de cierre global.",
+  })
+  @ApiResponse({
+    status: 200,
+    description: "Todas las sesiones finalizadas correctamente",
+  })
+  async logoutAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const result = await this.authService.logoutAll(user.id);
+    this.clearAuthCookies(response);
+
+    return {
+      success: true,
+      message: result.message,
       meta: {
         timestamp: new Date().toISOString(),
       },
@@ -322,24 +406,63 @@ export class AuthController {
     };
   }
 
-  private setAuthCookie(response: Response, token: string) {
+  private setAuthCookies(
+    response: Response,
+    accessToken: string,
+    refreshToken?: string,
+  ) {
     const isProd = process.env.NODE_ENV === "production";
     const sameSiteMode = isProd ? ("strict" as const) : ("lax" as const);
 
-    response.cookie(COOKIE_NAME, token, {
+    // Access Token (15 minutos)
+    response.cookie(COOKIE_NAME, accessToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: sameSiteMode,
-      maxAge: SEVEN_DAYS_MS,
+      maxAge: FIFTEEN_MINUTES_MS,
       path: "/",
     });
-    // Compatibilidad adicional
-    response.cookie("auth_token", token, {
+    response.cookie("auth_token", accessToken, {
       httpOnly: true,
       secure: isProd,
       sameSite: sameSiteMode,
-      maxAge: SEVEN_DAYS_MS,
+      maxAge: FIFTEEN_MINUTES_MS,
       path: "/",
+    });
+
+    // Refresh Token (7 días, restringido a /api/auth)
+    if (refreshToken) {
+      response.cookie(REFRESH_COOKIE_NAME, refreshToken, {
+        httpOnly: true,
+        secure: isProd,
+        sameSite: sameSiteMode,
+        maxAge: SEVEN_DAYS_MS,
+        path: "/api/auth",
+      });
+    }
+  }
+
+  private clearAuthCookies(response: Response) {
+    const isProd = process.env.NODE_ENV === "production";
+    const sameSiteMode = isProd ? ("strict" as const) : ("lax" as const);
+
+    response.clearCookie(COOKIE_NAME, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: sameSiteMode,
+      path: "/",
+    });
+    response.clearCookie("auth_token", {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: sameSiteMode,
+      path: "/",
+    });
+    response.clearCookie(REFRESH_COOKIE_NAME, {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: sameSiteMode,
+      path: "/api/auth",
     });
   }
 }

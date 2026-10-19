@@ -655,4 +655,86 @@ describe("GeminiAdvisorService (Natural Language Budget Creation & Human-in-the-
       expect(result.content).toContain("6 meses antes");
     });
   });
+
+  describe("categorizeMovements", () => {
+    const categories = [
+      { id: "cat-super", name: "Supermercado" },
+      { id: "cat-rest", name: "Restaurantes" },
+      { id: "cat-fuel", name: "Transporte" },
+    ];
+
+    it("debe clasificar movimientos correctamente basándose en description en modo offline", async () => {
+      const movements = [
+        { rowId: "row-1", description: "COMPRA MERCADONA VALENCIA" },
+        { rowId: "row-2", description: "CENA BURGER KING" },
+        { rowId: "row-3", description: "REPSOL GASOLINA AUTOVIA" },
+      ];
+
+      const result = await service.categorizeMovements(categories, movements);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].suggestedCategoryId).toBe("cat-super");
+      expect(result[0].suggestedCategoryName).toBe("Supermercado");
+      expect(result[1].suggestedCategoryId).toBe("cat-rest");
+      expect(result[2].suggestedCategoryId).toBe("cat-fuel");
+    });
+
+    it("debe asignar null a la categoría si la descripción es desconocida o ambigua", async () => {
+      const movements = [
+        { rowId: "row-unknown", description: "PAGO TARJETA REF 99482810283" },
+      ];
+
+      const result = await service.categorizeMovements(categories, movements);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].suggestedCategoryId).toBeNull();
+      expect(result[0].suggestedCategoryName).toBeNull();
+    });
+
+    it("debe usar Gemini API cuando el cliente de IA está activo y parsear la respuesta JSON", async () => {
+      // Mockear cliente Gemini en el servicio
+      const mockGenerateContent = jest.fn().mockResolvedValue({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  text: JSON.stringify([
+                    {
+                      rowId: "row-1",
+                      categoryId: "cat-super",
+                      categoryName: "Supermercado",
+                    },
+                    {
+                      rowId: "row-2",
+                      categoryId: null,
+                      categoryName: null,
+                    },
+                  ]),
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      (service as any).aiClient = {
+        models: {
+          generateContent: mockGenerateContent,
+        },
+      };
+
+      const movements = [
+        { rowId: "row-1", description: "CARREFOUR EXPRESS" },
+        { rowId: "row-2", description: "TRANSFERENCIA 849204820" },
+      ];
+
+      const result = await service.categorizeMovements(categories, movements);
+
+      expect(mockGenerateContent).toHaveBeenCalledTimes(1);
+      expect(result[0].suggestedCategoryId).toBe("cat-super");
+      expect(result[1].suggestedCategoryId).toBeNull();
+      expect(result[1].suggestedCategoryName).toBeNull();
+    });
+  });
 });

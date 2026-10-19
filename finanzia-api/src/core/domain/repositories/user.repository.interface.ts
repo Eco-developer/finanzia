@@ -33,6 +33,7 @@ export interface IUserRepository {
     userId: string,
     passwordHash: string,
   ): Promise<UserEntity>;
+  incrementTokenVersion(userId: string): Promise<UserEntity>;
 }
 
 export const USER_REPOSITORY = Symbol("IUserRepository");
