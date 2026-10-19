@@ -48,7 +48,10 @@ describe("AuthController (Unit Tests)", () => {
         refreshToken: "refresh-token-7d",
       });
 
-      const dto: LoginDto = { email: "test@example.com", password: "Password123!" };
+      const dto: LoginDto = {
+        email: "test@example.com",
+        password: "Password123!",
+      };
       const result = await controller.login(dto, mockRequest, mockResponse);
 
       expect(mockAuthService.login).toHaveBeenCalledWith(dto, {
@@ -63,7 +66,10 @@ describe("AuthController (Unit Tests)", () => {
       expect(mockResponse.cookie).toHaveBeenCalledWith(
         "refresh_token",
         "refresh-token-7d",
-        expect.objectContaining({ maxAge: 7 * 24 * 60 * 60 * 1000, path: "/api/auth" }),
+        expect.objectContaining({
+          maxAge: 7 * 24 * 60 * 60 * 1000,
+          path: "/api/auth",
+        }),
       );
       expect(result.success).toBe(true);
       expect(result.token).toBe("access-token-15m");
@@ -108,7 +114,11 @@ describe("AuthController (Unit Tests)", () => {
         refreshToken: "new-refresh-token",
       });
 
-      const result = await controller.refresh(mockRequest, "body-refresh-token", mockResponse);
+      const result = await controller.refresh(
+        mockRequest,
+        "body-refresh-token",
+        mockResponse,
+      );
 
       expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
         "body-refresh-token",
@@ -128,10 +138,22 @@ describe("AuthController (Unit Tests)", () => {
 
       const result = await controller.logout(mockRequest, "", mockResponse);
 
-      expect(mockAuthService.logout).toHaveBeenCalledWith("my-refresh-token", undefined);
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith("jwt_token", expect.any(Object));
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith("auth_token", expect.any(Object));
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith("refresh_token", expect.objectContaining({ path: "/api/auth" }));
+      expect(mockAuthService.logout).toHaveBeenCalledWith(
+        "my-refresh-token",
+        undefined,
+      );
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+        "jwt_token",
+        expect.any(Object),
+      );
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+        "auth_token",
+        expect.any(Object),
+      );
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+        "refresh_token",
+        expect.objectContaining({ path: "/api/auth" }),
+      );
       expect(result.success).toBe(true);
     });
   });
@@ -147,8 +169,14 @@ describe("AuthController (Unit Tests)", () => {
       const result = await controller.logoutAll(mockUser, mockResponse);
 
       expect(mockAuthService.logoutAll).toHaveBeenCalledWith("user-123");
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith("jwt_token", expect.any(Object));
-      expect(mockResponse.clearCookie).toHaveBeenCalledWith("refresh_token", expect.objectContaining({ path: "/api/auth" }));
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+        "jwt_token",
+        expect.any(Object),
+      );
+      expect(mockResponse.clearCookie).toHaveBeenCalledWith(
+        "refresh_token",
+        expect.objectContaining({ path: "/api/auth" }),
+      );
       expect(result.success).toBe(true);
     });
   });

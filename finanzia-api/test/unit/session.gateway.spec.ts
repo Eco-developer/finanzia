@@ -92,7 +92,10 @@ describe("SessionGateway (Unit Tests)", () => {
 
     it("debe rechazar la conexión si el usuario no existe", async () => {
       mockSocket.handshake.auth = { token: "token-valido" };
-      mockJwtService.verify.mockReturnValue({ sub: "user-uuid-1", tokenVersion: 1 });
+      mockJwtService.verify.mockReturnValue({
+        sub: "user-uuid-1",
+        tokenVersion: 1,
+      });
       mockUserRepository.findById.mockResolvedValue(null);
 
       await gateway.handleConnection(mockSocket);
@@ -102,7 +105,10 @@ describe("SessionGateway (Unit Tests)", () => {
 
     it("debe rechazar la conexión si el tokenVersion del payload es menor al del usuario (sesión revocada)", async () => {
       mockSocket.handshake.auth = { token: "token-valido" };
-      mockJwtService.verify.mockReturnValue({ sub: "user-uuid-1", tokenVersion: 1 });
+      mockJwtService.verify.mockReturnValue({
+        sub: "user-uuid-1",
+        tokenVersion: 1,
+      });
       mockUserRepository.findById.mockResolvedValue({
         ...mockUser,
         tokenVersion: 2, // Usuario ya incrementó tokenVersion
@@ -115,7 +121,10 @@ describe("SessionGateway (Unit Tests)", () => {
 
     it("debe autenticar exitosamente y unir el socket a la sala privada del usuario", async () => {
       mockSocket.handshake.auth = { token: "token-valido" };
-      mockJwtService.verify.mockReturnValue({ sub: "user-uuid-1", tokenVersion: 1 });
+      mockJwtService.verify.mockReturnValue({
+        sub: "user-uuid-1",
+        tokenVersion: 1,
+      });
       mockUserRepository.findById.mockResolvedValue(mockUser);
 
       await gateway.handleConnection(mockSocket);
@@ -136,7 +145,10 @@ describe("SessionGateway (Unit Tests)", () => {
       mockSocket.handshake.headers = {
         cookie: "other_cookie=xyz; jwt_token=cookie-token-value; foo=bar",
       };
-      mockJwtService.verify.mockReturnValue({ sub: "user-uuid-1", tokenVersion: 1 });
+      mockJwtService.verify.mockReturnValue({
+        sub: "user-uuid-1",
+        tokenVersion: 1,
+      });
       mockUserRepository.findById.mockResolvedValue(mockUser);
 
       await gateway.handleConnection(mockSocket);

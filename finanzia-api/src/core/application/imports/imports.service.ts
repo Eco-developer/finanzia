@@ -1,9 +1,6 @@
 import { Injectable, Inject, Optional, Logger } from "@nestjs/common";
 import { TransactionType } from "../../domain/types/financial.types";
-import {
-  IAiAdvisorPort,
-  AI_ADVISOR_PORT,
-} from "../ports/ai-advisor.port";
+import { IAiAdvisorPort, AI_ADVISOR_PORT } from "../ports/ai-advisor.port";
 import {
   IAccountRepository,
   ACCOUNT_REPOSITORY,

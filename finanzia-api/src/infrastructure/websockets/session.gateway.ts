@@ -4,7 +4,6 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   SubscribeMessage,
-  MessageBody,
   ConnectedSocket,
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
@@ -101,10 +100,7 @@ export class SessionGateway
   }
 
   @SubscribeMessage("session:ping")
-  async handlePing(
-    @ConnectedSocket() client: Socket,
-    @MessageBody() _data?: any,
-  ) {
+  async handlePing(@ConnectedSocket() client: Socket) {
     const userId = client.data?.userId;
     if (!userId) {
       client.emit("session:error", { message: "No autenticado" });
@@ -179,11 +175,14 @@ export class SessionGateway
     // 3. Cookie en headers
     const cookieHeader = client.handshake?.headers?.cookie;
     if (cookieHeader) {
-      const cookies = cookieHeader.split(";").reduce((acc, cookie) => {
-        const [k, v] = cookie.trim().split("=");
-        if (k && v) acc[k] = decodeURIComponent(v);
-        return acc;
-      }, {} as Record<string, string>);
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [k, v] = cookie.trim().split("=");
+          if (k && v) acc[k] = decodeURIComponent(v);
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       if (cookies["jwt_token"]) return cookies["jwt_token"];
       if (cookies["auth_token"]) return cookies["auth_token"];
