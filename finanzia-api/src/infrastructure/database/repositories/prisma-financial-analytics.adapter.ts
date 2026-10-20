@@ -10,7 +10,11 @@ import {
   HistoricalBaselineResult,
   ProactiveInsightItem,
 } from "../../../core/application/ai/ai-tools.service";
-import { IFinancialAnalyticsPort } from "../../../core/application/ports/financial-analytics.port";
+import {
+  IFinancialAnalyticsPort,
+  UserDebtsOverview,
+  ActiveDebtSummaryItem,
+} from "../../../core/application/ports/financial-analytics.port";
 import { RecommendationType as PrismaRecommendationType } from "@prisma/client";
 
 const FIXED_EXPENSE_KEYWORDS = [
@@ -333,6 +337,43 @@ export class PrismaFinancialAnalyticsAdapter implements IFinancialAnalyticsPort 
         isCompleted: g.isCompleted,
       };
     });
+  }
+
+  async getActiveDebtsSummary(userId: string): Promise<UserDebtsOverview> {
+    const debts = await this.prisma.debt.findMany({
+      where: { userId, status: "ACTIVE" },
+      orderBy: { createdAt: "desc" },
+    });
+
+    let totalRemainingCents = 0;
+    let totalMonthlyPaymentCents = 0;
+
+    const items: ActiveDebtSummaryItem[] = debts.map((d) => {
+      const rem = Number(d.remainingAmountCents);
+      const minPay = d.minimumMonthlyPaymentCents
+        ? Number(d.minimumMonthlyPaymentCents)
+        : null;
+      totalRemainingCents += rem;
+      if (minPay) totalMonthlyPaymentCents += minPay;
+
+      return {
+        debtId: d.id,
+        concept: d.concept,
+        creditor: d.creditor,
+        remainingAmountCents: rem,
+        initialAmountCents: Number(d.initialAmountCents),
+        minimumMonthlyPaymentCents: minPay,
+        interestRateBasisPts: d.interestRateBasisPts,
+        interestRateType: d.interestRateType,
+      };
+    });
+
+    return {
+      totalRemainingCents,
+      totalMonthlyPaymentCents,
+      activeDebtsCount: items.length,
+      debts: items,
+    };
   }
 
   async getHistoricalBaseline(

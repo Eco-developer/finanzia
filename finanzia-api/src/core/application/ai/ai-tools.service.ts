@@ -198,6 +198,8 @@ export interface MultiStepSavingsPlanResult {
   suggestedCuts: PlanCategoryCutSuggestion[];
   summary: string;
   recommendationId?: string;
+  isDuplicate?: boolean;
+  hasDebtConflict?: boolean;
 }
 
 export interface ProactiveInsightItem {

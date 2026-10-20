@@ -67,6 +67,33 @@ describe("FinancialProfileService (Cross-Session Long-Term Memory)", () => {
         averageSavingsRatePercent: 22.7,
         topVariableCategories: [],
       }),
+      getActiveDebtsSummary: jest.fn().mockResolvedValue({
+        totalRemainingCents: 475000,
+        totalMonthlyPaymentCents: 31500,
+        activeDebtsCount: 2,
+        debts: [
+          {
+            debtId: "d-car",
+            concept: "Préstamo Coche",
+            creditor: "Banco Santander",
+            remainingAmountCents: 400000,
+            initialAmountCents: 1200000,
+            minimumMonthlyPaymentCents: 25000,
+            interestRateBasisPts: 650,
+            interestRateType: "ANNUAL",
+          },
+          {
+            debtId: "d-iphone",
+            concept: "Financiación iPhone",
+            creditor: "Apple Financial",
+            remainingAmountCents: 75000,
+            initialAmountCents: 120000,
+            minimumMonthlyPaymentCents: 6500,
+            interestRateBasisPts: 0,
+            interestRateType: "ANNUAL",
+          },
+        ],
+      }),
       getProactiveInsights: jest.fn(),
       saveUserCategoryRule: jest.fn(),
       findUserCategoryRule: jest.fn(),
@@ -93,6 +120,9 @@ describe("FinancialProfileService (Cross-Session Long-Term Memory)", () => {
     expect(profile.activeGoalsCount).toBe(1);
     expect(profile.goals[0].name).toBe("Vacaciones");
     expect(profile.goals[0].progressPercent).toBe(80);
+    expect(profile.debtsOverview.totalRemainingEur).toBe("4750,00");
+    expect(profile.debtsOverview.activeDebtsCount).toBe(2);
+    expect(profile.debtsOverview.debts[0].concept).toBe("Préstamo Coche");
     expect(profile.baseline.monthlyIncomeEur).toBe("2200,00");
     expect(profile.baseline.monthlyNetSavingsEur).toBe("500,00");
     expect(profile.budgetsUnderRisk.length).toBe(1);
@@ -106,6 +136,10 @@ describe("FinancialProfileService (Cross-Session Long-Term Memory)", () => {
     expect(context).toContain("4500,00 €");
     expect(context).toContain("Vacaciones");
     expect(context).toContain("80% completado");
+    expect(context).toContain("Préstamo Coche");
+    expect(context).toContain("Financiación iPhone");
+    expect(context).toContain("REGLA DE PRIORIDAD FINANCIERA");
+    expect(context).toContain("REGLA ESTRICTA ANTI-DUPLICADOS");
     expect(context).toContain("Ocio: 95% consumido (WARNING)");
   });
 });

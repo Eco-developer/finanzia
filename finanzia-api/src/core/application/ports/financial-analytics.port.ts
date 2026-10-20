@@ -9,6 +9,24 @@ import {
   HistoricalBaselineResult,
 } from "../ai/ai-tools.service";
 
+export interface ActiveDebtSummaryItem {
+  debtId: string;
+  concept: string;
+  creditor: string | null;
+  remainingAmountCents: number;
+  initialAmountCents: number;
+  minimumMonthlyPaymentCents: number | null;
+  interestRateBasisPts: number;
+  interestRateType: string;
+}
+
+export interface UserDebtsOverview {
+  totalRemainingCents: number;
+  totalMonthlyPaymentCents: number;
+  activeDebtsCount: number;
+  debts: ActiveDebtSummaryItem[];
+}
+
 export interface IFinancialAnalyticsPort {
   getFinancialSummary(
     userId: string,
@@ -40,6 +58,8 @@ export interface IFinancialAnalyticsPort {
   getAccountBalances(userId: string): Promise<TotalBalancesResult>;
 
   getSavingsGoals(userId: string): Promise<SavingsGoalItem[]>;
+
+  getActiveDebtsSummary(userId: string): Promise<UserDebtsOverview>;
 
   getHistoricalBaseline(userId: string): Promise<HistoricalBaselineResult>;
 

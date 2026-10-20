@@ -37,6 +37,124 @@ export class MultiStepPlannerService {
       `[Planner] Calculando plan para usuario ${userId}: ${targetCents} céntimos en ${validMonths} meses (${monthlyQuotaCents} céntimos/mes)`,
     );
 
+    const norm = (s: string) =>
+      (s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+    const normalizedGoalName = norm(goalName);
+
+    // 1. REGLA ANTI-DUPLICADOS: Verificar si ya existe una meta con las mismas o muy similares características
+    const existingGoals = (await this.analytics.getSavingsGoals(userId)) || [];
+
+    const KEYWORDS = [
+      "vacaci",
+      "viaje",
+      "coche",
+      "auto",
+      "emergencia",
+      "boda",
+      "casa",
+      "piso",
+      "iphone",
+      "moto",
+      "reforma",
+      "estudios",
+      "master",
+    ];
+    const matchedKeyword = KEYWORDS.find((kw) =>
+      normalizedGoalName.includes(kw),
+    );
+
+    const duplicateGoal = existingGoals.find((g) => {
+      const gNorm = norm(g.name);
+      const sameConcept =
+        gNorm === normalizedGoalName ||
+        (matchedKeyword && gNorm.includes(matchedKeyword)) ||
+        gNorm.includes(normalizedGoalName) ||
+        normalizedGoalName.includes(gNorm);
+
+      const amountRatio =
+        Math.abs(g.targetAmountCents - targetCents) / targetCents;
+      const similarAmount = amountRatio <= 0.15;
+
+      return sameConcept && similarAmount;
+    });
+
+    const formatEur = (cents: number) => {
+      const parts = (cents / 100).toFixed(2).split(".");
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+      return parts.join(",");
+    };
+
+    if (duplicateGoal) {
+      const existingTargetEur = formatEur(duplicateGoal.targetAmountCents);
+      const existingCurEur = formatEur(duplicateGoal.currentAmountCents);
+
+      const duplicateSummary = `⚠️ **Meta de Ahorro ya existente detectada:**\n\nYa cuentas con una meta de ahorro activa con características idénticas o muy similares: **"${duplicateGoal.name}"** (Objetivo: **${existingTargetEur} €**, Acumulado actual: **${existingCurEur} €** · **${duplicateGoal.progressPercent}%** completado).\n\nPara mantener una planificación financiera coherente y evitar fragmentar tus fondos en metas duplicadas, no se recomienda crear una nueva meta con las mismas características. Puedes realizar aportaciones extraordinarias a tu meta existente o ajustar su importe objetivo.`;
+
+      return {
+        goalName,
+        targetAmountCents: targetCents,
+        months: validMonths,
+        monthlyQuotaCents,
+        averageNetSavingsCents: 0,
+        gapCents: 0,
+        isViableWithCurrentSavings: false,
+        suggestedCuts: [],
+        summary: duplicateSummary,
+        recommendationId: undefined,
+        isDuplicate: true,
+      };
+    }
+
+    // 2. CONTEXTO HOLÍSTICO Y DEUDAS ACTIVAS:
+    // Evaluar si el usuario tiene deudas pendientes antes de recomendar metas de ocio/discrecionales
+    const debtsOverview = this.analytics.getActiveDebtsSummary
+      ? await this.analytics.getActiveDebtsSummary(userId)
+      : {
+          totalRemainingCents: 0,
+          totalMonthlyPaymentCents: 0,
+          activeDebtsCount: 0,
+          debts: [],
+        };
+
+    const isDiscretionaryGoal =
+      !normalizedGoalName.includes("emergencia") &&
+      !normalizedGoalName.includes("salud") &&
+      !normalizedGoalName.includes("deuda") &&
+      !normalizedGoalName.includes("amortiz");
+
+    const hasSignificantDebt = debtsOverview.totalRemainingCents > 0;
+
+    if (hasSignificantDebt && isDiscretionaryGoal) {
+      const totalDebtEur = formatEur(debtsOverview.totalRemainingCents);
+      const debtsList = debtsOverview.debts
+        .map(
+          (d) =>
+            `- **${d.concept}**${d.creditor ? " (" + d.creditor + ")" : ""}: ${formatEur(d.remainingAmountCents)} € pendientes`,
+        )
+        .join("\n");
+
+      const debtSummary = `⚠️ **Conflicto de Prioridad Financiera — Deudas Activas Pendientes:**\n\nHe analizado tu contexto financiero global: actualmente tienes **${totalDebtEur} €** en deudas activas pendientes:\n${debtsList}\n\n💡 **Criterio de Salud Financiera:** No es recomendable iniciar ni recomendar una meta de ahorro para gastos discrecionales o de ocio como **"${goalName}"** mientras mantengas préstamos o pagos en cuotas activos (como deudas de vehículo o financiación de dispositivos como teléfonos u ordenadores). Cada euro destinado a amortizar deuda genera un ahorro garantizado al eliminar costes en intereses.\n\nTe recomiendo enfocar tu capacidad de ahorro en liquidar estas deudas mediante un plan acelerado (Avalancha o Bola de Nieve) o consolidar un fondo de emergencia de seguridad antes de planificar gastos de ocio.`;
+
+      return {
+        goalName,
+        targetAmountCents: targetCents,
+        months: validMonths,
+        monthlyQuotaCents,
+        averageNetSavingsCents: 0,
+        gapCents: 0,
+        isViableWithCurrentSavings: false,
+        suggestedCuts: [],
+        summary: debtSummary,
+        recommendationId: undefined,
+        hasDebtConflict: true,
+      };
+    }
+
     const baseline: HistoricalBaselineResult =
       await this.analytics.getHistoricalBaseline(userId);
 

@@ -16,6 +16,18 @@ export interface UserFinancialProfile {
     targetEur: string;
     isCompleted: boolean;
   }>;
+  debtsOverview: {
+    totalRemainingEur: string;
+    totalMonthlyPaymentEur: string;
+    activeDebtsCount: number;
+    debts: Array<{
+      concept: string;
+      creditor: string | null;
+      remainingEur: string;
+      quotaEur: string;
+      ratePercent: number;
+    }>;
+  };
   baseline: {
     monthlyIncomeEur: string;
     monthlyFixedExpensesEur: string;
@@ -48,12 +60,21 @@ export class FinancialProfileService {
     const currentMonth = now.getMonth() + 1;
     const currentYear = now.getFullYear();
 
-    const [balances, goals, baseline, budgets] = await Promise.all([
-      this.analytics.getAccountBalances(userId),
-      this.analytics.getSavingsGoals(userId),
-      this.analytics.getHistoricalBaseline(userId),
-      this.analytics.getBudgetStatus(userId, currentMonth, currentYear),
-    ]);
+    const [balances, goals, baseline, budgets, debtsOverview] =
+      await Promise.all([
+        this.analytics.getAccountBalances(userId),
+        this.analytics.getSavingsGoals(userId),
+        this.analytics.getHistoricalBaseline(userId),
+        this.analytics.getBudgetStatus(userId, currentMonth, currentYear),
+        this.analytics.getActiveDebtsSummary
+          ? this.analytics.getActiveDebtsSummary(userId)
+          : Promise.resolve({
+              totalRemainingCents: 0,
+              totalMonthlyPaymentCents: 0,
+              activeDebtsCount: 0,
+              debts: [],
+            }),
+      ]);
 
     const totalBalanceEur = (balances.totalBalanceCents / 100)
       .toFixed(2)
@@ -65,6 +86,16 @@ export class FinancialProfileService {
       currentEur: (g.currentAmountCents / 100).toFixed(2).replace(".", ","),
       targetEur: (g.targetAmountCents / 100).toFixed(2).replace(".", ","),
       isCompleted: g.isCompleted,
+    }));
+
+    const formattedDebts = debtsOverview.debts.map((d) => ({
+      concept: d.concept,
+      creditor: d.creditor,
+      remainingEur: (d.remainingAmountCents / 100).toFixed(2).replace(".", ","),
+      quotaEur: d.minimumMonthlyPaymentCents
+        ? (d.minimumMonthlyPaymentCents / 100).toFixed(2).replace(".", ",")
+        : "Flexible",
+      ratePercent: Number((d.interestRateBasisPts / 100).toFixed(2)),
     }));
 
     const budgetsUnderRisk = budgets
@@ -81,6 +112,16 @@ export class FinancialProfileService {
       accountsCount: balances.accounts.length,
       activeGoalsCount: goals.filter((g) => !g.isCompleted).length,
       goals: formattedGoals,
+      debtsOverview: {
+        totalRemainingEur: (debtsOverview.totalRemainingCents / 100)
+          .toFixed(2)
+          .replace(".", ","),
+        totalMonthlyPaymentEur: (debtsOverview.totalMonthlyPaymentCents / 100)
+          .toFixed(2)
+          .replace(".", ","),
+        activeDebtsCount: debtsOverview.activeDebtsCount,
+        debts: formattedDebts,
+      },
       baseline: {
         monthlyIncomeEur: (baseline.averageMonthlyIncomeCents / 100)
           .toFixed(2)
@@ -122,11 +163,24 @@ export class FinancialProfileService {
       text += `- Gastos variables discrecionales medios: ${p.baseline.monthlyVariableExpensesEur} €/mes (Restaurantes, Ocio, Compras).\n`;
       text += `- Capacidad de ahorro neta media: ${p.baseline.monthlyNetSavingsEur} €/mes (Tasa de ahorro: ${p.baseline.savingsRatePercent}%).\n`;
 
+      // Deudas activas
+      if (p.debtsOverview.activeDebtsCount > 0) {
+        text += `- Deudas y pasivos activos vigentes (${p.debtsOverview.activeDebtsCount} deuda(s), Total: ${p.debtsOverview.totalRemainingEur} € | Compromiso cuotas: ${p.debtsOverview.totalMonthlyPaymentEur} €/mes):\n`;
+        for (const d of p.debtsOverview.debts) {
+          text += `  * "${d.concept}"${d.creditor ? " (" + d.creditor + ")" : ""}: ${d.remainingEur} € pendientes (Cuota: ${d.quotaEur} €/mes, Interés: ${d.ratePercent}%).\n`;
+        }
+        text += `  * REGLA DE PRIORIDAD FINANCIERA: El usuario tiene deudas activas. NUNCA propongas ni recomiendes metas de ahorro para vacaciones, caprichos, viajes ni compras no esenciales (ej. comprar coche de ocio o artículos a plazos como iPhone) mientras existan estas deudas. La prioridad matemática innegociable debe ser amortizar deuda anticipadamente o fondo de emergencia.\n`;
+      } else {
+        text += `- Deudas y pasivos: 0 € pendientes (Sin deudas activas).\n`;
+      }
+
+      // Metas de ahorro
       if (p.goals.length > 0) {
-        text += `- Metas de ahorro activas:\n`;
+        text += `- Metas de ahorro activas actuales:\n`;
         for (const g of p.goals) {
           text += `  * "${g.name}": ${g.currentEur} € de ${g.targetEur} € (${g.progressPercent}% completado)${g.isCompleted ? " [COMPLETADA]" : ""}\n`;
         }
+        text += `  * REGLA ESTRICTA ANTI-DUPLICADOS: Antes de recomendar o crear una meta de ahorro, verifica las metas activas anteriores. Si ya existe una meta con el mismo propósito (ej. "Vacaciones") o con características idénticas o muy similares de importe o plazo, NUNCA propongas una meta duplicada. En su lugar, sugiere aportar a la existente o ajustar su importe.\n`;
       } else {
         text += `- Metas de ahorro: Sin metas configuradas actualmente.\n`;
       }

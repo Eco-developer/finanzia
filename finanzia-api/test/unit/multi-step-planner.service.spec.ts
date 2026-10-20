@@ -52,7 +52,13 @@ describe("MultiStepPlannerService (Deterministic Goal Decomposition & Variable C
         title: "Crear Meta",
       }),
       getAccountBalances: jest.fn(),
-      getSavingsGoals: jest.fn(),
+      getSavingsGoals: jest.fn().mockResolvedValue([]),
+      getActiveDebtsSummary: jest.fn().mockResolvedValue({
+        totalRemainingCents: 0,
+        totalMonthlyPaymentCents: 0,
+        activeDebtsCount: 0,
+        debts: [],
+      }),
       getHistoricalBaseline: jest.fn().mockResolvedValue(defaultBaseline),
       getProactiveInsights: jest.fn(),
       saveUserCategoryRule: jest.fn(),
@@ -136,5 +142,78 @@ describe("MultiStepPlannerService (Deterministic Goal Decomposition & Variable C
     );
     expect(result.months).toBe(1);
     expect(result.monthlyQuotaCents).toBe(100000);
+  });
+
+  it("debe evitar recomendar una meta duplicada si ya existe una meta con características similares (ej. Vacaciones en 6 meses con 3.000 €)", async () => {
+    mockAnalytics.getSavingsGoals.mockResolvedValue([
+      {
+        goalId: "goal-vac-1",
+        name: "Vacaciones de Verano",
+        targetAmountCents: 300000,
+        currentAmountCents: 100000,
+        progressPercent: 33.3,
+        isCompleted: false,
+        targetDate: "2026-09-01T00:00:00.000Z",
+      },
+    ]);
+
+    const result = await planner.calculateGoalPlan(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones",
+    );
+
+    expect(result.isDuplicate).toBe(true);
+    expect(result.recommendationId).toBeUndefined();
+    expect(result.summary).toContain("Meta de Ahorro ya existente detectada");
+    expect(result.summary).toContain("Vacaciones de Verano");
+    expect(result.summary).toContain("3.000,00 €");
+    expect(mockAnalytics.proposeRecommendation).not.toHaveBeenCalled();
+  });
+
+  it("debe tomar en cuenta las deudas actuales (ej. 4.000 € en coche o cuotas de iPhone) y NO recomendar metas de ocio como vacaciones", async () => {
+    mockAnalytics.getActiveDebtsSummary.mockResolvedValue({
+      totalRemainingCents: 475000,
+      totalMonthlyPaymentCents: 31500,
+      activeDebtsCount: 2,
+      debts: [
+        {
+          debtId: "d-car",
+          concept: "Préstamo Coche",
+          creditor: "Banco Santander",
+          remainingAmountCents: 400000, // 4.000 €
+          initialAmountCents: 1200000,
+          minimumMonthlyPaymentCents: 25000,
+          interestRateBasisPts: 650,
+          interestRateType: "ANNUAL",
+        },
+        {
+          debtId: "d-phone",
+          concept: "Financiación iPhone",
+          creditor: "Apple Financial",
+          remainingAmountCents: 75000, // 750 €
+          initialAmountCents: 120000,
+          minimumMonthlyPaymentCents: 6500,
+          interestRateBasisPts: 0,
+          interestRateType: "ANNUAL",
+        },
+      ],
+    });
+
+    const result = await planner.calculateGoalPlan(
+      "user-1",
+      300000,
+      6,
+      "Vacaciones en la Playa",
+    );
+
+    expect(result.hasDebtConflict).toBe(true);
+    expect(result.recommendationId).toBeUndefined();
+    expect(result.summary).toContain("Conflicto de Prioridad Financiera");
+    expect(result.summary).toContain("Préstamo Coche");
+    expect(result.summary).toContain("Financiación iPhone");
+    expect(result.summary).toContain("4.750,00 €");
+    expect(mockAnalytics.proposeRecommendation).not.toHaveBeenCalled();
   });
 });

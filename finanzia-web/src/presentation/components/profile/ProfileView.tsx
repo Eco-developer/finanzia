@@ -123,12 +123,6 @@ export function ProfileView() {
             </div>
           </div>
         </div>
-
-        <Link href="/accounts">
-          <Button variant="secondary" icon={<ArrowRight size={16} />}>
-            Gestionar mis Cuentas
-          </Button>
-        </Link>
       </div>
 
       {/* Alertas de Notificación */}
@@ -257,18 +251,16 @@ export function ProfileView() {
               <div className={wizardStyles.radioPillGroup}>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasRealEstateIncome === true ? wizardStyles.radioPillSelectedYes : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasRealEstateIncome === true ? wizardStyles.radioPillSelectedYes : ''
+                    }`}
                   onClick={() => setHasRealEstateIncome(true)}
                 >
                   Sí
                 </button>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasRealEstateIncome === false ? wizardStyles.radioPillSelectedNo : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasRealEstateIncome === false ? wizardStyles.radioPillSelectedNo : ''
+                    }`}
                   onClick={() => setHasRealEstateIncome(false)}
                 >
                   No
@@ -284,18 +276,16 @@ export function ProfileView() {
               <div className={wizardStyles.radioPillGroup}>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasStockInvestments === true ? wizardStyles.radioPillSelectedYes : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasStockInvestments === true ? wizardStyles.radioPillSelectedYes : ''
+                    }`}
                   onClick={() => setHasStockInvestments(true)}
                 >
                   Sí
                 </button>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasStockInvestments === false ? wizardStyles.radioPillSelectedNo : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasStockInvestments === false ? wizardStyles.radioPillSelectedNo : ''
+                    }`}
                   onClick={() => setHasStockInvestments(false)}
                 >
                   No
@@ -311,18 +301,16 @@ export function ProfileView() {
               <div className={wizardStyles.radioPillGroup}>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasCryptoInvestments === true ? wizardStyles.radioPillSelectedYes : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasCryptoInvestments === true ? wizardStyles.radioPillSelectedYes : ''
+                    }`}
                   onClick={() => setHasCryptoInvestments(true)}
                 >
                   Sí
                 </button>
                 <button
                   type="button"
-                  className={`${wizardStyles.radioPill} ${
-                    hasCryptoInvestments === false ? wizardStyles.radioPillSelectedNo : ''
-                  }`}
+                  className={`${wizardStyles.radioPill} ${hasCryptoInvestments === false ? wizardStyles.radioPillSelectedNo : ''
+                    }`}
                   onClick={() => setHasCryptoInvestments(false)}
                 >
                   No

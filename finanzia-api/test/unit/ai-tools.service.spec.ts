@@ -45,6 +45,12 @@ describe("AiToolsService (Cero Alucinaciones - Application Service)", () => {
       proposeRecommendation: jest.fn(),
       getAccountBalances: jest.fn(),
       getSavingsGoals: jest.fn(),
+      getActiveDebtsSummary: jest.fn().mockResolvedValue({
+        totalRemainingCents: 0,
+        totalMonthlyPaymentCents: 0,
+        activeDebtsCount: 0,
+        debts: [],
+      }),
       getHistoricalBaseline: jest.fn(),
       getProactiveInsights: jest.fn(),
       saveUserCategoryRule: jest.fn(),

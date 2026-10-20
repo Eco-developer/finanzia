@@ -18,6 +18,12 @@ describe("TransactionLearningService (Intelligent Categorization & Feedback Loop
       getAccountBalances: jest.fn(),
       getSavingsGoals: jest.fn(),
       getHistoricalBaseline: jest.fn(),
+      getActiveDebtsSummary: jest.fn().mockResolvedValue({
+        totalRemainingCents: 0,
+        totalMonthlyPaymentCents: 0,
+        activeDebtsCount: 0,
+        debts: [],
+      }),
       getProactiveInsights: jest.fn(),
       saveUserCategoryRule: jest
         .fn()

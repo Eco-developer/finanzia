@@ -35,7 +35,13 @@ TUS PRINCIPIOS INNEGOCIABLES SON:
 - Para amortizar capital (parcial o total), invoca 'amortize_debt'. Si el usuario indica pagar desde una cuenta bancaria (ej. "desde Cuenta Nómina"), especifica 'fromAccountName'.
 - Si la deuda se liquida al 100%, felicita calurosamente al usuario informándole de que la deuda queda sellada y archivada de forma inmutable en su historial.
 - Para proyecciones y comparación de métodos (Avalancha vs Bola de nieve), invoca 'simulate_debt_payoff'.
-- Para analizar recortes en gastos prescindibles orientados a amortizar antes, invoca 'analyze_debt_optimization'.`;
+- Para analizar recortes en gastos prescindibles orientados a amortizar antes, invoca 'analyze_debt_optimization'.
+9. REGLA ESTRICTA ANTI-DUPLICADOS DE METAS DE AHORRO:
+- Antes de sugerir, planificar o invocar 'calculate_savings_plan' o 'propose_recommendation' para una meta de ahorro, verifica siempre las metas existentes con 'get_savings_goals'.
+- Si el usuario ya cuenta con una meta de ahorro con características idénticas o muy similares (mismo propósito como vacaciones, o mismo importe objetivo y horizonte temporal, ej. 3.000 € en 6 meses), NUNCA recomiendes ni crees una meta duplicada. En su lugar, recuérdale su progreso actual en la meta existente y sugiérele realizar aportaciones extraordinarias o ajustar la meta existente.
+10. EVALUACIÓN HOLÍSTICA DEL CONTEXTO (MOVIMIENTOS, SALDOS, DEUDAS Y METAS):
+- Antes de emitir cualquier recomendación financiera o plan de ahorro, debes analizar TODO el contexto del usuario: sus movimientos recientes ('get_expenses_by_category' / 'get_financial_summary'), el dinero disponible en sus cuentas ('get_account_balances'), sus deudas y pasivos vigentes ('get_debts'), y sus metas actuales ('get_savings_goals').
+- CRITERIO DE PRUDENCIA FINANCIERA: Si el usuario tiene deudas activas pendientes (por ejemplo, un préstamo de coche de 4.000 €, financiación a plazos de un teléfono iPhone o electrodomésticos, o tarjetas de crédito), NO debes recomendarle metas de ahorro para vacaciones, caprichos o compras no esenciales. Explícale con empatía y claridad que, con deudas vigentes, la prioridad financiera debe ser amortizar capital para eliminar el pago de intereses ('simulate_debt_payoff', 'analyze_debt_optimization') o fortalecer un fondo de emergencia mínimo antes de destinar liquidez a ocio o vacaciones.`;
 
   constructor(
     private readonly configService: ConfigService,
@@ -2231,7 +2237,9 @@ INSTRUCCIONES Y REGLAS ESTRICTAS:
       });
 
       let reply = planResult.summary;
-      reply += `\n\n📌 He generado una propuesta estructurada en tu panel lateral de recomendaciones. Puedes pulsar **[Aprobar y Aplicar]** para formalizar la meta automáticamente en tu cuenta.`;
+      if (planResult.recommendationId) {
+        reply += `\n\n📌 He generado una propuesta estructurada en tu panel lateral de recomendaciones. Puedes pulsar **[Aprobar y Aplicar]** para formalizar la meta automáticamente en tu cuenta.`;
+      }
 
       return {
         content: reply,
@@ -2911,7 +2919,27 @@ INSTRUCCIONES Y REGLAS ESTRICTAS:
       });
 
       let recCreated = null;
-      if (summary.netSavingsCents > 5000) {
+      const debtsData = await this.aiToolsService.getDebts(userId, false);
+
+      if (debtsData.activeDebts.length > 0 && summary.netSavingsCents > 5000) {
+        const boostAmountCents = Math.min(summary.netSavingsCents * 0.5, 10000);
+        const boostEur = (boostAmountCents / 100).toFixed(2).replace(".", ",");
+        const topDebt = debtsData.activeDebts[0];
+        recCreated = await this.aiToolsService.proposeRecommendation(
+          userId,
+          "DEBT_AMORTIZATION",
+          `Amortización anticipada de ${boostEur} € a ${topDebt.concept}`,
+          `Dado que dispones de un ahorro neto de ${(summary.netSavingsCents / 100).toFixed(2).replace(".", ",")} € en ${currentMonth}/${currentYear} y mantienes ${topDebt.remainingAmountEur.toFixed(2).replace(".", ",")} € pendientes en "${topDebt.concept}", amortizar ${boostEur} € es la recomendación prioritaria para ahorrar intereses.`,
+          {
+            actionType: "AMORTIZE_DEBT",
+            debtId: topDebt.id,
+            amountCents: boostAmountCents,
+          },
+        );
+      } else if (
+        summary.netSavingsCents > 5000 &&
+        debtsData.activeDebts.length === 0
+      ) {
         const boostAmountCents = Math.min(summary.netSavingsCents * 0.5, 10000);
         const boostEur = (boostAmountCents / 100).toFixed(2).replace(".", ",");
         recCreated = await this.aiToolsService.proposeRecommendation(
