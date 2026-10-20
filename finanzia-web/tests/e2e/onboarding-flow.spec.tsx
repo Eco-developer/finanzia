@@ -240,29 +240,11 @@ describe('E2E Onboarding & Profile Flow', () => {
       expect(screen.getByText(/Correo Verificado/i)).toBeInTheDocument();
     });
 
-    // Pestaña 2: Metas e IA
-    const goalsTabBtn = screen.getByRole('button', { name: /Objetivos y Asistente IA/i });
-    fireEvent.click(goalsTabBtn);
+    // Verificamos que no se muestran los items de Metas/IA ni Privacidad
+    expect(screen.queryByRole('button', { name: /Objetivos y Asistente IA/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Privacidad y Límites/i })).not.toBeInTheDocument();
 
-    expect(
-      screen.getByDisplayValue('Ahorrar para la entrada de vivienda'),
-    ).toBeInTheDocument();
-
-    (profileApi.updateProfile as any).mockResolvedValue({
-      usageGoals: ['control_expenses', 'savings_goals'],
-      customGoal: 'Ahorrar para la entrada de vivienda',
-      preferredCurrency: 'EUR',
-      updatedAt: new Date().toISOString(),
-    });
-
-    const saveGoalsBtn = screen.getByRole('button', { name: /Guardar Preferencias/i });
-    fireEvent.click(saveGoalsBtn);
-
-    await waitFor(() => {
-      expect(profileApi.updateProfile).toHaveBeenCalled();
-    });
-
-    // Pestaña 3: Perfil Económico y Activos
+    // Pestaña Perfil Económico y Activos
     const financialTabBtn = screen.getByRole('button', { name: /Perfil Económico y Activos/i });
     fireEvent.click(financialTabBtn);
 
@@ -285,12 +267,5 @@ describe('E2E Onboarding & Profile Flow', () => {
     await waitFor(() => {
       expect(profileApi.updateFinancialProfile).toHaveBeenCalled();
     });
-
-    // Pestaña 4: Privacidad y Límites
-    const privacyTabBtn = screen.getByRole('button', { name: /Privacidad y Límites/i });
-    fireEvent.click(privacyTabBtn);
-
-    expect(screen.getByText(/Garantías de Privacidad y Marco Legal/i)).toBeInTheDocument();
-    expect(screen.getByText(/Aceptado y Verificado/i)).toBeInTheDocument();
   });
 });

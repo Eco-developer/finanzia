@@ -94,32 +94,20 @@ describe('ProfileView Component', () => {
     expect(screen.getByDisplayValue('miguel@finanzia.com')).toBeInTheDocument();
   });
 
-  it('Tab 2: permite modificar metas de uso y preferencias de IA', async () => {
+  it('no muestra los items de Objetivos y Asistente IA ni Privacidad y Límites', async () => {
     render(<ProfileView />);
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Objetivos y Asistente IA/i })).toBeInTheDocument();
+      expect(screen.getByText(/Información de la Cuenta/i)).toBeInTheDocument();
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /Objetivos y Asistente IA/i }));
-
-    expect(screen.getByText(/Objetivos Financieros y Preferencias de IA/i)).toBeInTheDocument();
-
-    // Guardar cambios
-    const saveBtn = screen.getByRole('button', { name: /Guardar Preferencias de Metas e IA/i });
-    fireEvent.click(saveBtn);
-
-    await waitFor(() => {
-      expect(profileApi.updateProfile).toHaveBeenCalledWith(
-        expect.objectContaining({
-          usageGoals: expect.arrayContaining(['control_expenses']),
-        }),
-      );
-      expect(screen.getByText(/actualizados correctamente/i)).toBeInTheDocument();
-    });
+    expect(screen.queryByRole('button', { name: /Objetivos y Asistente IA/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Privacidad y Límites/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Datos de Cuenta/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Perfil Económico y Activos/i })).toBeInTheDocument();
   });
 
-  it('Tab 3: permite modificar perfil económico y activos', async () => {
+  it('permite alternar a Perfil Económico y modificar datos', async () => {
     render(<ProfileView />);
 
     await waitFor(() => {
@@ -144,22 +132,5 @@ describe('ProfileView Component', () => {
       );
       expect(screen.getByText(/Perfil económico y patrimonial actualizado correctamente/i)).toBeInTheDocument();
     });
-  });
-
-  it('Tab 4: visualiza los 4 pilares de privacidad y términos aceptados', async () => {
-    render(<ProfileView />);
-
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: /Privacidad y Límites/i })).toBeInTheDocument();
-    });
-
-    fireEvent.click(screen.getByRole('button', { name: /Privacidad y Límites/i }));
-
-    expect(screen.getByText(/Garantías de Privacidad y Marco Legal/i)).toBeInTheDocument();
-    expect(screen.getByText(/1\. Cero datos bancarios ni contraseñas/i)).toBeInTheDocument();
-    expect(screen.getByText(/2\. Cero publicidad/i)).toBeInTheDocument();
-    expect(screen.getByText(/3\. Modo solo lectura y registro manual/i)).toBeInTheDocument();
-    expect(screen.getByText(/4\. Sin asesoramiento financiero regulado/i)).toBeInTheDocument();
-    expect(screen.getByText(/Aceptado y Verificado/i)).toBeInTheDocument();
   });
 });

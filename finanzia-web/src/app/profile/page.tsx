@@ -40,7 +40,7 @@ export default function ProfilePage() {
           <div className={accountsStyles.headerTitles}>
             <h1 className={accountsStyles.pageTitle}>Mi Perfil de Usuario</h1>
             <p className={accountsStyles.pageSubtitle}>
-              Consulta y modifica tus datos de registro, metas financieras, contexto económico y condiciones de privacidad.
+              Consulta y modifica tus datos de registro y contexto económico.
             </p>
           </div>
         </header>
